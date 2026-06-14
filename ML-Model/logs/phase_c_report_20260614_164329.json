@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-06-14T16:43:29.391249Z",
+  "phase": "C - Stacking Meta-Learner",
+  "approach": [
+    "7 diverse base learners (RF, XGB, GB, AdaBoost, LGB, SVM, KNN)",
+    "Cross-validation for meta-feature generation",
+    "Logistic Regression meta-learner"
+  ],
+  "base_learners": [
+    "RandomForest",
+    "XGBoost",
+    "GradientBoosting",
+    "AdaBoost",
+    "LightGBM",
+    "SVM",
+    "KNN"
+  ],
+  "results": {
+    "accuracy": 0.6802443991853361,
+    "precision": 0.7,
+    "recall": 0.6809338521400778,
+    "f1": 0.6903353057199211,
+    "auc_roc": 0.74806278891882,
+    "confusion_matrix": [
+      [
+        159,
+        75
+      ],
+      [
+        82,
+        175
+      ]
+    ]
+  },
+  "improvements": {
+    "baseline": 0.625,
+    "phase_a": 0.666,
+    "phase_c_stacking": 0.6802443991853361,
+    "improvement_from_baseline": 0.05524439918533608,
+    "improvement_from_phase_a": 0.014244399185336043
+  },
+  "progress": "68.0% / 85% target (80% toward goal)"
+}

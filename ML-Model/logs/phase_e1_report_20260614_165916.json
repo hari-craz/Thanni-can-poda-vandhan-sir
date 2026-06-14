@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-06-14T16:59:16.584003Z",
+  "phase": "E1 - MICE 5fold Stacking",
+  "metrics": {
+    "accuracy": 0.6802443991853361,
+    "precision": 0.7192982456140351,
+    "recall": 0.6381322957198443,
+    "f1": 0.6762886597938145,
+    "auc": 0.7431407762147062,
+    "confusion_matrix": [
+      [
+        170,
+        64
+      ],
+      [
+        93,
+        164
+      ]
+    ]
+  },
+  "learners": [
+    "rf",
+    "xgb",
+    "gb",
+    "ada",
+    "svm",
+    "knn",
+    "lgb"
+  ]
+}

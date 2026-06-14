@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-06-14T16:58:02.202070Z",
+  "phase": "E - FeatureSelect 5fold Stacking",
+  "top_features": [
+    "Sulfate",
+    "Hardness",
+    "hardness_log",
+    "ph_conductivity_interaction",
+    "conductivity_log",
+    "Conductivity",
+    "Chloramines",
+    "cond_to_hardness",
+    "sulfate_chloramines_interaction",
+    "feature_sum",
+    "ph_squared",
+    "ph",
+    "cond_to_solids",
+    "Solids",
+    "chloramines_to_solids",
+    "thm_to_chloramines",
+    "ph_neutral_distance",
+    "solids_log"
+  ],
+  "metrics": {
+    "accuracy": 0.6191446028513238,
+    "precision": 0.631578947368421,
+    "recall": 0.6536964980544747,
+    "f1": 0.6424474187380497,
+    "auc": 0.67747514051016,
+    "confusion_matrix": [
+      [
+        136,
+        98
+      ],
+      [
+        89,
+        168
+      ]
+    ]
+  },
+  "importances": {
+    "Sulfate": 0.06911617834312372,
+    "Hardness": 0.05367408897280151,
+    "hardness_log": 0.05365218647527535,
+    "ph_conductivity_interaction": 0.046420277266192835,
+    "conductivity_log": 0.04638427237481966,
+    "Conductivity": 0.045303283560952375,
+    "Chloramines": 0.04511554675113152,
+    "cond_to_hardness": 0.04500574572241248,
+    "sulfate_chloramines_interaction": 0.04410510499519353,
+    "feature_sum": 0.04197825369411312,
+    "ph_squared": 0.04107103684253654,
+    "ph": 0.04041702412735813,
+    "cond_to_solids": 0.0389806138092721,
+    "Solids": 0.038471724737045444,
+    "chloramines_to_solids": 0.03844714010597977,
+    "thm_to_chloramines": 0.037342757761053266,
+    "ph_neutral_distance": 0.037007970907641956,
+    "solids_log": 0.036727320718157104,
+    "Trihalomethanes": 0.036529698397275996,
+    "Turbidity": 0.03577509464948469,
+    "turbidity_log": 0.035254674369759785,
+    "Organic_carbon": 0.03459450764496325,
+    "organic_carbon_log": 0.03442331218631175,
+    "chloramines_high": 0.005347471878736787,
+    "thm_high": 0.00412390680177187,
+    "solids_high": 0.0038665305819144784,
+    "is_acidic": 0.0037339756792898076,
+    "is_alkaline": 0.0036458692199702507,
+    "hardness_high": 0.0034844314254610155,
+    "turbidity_high": 0.0
+  }
+}

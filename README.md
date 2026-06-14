@@ -241,21 +241,50 @@ Develop a scalable, affordable, and intelligent water monitoring platform capabl
 
 ## Expected Deliverables
 
-1. ESP32 firmware with sensor integration and WiFi portal
-2. Backend server with APIs and database
-3. Frontend dashboard for multi-device monitoring
-4. End-to-end working system from sensor to visualization
+### Phase 1 (MVP — 3-4 months)
+1. ESP32 firmware: sensor sampling, local display, SD buffering, MQTT/HTTP client
+2. Backend API: data ingestion, rule-based scoring, basic alerting
+3. Dashboard: device overview, real-time metrics, historical charts
+4. Docker Compose deployment (home server or single cloud VM)
+
+### Phase 2 (Production — 4-6 months)
+1. Device provisioning API + OTA firmware updates
+2. MQTT broker cluster + HTTP fallback
+3. Notification module (email + in-app alerts)
+4. API key rotation + rate limiting + OAuth2
+5. Structured logging + heartbeat monitoring
+6. Backup automation + restore testing
+
+### Phase 3 (Scale — 6-8 months)
+1. Multi-region deployment (US, EU, Asia)
+2. ML anomaly detection (if ≥85% accuracy)
+3. Mobile app
+4. Advanced analytics + reporting
+5. Kubernetes deployment option
 
 ## Documentation
 
 The full implementation brief has been split into focused docs under [docs](docs):
 
-1. [Hydronix-Master-Prompt.md](docs/Hydronix-Master-Prompt.md)
-2. [Architecture-Overview.md](docs/Architecture-Overview.md)
-3. [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md)
-4. [Backend-Spec.md](docs/Backend-Spec.md)
-5. [Frontend-Spec.md](docs/Frontend-Spec.md)
-6. [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md)
-7. [End-to-End-Workflow.md](docs/End-to-End-Workflow.md)
-8. [ER-Diagram.md](docs/ER-Diagram.md)
-9. [Data-Flow-Diagram.md](docs/Data-Flow-Diagram.md)
+1. [Hydronix-Master-Prompt.md](docs/Hydronix-Master-Prompt.md) — Master brief
+2. [Architecture-Overview.md](docs/Architecture-Overview.md) — System layers and components
+3. [Implementation-Roadmap.md](docs/Implementation-Roadmap.md) — 📍 **START HERE** — Phased delivery plan
+4. [Known-Issues-and-Solutions.md](docs/Known-Issues-and-Solutions.md) — All 12 critical issues + mitigations
+5. [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md) — Device firmware architecture
+6. [Backend-Spec.md](docs/Backend-Spec.md) — API endpoints, database schema, security
+7. [Frontend-Spec.md](docs/Frontend-Spec.md) — Dashboard screens and real-time features
+8. [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md) — HA, backups, compliance
+9. [End-to-End-Workflow.md](docs/End-to-End-Workflow.md) — Runtime flows + failure scenarios
+10. [ER-Diagram.md](docs/ER-Diagram.md) — Database schema diagram
+11. [Data-Flow-Diagram.md](docs/Data-Flow-Diagram.md) — System data flow diagram
+
+## Getting Started
+
+1. **Understand the architecture**: Read [Architecture-Overview.md](docs/Architecture-Overview.md)
+2. **Follow the roadmap**: Read [Implementation-Roadmap.md](docs/Implementation-Roadmap.md) for phased approach
+3. **Address critical issues**: Review [Known-Issues-and-Solutions.md](docs/Known-Issues-and-Solutions.md)
+4. **Component specs**: Choose your path:
+   - **Firmware dev?** → [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md)
+   - **Backend dev?** → [Backend-Spec.md](docs/Backend-Spec.md)
+   - **Frontend dev?** → [Frontend-Spec.md](docs/Frontend-Spec.md)
+5. **Production ready?** → [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md)
