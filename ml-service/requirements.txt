@@ -6,3 +6,4 @@ pandas
 scikit-learn
 xgboost
 prometheus_client
+psycopg2-binary
