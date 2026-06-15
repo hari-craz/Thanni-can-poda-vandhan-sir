@@ -7,7 +7,7 @@ export const API_CONFIG = {
 };
 
 export const WEBSOCKET_CONFIG = {
-  URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws',
+  URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws/updates',
   RECONNECT_INTERVAL: 5000,
   RECONNECT_ATTEMPTS: 5,
   HEARTBEAT_INTERVAL: 30000,
