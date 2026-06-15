@@ -5,7 +5,7 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
-      - '127.0.0.1:9091:9090'
+      - '127.0.0.1:9415:9090'
     networks:
       - default
 
