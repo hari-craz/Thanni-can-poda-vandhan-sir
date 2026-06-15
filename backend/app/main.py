@@ -48,7 +48,7 @@ def ingest_http(payload: SensorPayload):
 @app.post('/predict')
 def predict(payload: SensorPayload):
     # Require model loaded
-    if not getattr(app.state, 'model', None) or not getattr(app.state, 'preprocessor', None):
+    if not getattr(app.state, 'model', None):
         raise HTTPException(status_code=503, detail='Model not available')
     try:
         # create single-row DataFrame from payload.data
