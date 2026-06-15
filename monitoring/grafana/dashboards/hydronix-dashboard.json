@@ -20,6 +20,24 @@
       "title":"Feedback Accuracy (1h)",
       "targets":[{"expr":"(increase(ml_feedback_correct[1h]) / (increase(ml_feedback_total[1h]) + 0.0001))"}],
       "id":3
+    },
+    {
+      "type":"graph",
+      "title":"Exported Rows (1h)",
+      "targets":[{"expr":"increase(ml_exported_rows_total[1h])"}],
+      "id":4
+    },
+    {
+      "type":"graph",
+      "title":"Backup Success vs Failure (1h)",
+      "targets":[{"expr":"increase(ml_backup_success_total[1h])"},{"expr":"increase(ml_backup_failure_total[1h])"}],
+      "id":5
+    },
+    {
+      "type":"stat",
+      "title":"Last Export Duration (s)",
+      "targets":[{"expr":"ml_export_last_duration_seconds"}],
+      "id":6
     }
   ],
   "title":"Hydronix ML Service Overview",

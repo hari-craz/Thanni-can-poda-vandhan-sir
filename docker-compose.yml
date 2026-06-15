@@ -10,6 +10,22 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mqtt/config:/mosquitto/config:ro
+      - mqtt_data:/mosquitto/data
+
   ml-service:
     build: ./ml-service
     ports:
@@ -25,19 +41,24 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
   backend:
     build: ./backend
     depends_on:
       - db
       - ml-service
+      - redis
+      - mqtt
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://hydronix:hydronix_pass@db:5432/hydronix_db
-      MQTT_BROKER: broker.hivemq.com
+      REDIS_URL: redis://redis:6379/0
+      MQTT_BROKER: mqtt
       MQTT_PORT: 1883
       ML_SERVICE_URL: http://ml-service:8000
       ML_SERVICE_API_KEY: "hydronix_local_key"
+      ML_SERVICE_ENABLED: "true"
     volumes:
       - ./ML-Model/models:/app/models:ro
     healthcheck:
@@ -45,5 +66,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
 volumes:
   db_data:
+  redis_data:
+  mqtt_data:

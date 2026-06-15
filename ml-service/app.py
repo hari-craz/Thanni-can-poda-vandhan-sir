@@ -45,6 +45,16 @@ PREPROCESSOR_LOADED = Gauge('ml_preprocessor_loaded', '1 if preprocessor loaded 
 FEEDBACK_TOTAL = Counter('ml_feedback_total', 'Total feedback entries')
 FEEDBACK_CORRECT = Counter('ml_feedback_correct', 'Correct predictions from feedback')
 
+# exporter & backup metrics
+EXPORTED_ROWS = Counter('ml_exported_rows_total', 'Total rows exported to central DB')
+EXPORT_RUNS = Counter('ml_export_runs_total', 'Total export runs attempted')
+EXPORT_SUCCESS = Counter('ml_export_success_total', 'Total successful export runs')
+EXPORT_FAILURE = Counter('ml_export_failure_total', 'Total failed export runs')
+EXPORT_LAST_DURATION = Gauge('ml_export_last_duration_seconds', 'Duration of last export run (s)')
+
+BACKUP_SUCCESS = Counter('ml_backup_success_total', 'Successful backup count')
+BACKUP_FAILURE = Counter('ml_backup_failure_total', 'Failed backup count')
+
 MODEL_LOADED.set(1 if model is not None else 0)
 PREPROCESSOR_LOADED.set(1 if preprocessor is not None else 0)
 
@@ -111,7 +121,33 @@ async def predict(payload: SensorPayload, request: Request):
     REQUEST_COUNT.inc()
     with REQUEST_LATENCY.time():
         try:
-            df = pd.DataFrame([payload.data])
+            # Standardize keys to match model features case-insensitively, including mapping synonyms like 'solids'/'tds' to 'Solids'
+            raw_data = payload.data or {}
+            mapped_data = {}
+            for k, v in raw_data.items():
+                k_lower = k.lower()
+                if k_lower in ('solids', 'tds'):
+                    mapped_data['Solids'] = v
+                elif k_lower == 'ph':
+                    mapped_data['ph'] = v
+                elif k_lower == 'hardness':
+                    mapped_data['Hardness'] = v
+                elif k_lower == 'chloramines':
+                    mapped_data['Chloramines'] = v
+                elif k_lower == 'sulfate':
+                    mapped_data['Sulfate'] = v
+                elif k_lower == 'conductivity':
+                    mapped_data['Conductivity'] = v
+                elif k_lower == 'organic_carbon':
+                    mapped_data['Organic_carbon'] = v
+                elif k_lower == 'trihalomethanes':
+                    mapped_data['Trihalomethanes'] = v
+                elif k_lower == 'turbidity':
+                    mapped_data['Turbidity'] = v
+                else:
+                    mapped_data[k] = v
+
+            df = pd.DataFrame([mapped_data])
             if preprocessor is not None:
                 # ensure columns are in the same order model expects
                 feature_names = getattr(model, 'feature_names_in_', None)
@@ -122,7 +158,7 @@ async def predict(payload: SensorPayload, request: Request):
                 feature_names = getattr(model, 'feature_names_in_', None)
                 if feature_names is None:
                     raise HTTPException(status_code=503, detail='Model feature names unknown')
-                row = {col: payload.data.get(col, np.nan) for col in feature_names}
+                row = {col: mapped_data.get(col, np.nan) for col in feature_names}
                 df2 = pd.DataFrame([row], columns=feature_names)
                 df2 = df2.fillna(0)
                 X = df2.values
@@ -226,10 +262,16 @@ def health():
 # Export and backup utilities
 
 def export_to_postgres() -> (bool, str):
-    """Export unexported rows in batches to central Postgres. Marks exported rows in sqlite on success."""
+    """Export unexported rows in batches to central Postgres. Marks exported rows in sqlite on success and reports Prometheus metrics."""
+    start = time.time()
+    EXPORT_RUNS.inc()
     if DATABASE_URL is None:
+        EXPORT_FAILURE.inc()
+        EXPORT_LAST_DURATION.set(time.time() - start)
         return False, 'DATABASE_URL not configured'
     if conn is None:
+        EXPORT_FAILURE.inc()
+        EXPORT_LAST_DURATION.set(time.time() - start)
         return False, 'Local feedback DB not available'
     try:
         # connect to Postgres
@@ -254,6 +296,8 @@ def export_to_postgres() -> (bool, str):
         local_cur.execute('SELECT id, device_id, timestamp, prediction, true_label, user_id, label_source, confidence, created_at FROM feedback WHERE exported = 0 ORDER BY id ASC LIMIT ?', (EXPORT_BATCH_SIZE,))
         rows = local_cur.fetchall()
         if not rows:
+            EXPORT_SUCCESS.inc()
+            EXPORT_LAST_DURATION.set(time.time() - start)
             return True, 'No rows to export'
         inserted = 0
         for r in rows:
@@ -270,8 +314,15 @@ def export_to_postgres() -> (bool, str):
                 # skip marking exported so it can be retried
         conn.commit()
         pg.close()
-        return True, f'Exported {inserted} rows (marked others as exported).' 
+        # metrics
+        if inserted > 0:
+            EXPORTED_ROWS.inc(inserted)
+        EXPORT_SUCCESS.inc()
+        EXPORT_LAST_DURATION.set(time.time() - start)
+        return True, f'Exported {inserted} rows (marked others as exported).'
     except Exception as e:
+        EXPORT_FAILURE.inc()
+        EXPORT_LAST_DURATION.set(time.time() - start)
         return False, str(e)
 
 
@@ -282,6 +333,7 @@ def backup_db():
         ts = datetime.utcnow().strftime('%Y%m%d%H%M%S')
         dest = os.path.join(BACKUP_DIR, f'feedback-{ts}.db')
         shutil.copy2(DB_PATH, dest)
+        BACKUP_SUCCESS.inc()
         # prune old backups
         now = time.time()
         for fname in os.listdir(BACKUP_DIR):
@@ -296,6 +348,7 @@ def backup_db():
                 except Exception:
                     pass
     except Exception as e:
+        BACKUP_FAILURE.inc()
         print('backup_db error', e)
 
 
