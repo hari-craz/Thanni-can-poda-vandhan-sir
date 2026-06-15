@@ -43,7 +43,7 @@ from .schemas import (
 import httpx
 from .database import (
     Device, User, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
-    get_db, init_db, Firmware
+    get_db, init_db, Firmware, SessionLocal
 )
 from .auth import validate_api_key, create_api_key_for_device, rotate_api_key
 from .quality_score import QualityScorer, AlertManager
@@ -162,6 +162,94 @@ ws_manager = WebSocketManager()
 # Redis cache helper (optional)
 from .cache import RedisCache
 cache = RedisCache(redis_url=settings.redis_url)
+
+
+async def get_device_id_cached(api_key: str) -> Optional[str]:
+    """Retrieve device ID from API key, using Redis cache to avoid slow bcrypt hashes."""
+    if not api_key:
+        return None
+        
+    import hashlib
+    # Generate a cache key from a secure fast hash of the API key
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+    cache_key = f"apikey:device:{key_hash}"
+    
+    # Check cache
+    try:
+        cached_device_id = cache.get(cache_key)
+        if cached_device_id is not None:
+            if cached_device_id == "invalid":
+                return None
+            return cached_device_id
+    except Exception as e:
+        logger.warning(f"Failed to query API key cache: {e}")
+
+    # If not cached, resolve from DB
+    db = SessionLocal()
+    try:
+        device = validate_api_key(db, api_key)
+        if device:
+            # Cache positive result for 1 hour (3600 seconds)
+            try:
+                cache.set(cache_key, device.device_id, ex=3600)
+            except Exception:
+                pass
+            return device.device_id
+        else:
+            # Cache negative result for 5 minutes (300 seconds) to prevent brute-forcing bcrypt
+            try:
+                cache.set(cache_key, "invalid", ex=300)
+            except Exception:
+                pass
+            return None
+    finally:
+        db.close()
+
+
+@app.middleware("http")
+async def rate_limiting_middleware(request: Request, call_next):
+    """Global sliding-window rate limiting middleware using Redis."""
+    path = request.url.path
+    # Bypass health, openapi specs and documentation endpoints
+    if path in ("/health", "/docs", "/openapi.json", "/redoc") or path.startswith("/static"):
+        return await call_next(request)
+
+    # 1. Get client IP
+    client_ip = "unknown"
+    if request.client:
+        client_ip = request.client.host
+
+    # 2. Check client IP rate limit (10,000 requests/hour)
+    is_limited, headers = rate_limiter.is_rate_limited(ip_address=client_ip)
+    if is_limited:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "IP rate limit exceeded. Max 10,000 requests/hour."},
+            headers=headers
+        )
+
+    # 3. Check device rate limit if X-API-Key header is present
+    api_key = request.headers.get("X-API-Key")
+    if api_key:
+        device_id = await get_device_id_cached(api_key)
+        if device_id:
+            is_limited_device, device_headers = rate_limiter.is_rate_limited(device_id=device_id)
+            headers.update(device_headers)
+            if is_limited_device:
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": f"Device rate limit exceeded for {device_id}. Max 100 requests/minute."},
+                    headers=headers
+                )
+
+    # 4. Proceed with request
+    response = await call_next(request)
+
+    # 5. Append rate-limiting metadata headers to the response
+    for k, v in headers.items():
+        response.headers[k] = v
+
+    return response
 
 
 # ============================================================================
@@ -344,18 +432,6 @@ async def ingest_sensor_data(
         # Device ID must match authenticated device
         if request.device_id != device_id:
             raise HTTPException(status_code=403, detail="Device ID mismatch")
-        
-        # Rate limiting
-        is_limited, rate_limit_headers = rate_limiter.is_rate_limited(
-            device_id=device_id,
-            ip_address=client_ip
-        )
-        if is_limited:
-            raise HTTPException(
-                status_code=429,
-                detail="Rate limit exceeded",
-                headers=rate_limit_headers
-            )
         
         # Prepare reading values (apply EMA smoothing and calibration offsets if enabled)
         reading_raw = {

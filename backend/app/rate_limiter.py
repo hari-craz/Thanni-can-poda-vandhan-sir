@@ -4,6 +4,7 @@ Supports per-device and per-IP rate limiting using Redis.
 """
 import redis
 import time
+import uuid
 from typing import Optional
 from .config import settings
 
@@ -86,8 +87,8 @@ class RateLimiter:
             # Count current requests in window
             count = self.redis.zcard(key)
             
-            # Add current request
-            self.redis.zadd(key, {str(now): now})
+            # Add current request (using a unique member string to prevent collisions)
+            self.redis.zadd(key, {f"{now}:{uuid.uuid4()}": now})
             
             # Set key expiry to window + 1 second
             self.redis.expire(key, window + 1)
