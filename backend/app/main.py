@@ -17,12 +17,18 @@ def startup_event():
     # Load ML artifacts if present
     try:
         app.state.preprocessor = joblib.load('models/Preprocessor.pkl')
-    except Exception:
+        print('Loaded Preprocessor from models/Preprocessor.pkl')
+    except Exception as e:
         app.state.preprocessor = None
+        app.state.model_load_error = f'preprocessor load error: {e}'
+        print(app.state.model_load_error)
     try:
         app.state.model = joblib.load('models/XGBoost.pkl')
-    except Exception:
+        print('Loaded model from models/XGBoost.pkl')
+    except Exception as e:
         app.state.model = None
+        app.state.model_load_error = getattr(app.state, 'model_load_error', '') + f' | model load error: {e}'
+        print(getattr(app.state, 'model_load_error'))
 
 
 @app.post('/ingest', response_model=IngestResponse)
