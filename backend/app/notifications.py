@@ -1,6 +1,8 @@
 """
 Notification helper module.
 - Email notifications via SMTP (optional, controlled by config.smtp_host)
+- Slack webhook notifications (optional, controlled by config.slack_webhook_url)
+- Twilio SMS notifications (optional, controlled by Twilio config settings)
 - Deduplication using recent alerts (cooldown window)
 - Simple escalation: include escalation level in subject/body
 """
@@ -9,6 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 from typing import Optional
+import httpx
 
 from .config import settings
 from .database import Alert
@@ -57,7 +60,60 @@ def _send_email(subject: str, body: str, to: Optional[str] = None) -> bool:
         return False
 
 
-def send_alert_notification(db, alert: Alert):
+def _send_slack(message: str) -> bool:
+    """Send alert message to Slack webhook. Returns True on success."""
+    if not settings.slack_webhook_url:
+        return False
+    try:
+        response = httpx.post(
+            settings.slack_webhook_url,
+            json={"text": message},
+            timeout=10.0
+        )
+        if response.status_code in (200, 201):
+            logger.info("Alert notification sent to Slack")
+            return True
+        else:
+            logger.warning(f"Failed to send Slack alert, status: {response.status_code}, body: {response.text}")
+            return False
+    except Exception as e:
+        logger.exception(f"Error sending Slack alert: {e}")
+        return False
+
+
+def _send_sms(message: str) -> bool:
+    """Send alert message via Twilio SMS. Returns True on success."""
+    if not (settings.twilio_account_sid and 
+            settings.twilio_auth_token and 
+            settings.twilio_phone_from and 
+            settings.twilio_phone_to):
+        return False
+    
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.twilio_account_sid}/Messages.json"
+    data = {
+        "From": settings.twilio_phone_from,
+        "To": settings.twilio_phone_to,
+        "Body": message
+    }
+    try:
+        response = httpx.post(
+            url,
+            data=data,
+            auth=(settings.twilio_account_sid, settings.twilio_auth_token),
+            timeout=10.0
+        )
+        if response.status_code in (200, 201):
+            logger.info("Alert SMS notification sent via Twilio")
+            return True
+        else:
+            logger.warning(f"Failed to send Twilio SMS, status: {response.status_code}, body: {response.text}")
+            return False
+    except Exception as e:
+        logger.exception(f"Error sending Twilio SMS: {e}")
+        return False
+
+
+def send_alert_notification(db, alert: Alert) -> bool:
     """High-level: check dedupe, build message, and send notification(s)."""
     try:
         device_id = alert.device_id
@@ -76,11 +132,29 @@ def send_alert_notification(db, alert: Alert):
             f"Escalation level: {alert.escalation_level}\n"
         )
 
-        sent = _send_email(subject, body)
-        # Future: add slack/sms hooks if configured
-        if sent:
-            logger.info(f"Notification sent for alert {alert.id}")
-        return sent
+        sent_any = False
+
+        # Send Email
+        if _send_email(subject, body):
+            sent_any = True
+
+        # Send Slack Webhook
+        if settings.slack_webhook_url:
+            if _send_slack(body):
+                sent_any = True
+
+        # Send Twilio SMS
+        if (settings.twilio_account_sid and 
+            settings.twilio_auth_token and 
+            settings.twilio_phone_from and 
+            settings.twilio_phone_to):
+            if _send_sms(body):
+                sent_any = True
+
+        if sent_any:
+            logger.info(f"Notification sent successfully for alert {alert.id}")
+        return sent_any
     except Exception as e:
         logger.exception(f"Error sending alert notification: {e}")
         return False
+
