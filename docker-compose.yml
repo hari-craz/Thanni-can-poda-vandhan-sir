@@ -66,17 +66,6 @@ services:
       timeout: 10s
       retries: 3
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "3002:3000"
-    depends_on:
-      - backend
-    environment:
-      VITE_API_BASE_URL: http://localhost:8000
-      VITE_WS_URL: ws://localhost:8000/ws/updates
-    command: ["npm", "run", "dev"]
-
 volumes:
   db_data:
   redis_data:
