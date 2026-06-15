@@ -256,12 +256,30 @@ async def rate_limiting_middleware(request: Request, call_next):
 # STARTUP / SHUTDOWN
 # ============================================================================
 
+async def partition_manager_loop():
+    """Background loop to periodically run partition creation and pruning."""
+    import asyncio
+    while True:
+        try:
+            logger.info("Running database partition manager background task")
+            database.setup_database_partitions()
+            database.prune_database_partitions()
+        except Exception as e:
+            logger.error(f"Error in partition manager background task: {e}")
+        # Sleep for 24 hours (86400 seconds)
+        await asyncio.sleep(86400)
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and background tasks."""
     logger.info(f"Starting Hydronix Backend API (env: {settings.environment})")
     init_db()
     logger.info("Database initialized")
+
+    # Start database partition manager background loop
+    import asyncio
+    asyncio.create_task(partition_manager_loop())
 
     # Bootstrap superadmin if users table is empty
     db = next(get_db())

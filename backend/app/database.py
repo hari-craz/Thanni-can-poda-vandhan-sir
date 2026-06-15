@@ -242,11 +242,56 @@ def setup_database_partitions():
             conn.execute(text(create_partition_sql))
 
 
+def prune_database_partitions():
+    """Drop partitions older than 12 months (retaining current month + past 11 months)."""
+    if engine.dialect.name != "postgresql":
+        return
+
+    from sqlalchemy import text
+    from datetime import datetime
+    
+    now = datetime.utcnow().replace(day=1)
+    
+    # Calculate cutoff date: keep current month + previous 11 months (total 12 months)
+    m = now.month - 11
+    y = now.year
+    if m <= 0:
+        y -= (abs(m) // 12) + 1
+        m = 12 - (abs(m) % 12)
+    cutoff_date = datetime(y, m, 1)
+    
+    get_partitions_sql = """
+    SELECT child.relname AS partition_name
+    FROM pg_inherits
+    JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+    JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+    WHERE parent.relname = 'sensor_data';
+    """
+    
+    with engine.begin() as conn:
+        result = conn.execute(text(get_partitions_sql)).fetchall()
+        for row in result:
+            partition_name = row[0]
+            if partition_name.startswith("sensor_data_"):
+                parts = partition_name.split("_")
+                if len(parts) >= 4:
+                    try:
+                        py = int(parts[2])
+                        pm = int(parts[3])
+                        part_date = datetime(py, pm, 1)
+                        if part_date < cutoff_date:
+                            drop_sql = f"DROP TABLE IF EXISTS {partition_name};"
+                            conn.execute(text(drop_sql))
+                    except ValueError:
+                        pass
+
+
 def init_db():
     """Create all tables and setup partitions."""
     Base.metadata.create_all(bind=engine)
     try:
         setup_database_partitions()
+        prune_database_partitions()
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning(f"Failed to auto-setup database partitions: {e}")

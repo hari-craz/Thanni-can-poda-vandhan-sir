@@ -246,7 +246,7 @@ void pruneOfflineQueue() {
   file.close();
   
   if (record_count <= 4320) {
-    lowStorageMode = (getSDUsagePercent() > 95.0f);
+    lowStorageMode = (getSDUsagePercent() > 90.0f);
     return; // Queue is within limits
   }
   
@@ -283,7 +283,7 @@ void pruneOfflineQueue() {
   
   SD.remove("/data/queue.jsonl");
   SD.rename("/data/temp.jsonl", "/data/queue.jsonl");
-  lowStorageMode = (getSDUsagePercent() > 95.0f);
+  lowStorageMode = (getSDUsagePercent() > 90.0f);
 }
 
 // --- SETUP CONFIGURATION PORTAL HTML ---
@@ -824,8 +824,24 @@ void taskSensorRead(void* pvParameters) {
   
   TickType_t lastWakeTime = xTaskGetTickCount();
   const uint32_t maxStuckSamples = 86400 / config.sample_interval_sec;
+  bool wasThrottled = false;
   
   for (;;) {
+    bool currentThrottle = lowStorageMode;
+    if (currentThrottle != wasThrottled) {
+      if (currentThrottle) {
+        Serial.println("[WARNING] Low SD storage detected. Throttling sampling interval (5x slowdown).");
+      } else {
+        Serial.println("[INFO] SD storage levels healthy. Resuming normal sampling interval.");
+      }
+      wasThrottled = currentThrottle;
+    }
+    
+    uint32_t active_interval = config.sample_interval_sec;
+    if (currentThrottle) {
+      active_interval *= 5;
+    }
+
     // If calibration is in progress, collect samples asynchronously
     if (calibrationRunning) {
       float raw = analogRead(PIN_PH) * (3.3f / 4095.0f) * 3.5f;
@@ -947,7 +963,7 @@ void taskSensorRead(void* pvParameters) {
                     smooth_ph, smooth_turb, smooth_tds);
     }
     
-    vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(config.sample_interval_sec * 1000));
+    vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(active_interval * 1000));
   }
 }
 
@@ -963,7 +979,13 @@ void taskDisplayUpdate(void* pvParameters) {
       // Line 1: Basic Telemetry or warnings
       lcd.setCursor(0, 0);
       if (isPhStuck || isTurbStuck || isTdsStuck || isTempStuck || isFlowStuck) {
-        lcd.print("ALERT: STUCK SENSOR ");
+        lcd.print("STUCK:");
+        bool first = true;
+        if (isPhStuck) { lcd.print("pH"); first = false; }
+        if (isTurbStuck) { if (!first) lcd.print(","); lcd.print("Tb"); first = false; }
+        if (isTdsStuck) { if (!first) lcd.print(","); lcd.print("Tds"); first = false; }
+        if (isTempStuck) { if (!first) lcd.print(","); lcd.print("Tmp"); first = false; }
+        if (isFlowStuck) { if (!first) lcd.print(","); lcd.print("Flw"); first = false; }
       } else {
         lcd.print(config.device_id);
         lcd.print(" | pH:");
