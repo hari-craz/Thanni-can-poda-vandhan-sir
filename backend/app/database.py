@@ -36,7 +36,10 @@ class Device(Base):
     device_reset_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+    # Calibration offsets and last smoothed readings stored as JSON
+    calibration_offsets = Column(JSON, default={})
+    last_smoothed_readings = Column(JSON, default={})
+
     sensor_data = relationship("SensorData", back_populates="device", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="device", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="device", cascade="all, delete-orphan")

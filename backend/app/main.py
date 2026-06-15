@@ -21,6 +21,8 @@ from .schemas import (
     DeviceHeartbeatResponse,
     DeviceProvisionRequest,
     DeviceProvisionResponse,
+    FirmwareUploadRequest,
+    FirmwareInfoResponse,
     AlertAcknowledgementRequest,
     KeyRotationRequest,
     KeyRotationResponse,
@@ -47,7 +49,22 @@ from .rate_limiter import RateLimiter
 
 # Configure logging
 logging.basicConfig(level=settings.log_level)
-logger = logging.getLogger(__name__)
+# Try to configure structlog to output JSON for ELK-friendly logs; fall back to stdlib if structlog not installed
+_use_structlog = False
+try:
+    structlog.configure(
+        processors=[
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+    )
+    logger = structlog.get_logger(__name__)
+    _use_structlog = True
+except Exception:
+    logger = logging.getLogger(__name__)
+    logger.warning("structlog not available, using stdlib logging fallback")
 
 # Initialize FastAPI
 app = FastAPI(
@@ -55,6 +72,13 @@ app = FastAPI(
     description=settings.api_description,
     version=settings.api_version,
 )
+
+# Include WebSocket routes
+try:
+    from .ws_routes import router as ws_router
+    app.include_router(ws_router)
+except Exception:
+    pass
 
 # Add CORS middleware
 app.add_middleware(
@@ -65,10 +89,72 @@ app.add_middleware(
     allow_headers=settings.cors_allow_headers,
 )
 
+# Trace ID middleware (adds X-Trace-Id and binds to structlog context)
+@app.middleware("http")
+async def add_trace_id(request: Request, call_next):
+    trace_id = str(uuid.uuid4())
+    try:
+        if _use_structlog:
+            structlog.contextvars.bind_contextvars(trace_id=trace_id)
+    except Exception:
+        pass
+    request.state.trace_id = trace_id
+    response = await call_next(request)
+    response.headers["X-Trace-Id"] = trace_id
+    try:
+        if _use_structlog:
+            structlog.contextvars.clear_contextvars()
+    except Exception:
+        pass
+    return response
+
 # Initialize components
 rate_limiter = RateLimiter()
 quality_scorer = QualityScorer()
 alert_manager = AlertManager()
+
+# Register auth token endpoint
+from .security import token_endpoint, get_current_admin
+app.post("/auth/token")(token_endpoint)
+
+# MQTT processor (initialized at startup)
+mqtt_processor = None
+
+# WebSocket connections manager
+class WebSocketManager:
+    def __init__(self):
+        self.active = set()
+
+    async def connect(self, websocket):
+        await websocket.accept()
+        self.active.add(websocket)
+
+    def disconnect(self, websocket):
+        try:
+            self.active.remove(websocket)
+        except KeyError:
+            pass
+
+    async def broadcast_json(self, message: dict):
+        # send concurrently
+        import asyncio
+        coros = []
+        for ws in list(self.active):
+            try:
+                coros.append(ws.send_json(message))
+            except Exception:
+                try:
+                    self.disconnect(ws)
+                except Exception:
+                    pass
+        if coros:
+            await asyncio.gather(*coros, return_exceptions=True)
+
+ws_manager = WebSocketManager()
+
+# Redis cache helper (optional)
+from .cache import RedisCache
+cache = RedisCache(redis_url=settings.redis_url)
 
 
 # ============================================================================
@@ -82,11 +168,68 @@ async def startup_event():
     init_db()
     logger.info("Database initialized")
 
+    # Start MQTT processor if enabled
+    global mqtt_processor
+    try:
+        from .mqtt_client import MQTTProcessor
+
+        def _process_mqtt_message(payload: dict):
+            # Basic mapping: pass MQTT message payload into ingest flow.
+            # Expect payload to conform to SensorDataIngestionRequest shape.
+            try:
+                # Synchronous DB call via dependency is not available here — use a short-lived session
+                db = next(get_db())
+                # Build a minimal request-like object
+                class _Req:
+                    pass
+
+                req = _Req()
+                req.device_id = payload.get('device_id')
+                req.ph = payload.get('ph')
+                req.turbidity = payload.get('turbidity')
+                req.tds = payload.get('tds')
+                req.temperature = payload.get('temperature')
+                req.flow_rate = payload.get('flow_rate')
+                req.timestamp = payload.get('timestamp')
+                req.seq_no = payload.get('seq_no')
+                req.device_reset_count = payload.get('device_reset_count', 0)
+                req.raw_ph = payload.get('raw_ph')
+
+                # Call ingest path directly
+                # Note: device authentication/authorization is skipped for MQTT source — broker should filter topics
+                asyncio_run = None
+                try:
+                    import asyncio
+                    asyncio_run = asyncio.get_event_loop().run_until_complete
+                except Exception:
+                    asyncio_run = None
+
+                if asyncio_run:
+                    # Use FastAPI endpoint helper call
+                    asyncio_run(ingest_sensor_data(req, db, client_ip='mqtt', device_id=req.device_id))
+                else:
+                    # Fallback: call ingest_sensor_data synchronously if available
+                    ingest_sensor_data(req, db, client_ip='mqtt', device_id=req.device_id)
+            except Exception as e:
+                logger.exception(f"Error handing MQTT payload: {e}")
+
+        mqtt_processor = MQTTProcessor(on_message_callback=_process_mqtt_message)
+        mqtt_processor.start()
+    except Exception as e:
+        logger.warning(f"MQTT processor failed to start: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup resources."""
     logger.info("Shutting down Hydronix Backend API")
+    # Stop mqtt processor if running
+    global mqtt_processor
+    try:
+        if mqtt_processor:
+            mqtt_processor.stop()
+    except Exception:
+        pass
 
 
 # ============================================================================
@@ -186,24 +329,74 @@ async def ingest_sensor_data(
                 headers=rate_limit_headers
             )
         
-        # Calculate quality score
-        reading = {
+        # Prepare reading values (apply EMA smoothing and calibration offsets if enabled)
+        reading_raw = {
             "ph": request.ph,
             "turbidity": request.turbidity,
             "tds": request.tds,
             "temperature": request.temperature,
             "flow_rate": request.flow_rate,
         }
-        quality_score = quality_scorer.calculate_score(reading)
+
+        # Fetch device for calibration/last_smoothed values
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        smoothed = reading_raw.copy()
+        if settings.smoothing_enabled and device is not None:
+            alpha = settings.smoothing_alpha
+            last_smoothed = device.last_smoothed_readings or {}
+            for k, v in reading_raw.items():
+                last = last_smoothed.get(k)
+                if last is not None:
+                    smoothed[k] = alpha * v + (1 - alpha) * last
+                else:
+                    smoothed[k] = v
+            # persist new smoothed values
+            device.last_smoothed_readings = smoothed
+
+        # Apply calibration offsets if present
+        calibrated = smoothed.copy()
+        if device is not None and getattr(device, 'calibration_offsets', None):
+            offsets = device.calibration_offsets or {}
+            for k, off in offsets.items():
+                if k in calibrated and isinstance(off, (int, float)):
+                    calibrated[k] = calibrated[k] + off
+
+        # Calculate quality score on calibrated (smoothed) readings
+        quality_score = quality_scorer.calculate_score(calibrated)
         
-        # Detect anomalies
-        anomaly_flags = quality_scorer.detect_anomalies(reading, device_id, db)
-        
+        # Detect anomalies using calibrated values
+        anomaly_flags = quality_scorer.detect_anomalies(calibrated, device_id, db)
+
+        # Ensure device variable exists for later updates
+        if device is None:
+            device = db.query(Device).filter(Device.device_id == device_id).first()
+
+        # Validate duplicate by device_reset_count + seq_no
+        if request.seq_no is not None:
+            existing_reading = db.query(SensorData).filter(
+                SensorData.device_id == device_id,
+                SensorData.device_reset_count == (request.device_reset_count or 0),
+                SensorData.seq_no == request.seq_no
+            ).first()
+            if existing_reading:
+                logger.info(f"Duplicate reading received for {device_id} (seq_no: {request.seq_no})")
+                return DataIngestionResponse(ok=True, accepted=0, rejected=1)
+
+        # Apply NTP/time-drift handling
+        server_now = datetime.utcnow()
+        drift_seconds = abs((request.timestamp - server_now).total_seconds()) if request.timestamp else 0
+        if drift_seconds > settings.max_drift_seconds:
+            sensor_timestamp = server_now
+            timestamp_source = "server_adjusted"
+        else:
+            sensor_timestamp = request.timestamp
+            timestamp_source = "device"
+
         # Create sensor data record
         trace_id = str(uuid.uuid4())
         sensor_data = SensorData(
             device_id=device_id,
-            device_reset_count=0,
+            device_reset_count=(request.device_reset_count or 0),
             seq_no=request.seq_no,
             ph=request.ph,
             turbidity=request.turbidity,
@@ -213,15 +406,14 @@ async def ingest_sensor_data(
             raw_ph=request.raw_ph,
             quality_score=quality_score,
             anomaly_flags=anomaly_flags,
-            timestamp=request.timestamp,
-            received_at=datetime.utcnow(),
-            timestamp_source="device",
+            timestamp=sensor_timestamp,
+            received_at=server_now,
+            timestamp_source=timestamp_source,
             trace_id=trace_id,
         )
         db.add(sensor_data)
         
         # Update device last_seen
-        device = db.query(Device).filter(Device.device_id == device_id).first()
         if device:
             device.last_seen = datetime.utcnow()
             device.status = "online"
@@ -241,6 +433,47 @@ async def ingest_sensor_data(
             logger.warning(f"Alert for {device_id}: {alert_message}")
         
         db.commit()
+
+        # Invalidate cache for this device
+        try:
+            invalidated = cache.invalidate_device(device_id)
+            if invalidated:
+                logger.info(f"Invalidated {invalidated} cache keys for {device_id}")
+        except Exception:
+            pass
+
+        # Broadcast new reading to WebSocket clients (async, non-blocking)
+        try:
+            import asyncio
+            payload = {
+                "type": "reading",
+                "device_id": device_id,
+                "quality_score": quality_score,
+                "timestamp": sensor_data.timestamp.isoformat(),
+                "values": {
+                    "ph": sensor_data.ph,
+                    "turbidity": sensor_data.turbidity,
+                    "tds": sensor_data.tds,
+                    "temperature": sensor_data.temperature,
+                    "flow_rate": sensor_data.flow_rate,
+                }
+            }
+            asyncio.create_task(ws_manager.broadcast_json(payload))
+        except Exception:
+            pass
+
+        # After commit, attempt to send notification (non-blocking)
+        try:
+            from .notifications import send_alert_notification
+            if alert_severity and alert:
+                # Use the same db session to check dedupe; do not block request on email send
+                try:
+                    send_alert_notification(db, alert)
+                except Exception as e:
+                    logger.warning(f"Notification sending failed: {e}")
+        except Exception:
+            # If import fails, skip notifications silently
+            pass
         
         logger.info(
             f"Ingested reading from {device_id} (score: {quality_score}, "
@@ -350,6 +583,7 @@ async def get_device(
 async def provision_device(
     request: DeviceProvisionRequest,
     db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
 ):
     """
     POST /devices/provision
@@ -400,7 +634,6 @@ async def provision_device(
             qr_code=qr_code,
             setup_url=f"http://192.168.4.1?key={api_key}"
         )
-    
     except HTTPException:
         raise
     except Exception as e:
@@ -409,12 +642,97 @@ async def provision_device(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# OTA / FIRMWARE ENDPOINTS (minimal implementation)
+# ---------------------------------------------------------------------------
+
+@app.post("/devices/{device_id}/firmware", response_model=FirmwareInfoResponse)
+async def upload_firmware_metadata(
+    device_id: str,
+    request: FirmwareUploadRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    POST /devices/:device_id/firmware
+    Accept firmware metadata (URL, version, optional signature) and store as AuditLog entry.
+    This is a minimal, non-binary implementation: devices will fetch "url" directly.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Record firmware metadata in audit log (serves as history)
+        audit = AuditLog(
+            action="firmware_upload",
+            resource_type="device",
+            resource_id=device_id,
+            details={
+                "version": request.version,
+                "url": request.url,
+                "signature": request.signature,
+                "release_notes": request.release_notes,
+            }
+        )
+        db.add(audit)
+        # Optionally update device firmware_version (not applying yet)
+        device.firmware_version = request.version
+        db.commit()
+
+        return FirmwareInfoResponse(
+            device_id=device_id,
+            version=request.version,
+            url=request.url,
+            signature=request.signature,
+            uploaded_at=audit.created_at,
+            release_notes=request.release_notes,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading firmware metadata: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/devices/{device_id}/firmware/latest", response_model=FirmwareInfoResponse)
+async def get_latest_firmware(device_id: str, db: Session = Depends(get_db)):
+    """Return the latest known firmware metadata for the device (from AuditLog)."""
+    try:
+        rec = db.query(AuditLog).filter(
+            AuditLog.resource_type == "device",
+            AuditLog.resource_id == device_id,
+            AuditLog.action == "firmware_upload"
+        ).order_by(AuditLog.created_at.desc()).first()
+
+        if not rec:
+            raise HTTPException(status_code=404, detail="No firmware metadata found")
+
+        details = rec.details or {}
+        return FirmwareInfoResponse(
+            device_id=device_id,
+            version=details.get("version"),
+            url=details.get("url"),
+            signature=details.get("signature"),
+            uploaded_at=rec.created_at,
+            release_notes=details.get("release_notes"),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching latest firmware metadata: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/devices/{device_id}/keys/rotate", response_model=KeyRotationResponse)
 async def rotate_device_key(
     device_id: str,
     request: KeyRotationRequest,
     db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
 ):
+    """Rotate device key and broadcast key rotation event to WebSocket clients."""
     """
     POST /devices/:device_id/keys/rotate
     Rotate device API key (revoke old, issue new).
@@ -438,6 +756,17 @@ async def rotate_device_key(
         
         logger.info(f"Rotated API key for device {device_id}")
         
+        # broadcast key rotation event
+        try:
+            import asyncio
+            asyncio.create_task(ws_manager.broadcast_json({
+                "type": "key_rotation",
+                "device_id": device_id,
+                "new_key_expires_at": expires_at.isoformat() if expires_at else None,
+            }))
+        except Exception:
+            pass
+
         grace_days = settings.api_key_rotation_grace_days
         return KeyRotationResponse(
             new_key=new_api_key,
@@ -466,6 +795,12 @@ async def get_device_data(
     from_time: Optional[datetime] = Query(None),
     to_time: Optional[datetime] = Query(None),
 ):
+    """GET /data/:device_id with optional Redis caching for paginated queries."""
+    # Try cache key
+    cache_key = f"device:{device_id}:data:{skip}:{limit}:{from_time}:{to_time}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
     """
     GET /data/:device_id
     Returns readings for device, optionally filtered by time range.
@@ -480,12 +815,17 @@ async def get_device_data(
         
         total = query.count()
         readings = query.order_by(SensorData.timestamp.desc()).offset(skip).limit(limit).all()
-        
-        return DataQueryResponse(
+        result = DataQueryResponse(
             device_id=device_id,
             readings=[SensorDataResponse.model_validate(r) for r in readings],
             total=total
         )
+        # Cache short-lived
+        try:
+            cache.set(cache_key, result.dict(), ex=30)
+        except Exception:
+            pass
+        return result
     except Exception as e:
         logger.error(f"Error querying device data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -700,6 +1040,43 @@ async def predict_anomaly(
     
     except Exception as e:
         logger.error(f"Error in ML prediction: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Calibration endpoints
+from .schemas import CalibrationRequest, CalibrationResponse
+
+@app.post("/devices/{device_id}/calibrate", response_model=CalibrationResponse)
+async def post_calibration(
+    device_id: str,
+    request: CalibrationRequest,
+    db: Session = Depends(get_db),
+    auth_device_id: str = Depends(get_device_id_from_auth),
+):
+    """
+    POST /devices/:device_id/calibrate
+    Submit calibration offsets (admin or device). Stores offsets in device.calibration_offsets and updates last_calibration_at.
+    """
+    try:
+        # For now, allow device-authenticated calibration or admin callers.
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        device.calibration_offsets = request.offsets
+        device.last_calibration_at = request.calibrated_at or datetime.utcnow()
+        db.commit()
+
+        return CalibrationResponse(
+            device_id=device_id,
+            offsets=device.calibration_offsets or {},
+            last_calibrated_at=device.last_calibration_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving calibration: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 

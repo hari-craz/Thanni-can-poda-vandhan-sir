@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     mqtt_username: Optional[str] = None
     mqtt_password: Optional[str] = None
     mqtt_keepalive: int = 60
+    mqtt_queue_max: int = 1000  # Max in-memory queue size for incoming MQTT messages
     
     # Redis (for rate limiting and caching)
     redis_url: str = "redis://localhost:6379/0"
@@ -52,6 +53,8 @@ class Settings(BaseSettings):
     # Device Configuration
     device_heartbeat_timeout_seconds: int = 120  # Mark as offline if no heartbeat in 2 min
     device_offline_escalation_minutes: list = [5, 15, 60]  # Escalation thresholds
+    # Time drift handling (seconds)
+    max_drift_seconds: int = 300  # If device timestamp differs from server by this much, use server time
     
     # Quality Score Thresholds (Rule-Based)
     quality_score_safe_ph_min: float = 6.5
@@ -66,7 +69,20 @@ class Settings(BaseSettings):
     alert_threshold_warning: int = 50
     alert_threshold_critical: int = 30
     alert_threshold_emergency: int = 10
-    
+
+    # Notifications
+    notification_cooldown_minutes: int = 10  # dedupe: max 1 notification per device per this many minutes per severity
+    notification_email_from: str = "no-reply@hydronix.local"
+    notification_email_to: str = "ops@hydronix.local"  # single admin email; can be expanded
+    smtp_host: Optional[str] = None
+    smtp_port: int = 25
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
+
+    # EMA smoothing for noisy sensors
+    smoothing_enabled: bool = True
+    smoothing_alpha: float = 0.3  # EMA alpha (0-1). Higher = faster response
+
     # ML Service (Phase 2+)
     ml_service_enabled: bool = False
     ml_service_url: str = "http://ml-service:8000"
@@ -80,6 +96,14 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"  # development, staging, production
     
+    # Admin user for OAuth2 (development default)
+    admin_username: str = "admin"
+    admin_password: str = "admin"  # change in production via env
+
+    # Logging / ELK
+    log_to_elastic: bool = False
+    elastic_url: Optional[str] = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

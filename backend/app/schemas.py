@@ -35,6 +35,7 @@ class SensorDataIngestionRequest(BaseModel):
     flow_rate: float = Field(..., ge=0, le=10000)
     timestamp: datetime
     seq_no: Optional[int] = Field(None, ge=0)
+    device_reset_count: Optional[int] = Field(0, ge=0)
     raw_ph: Optional[float] = None
 
     @validator('device_id')
@@ -141,6 +142,40 @@ class DeviceProvisionResponse(BaseModel):
     setup_url: str
 
 
+# ============================================================================
+# FIRMWARE / OTA SCHEMAS
+# ============================================================================
+
+class FirmwareUploadRequest(BaseModel):
+    """POST /devices/:device_id/firmware - metadata for OTA update."""
+    version: str = Field(..., min_length=1)
+    url: str = Field(..., min_length=5)
+    signature: Optional[str] = None
+    release_notes: Optional[str] = None
+
+
+class FirmwareInfoResponse(BaseModel):
+    """Response describing latest firmware metadata."""
+    device_id: str
+    version: str
+    url: str
+    signature: Optional[str]
+    uploaded_at: datetime
+    release_notes: Optional[str]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "version": "1.2.3",
+                "url": "https://cdn.example.com/firmware/hydro_1_2_3.bin",
+                "signature": None,
+                "uploaded_at": "2026-06-15T12:00:00Z",
+                "release_notes": "Bug fixes and stability improvements"
+            }
+        }
+
+
 class KeyRotationResponse(BaseModel):
     """Response for POST /devices/:device_id/keys/rotate."""
     new_key: str
@@ -241,6 +276,27 @@ class CalibrationStatusResponse(BaseModel):
     calibration_due_in_days: Optional[int]
     needs_calibration: bool
     calibration_overdue: bool
+
+
+class CalibrationRequest(BaseModel):
+    """POST /devices/:device_id/calibrate - submit calibration offsets."""
+    offsets: Dict[str, float]  # e.g., {"ph": -0.05, "tds": 2}
+    calibrated_at: Optional[datetime] = None
+
+
+class CalibrationResponse(BaseModel):
+    device_id: str
+    offsets: Dict[str, float]
+    last_calibrated_at: Optional[datetime]
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "offsets": {"ph": -0.05},
+                "last_calibrated_at": "2026-06-15T12:00:00Z"
+            }
+        }
 
 
 class SystemStatusResponse(BaseModel):

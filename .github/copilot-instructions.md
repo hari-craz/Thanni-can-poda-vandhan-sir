@@ -8,7 +8,17 @@
 - **Setup**: `python -m venv .venv && .\.venv\Scripts\activate && pip install -r backend/requirements.txt`
 - **Run locally**: `uvicorn backend.app.main:app --reload` (or `python -m uvicorn backend.app.main:app --reload`)
 - **Run with Docker**: `docker-compose up --build` (starts backend, db, ml-service)
-- **Test single endpoint**: `curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d '{"device_id":"HYDRO_001","data":{"ph":7.2,"turbidity":3.1}}'`
+
+- **Run test suite (pytest)**:
+  - Install test deps: `pip install -r backend/requirements-test.txt`
+  - Run all tests: `pytest -q backend/tests`
+  - Run single test file: `pytest -q backend/tests/test_quality_score.py`
+  - Run a single test case or test method: `pytest -q backend/tests/test_quality_score.py::TestQualityScoring::test_perfect_water_quality`
+
+- **Standalone test runner**: `python run_backend_tests.py` — quick import/behavior checks used by maintainers and CI.
+  - Note: GitHub Actions runs a quick import test in `.github/workflows/backend-ci.yml` (checks `import backend.app.main`).
+
+- **Test single endpoint (manual)**: `curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d '{"device_id":"HYDRO_001","data":{"ph":7.2,"turbidity":3.1}}'`
 
 ### ML Model (Python/scikit-learn/XGBoost)
 - **Setup**: `pip install -r ML-Model/requirements.txt`
