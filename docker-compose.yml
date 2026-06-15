@@ -81,3 +81,5 @@ services:
 
 volumes:
   db_data:
+  redis_data:
+  mqtt_data:
