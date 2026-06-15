@@ -28,6 +28,7 @@ services:
 
   ml-service:
     build: ./ml-service
+    image: ghcr.io/hari-craz/hydronix-ml-service:latest
     ports:
       - "8001:8000"
     depends_on:
@@ -44,6 +45,7 @@ services:
 
   backend:
     build: ./backend
+    image: ghcr.io/hari-craz/hydronix-backend:latest
     depends_on:
       - db
       - ml-service
