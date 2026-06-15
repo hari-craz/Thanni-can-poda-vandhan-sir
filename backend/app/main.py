@@ -53,12 +53,24 @@ def predict(payload: SensorPayload):
     try:
         # create single-row DataFrame from payload.data
         df = pd.DataFrame([payload.data])
-        # Ensure column order and missing columns handled by preprocessor
-        X = app.state.preprocessor.transform(df)
+        if getattr(app.state, 'preprocessor', None):
+            X = app.state.preprocessor.transform(df)
+        else:
+            # Fallback: align to model's expected feature names and simple impute
+            feature_names = getattr(app.state.model, 'feature_names_in_', None)
+            if feature_names is None:
+                raise HTTPException(status_code=503, detail='Model feature names unknown')
+            row = {col: payload.data.get(col, np.nan) for col in feature_names}
+            df2 = pd.DataFrame([row], columns=feature_names)
+            # simple impute: fill numeric NaNs with 0
+            df2 = df2.fillna(0)
+            X = df2.values
         proba = app.state.model.predict_proba(X)
         score = float(proba[0, 1])
         pred = int(score >= 0.5)
         return {'prediction': pred, 'score': score}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
