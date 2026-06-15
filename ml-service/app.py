@@ -49,6 +49,30 @@ MODEL_LOADED.set(1 if model is not None else 0)
 PREPROCESSOR_LOADED.set(1 if preprocessor is not None else 0)
 
 from fastapi import Request
+import sqlite3
+from datetime import datetime
+
+# Initialize persisted feedback DB
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'feedback.db'))
+try:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    cur = conn.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    device_id TEXT,
+                    timestamp TEXT,
+                    prediction INTEGER,
+                    true_label INTEGER,
+                    created_at TEXT,
+                    UNIQUE(device_id, timestamp)
+                )''')
+    conn.commit()
+    print('ML service: feedback DB initialized at', DB_PATH)
+except Exception as e:
+    conn = None
+    print('ML service: feedback DB init error:', e)
 
 # simple API key auth dependency
 async def require_api_key(request: Request):
@@ -102,21 +126,45 @@ async def predict(payload: SensorPayload, request: Request):
 
 @app.post('/feedback')
 async def feedback(item: Dict[str, Any], request: Request):
-    """Accepts {'device_id','timestamp','prediction','true_label'} to log accuracy."""
-    # optional auth
+    """Accepts {'device_id','timestamp','prediction','true_label'} to log accuracy.
+    Stores feedback in SQLite under ml-service/data/feedback.db and avoids duplicates by (device_id,timestamp).
+    Requires API key if ML_SERVICE_API_KEY set.
+    """
+    # auth
     if ML_API_KEY:
         key = request.headers.get('x-api-key', '')
         if key != ML_API_KEY:
             raise HTTPException(status_code=401, detail='Unauthorized')
+    # validate payload
     try:
-        pred = int(item.get('prediction'))
-        true = int(item.get('true_label'))
-        FEEDBACK_TOTAL.inc()
-        if pred == true:
-            FEEDBACK_CORRECT.inc()
-        return {'status': 'ok'}
+        device_id = str(item.get('device_id'))
+        timestamp = str(item.get('timestamp')) if item.get('timestamp') is not None else datetime.utcnow().isoformat()
+        prediction = int(item.get('prediction'))
+        true_label = int(item.get('true_label'))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f'Invalid payload: {e}')
+
+    # persist with dedup (UNIQUE(device_id,timestamp))
+    if conn is None:
+        # still increment Prometheus counters for observability
+        FEEDBACK_TOTAL.inc()
+        if prediction == true_label:
+            FEEDBACK_CORRECT.inc()
+        return {'status': 'ok', 'persisted': False}
+    try:
+        cur = conn.cursor()
+        cur.execute('INSERT OR IGNORE INTO feedback (device_id, timestamp, prediction, true_label, created_at) VALUES (?, ?, ?, ?, ?)',
+                    (device_id, timestamp, prediction, true_label, datetime.utcnow().isoformat()))
+        inserted = cur.rowcount
+        conn.commit()
+        FEEDBACK_TOTAL.inc()
+        if prediction == true_label:
+            FEEDBACK_CORRECT.inc()
+        if inserted == 0:
+            return {'status': 'duplicate', 'persisted': False}
+        return {'status': 'ok', 'persisted': True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/metrics')
 def metrics():
