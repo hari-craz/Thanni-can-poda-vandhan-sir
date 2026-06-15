@@ -54,7 +54,13 @@ async def predict(payload: SensorPayload):
     ml_url = app.state.ml_service_url if hasattr(app.state, 'ml_service_url') else 'http://ml-service:8000'
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.post(f"{ml_url}/predict", json=payload.dict())
+            # pydantic model may have datetime; serialize safely
+            body = payload.dict()
+            if isinstance(body.get('timestamp', None), (bytes, bytearray)):
+                body['timestamp'] = str(body['timestamp'])
+            elif body.get('timestamp', None) is not None:
+                body['timestamp'] = str(body['timestamp'])
+            resp = await client.post(f"{ml_url}/predict", json=body)
             resp.raise_for_status()
             return resp.json()
     except httpx.HTTPStatusError as e:
