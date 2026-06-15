@@ -6,7 +6,7 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional, List
-from fastapi import FastAPI, Depends, HTTPException, Header, Request, Query
+from fastapi import FastAPI, Depends, HTTPException, Header, Request, Query, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -23,6 +23,7 @@ from .schemas import (
     DeviceProvisionResponse,
     FirmwareUploadRequest,
     FirmwareInfoResponse,
+    FirmwareStatusRequest,
     AlertAcknowledgementRequest,
     KeyRotationRequest,
     KeyRotationResponse,
@@ -42,7 +43,7 @@ from .schemas import (
 import httpx
 from .database import (
     Device, User, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
-    get_db, init_db
+    get_db, init_db, Firmware
 )
 from .auth import validate_api_key, create_api_key_for_device, rotate_api_key
 from .quality_score import QualityScorer, AlertManager
@@ -813,32 +814,238 @@ async def upload_firmware_metadata(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/devices/{device_id}/firmware/latest", response_model=FirmwareInfoResponse)
-async def get_latest_firmware(device_id: str, db: Session = Depends(get_db)):
-    """Return the latest known firmware metadata for the device (from AuditLog)."""
+@app.post("/devices/firmware/upload", response_model=FirmwareInfoResponse)
+async def upload_firmware(
+    request: Request,
+    device_id: str = Form(...),
+    version: str = Form(...),
+    signature: Optional[str] = Form(None),
+    release_notes: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin),
+):
+    """
+    POST /devices/firmware/upload (Admin Only)
+    Uploads signed compiled .bin update to MinIO object store and registers it.
+    """
     try:
-        rec = db.query(AuditLog).filter(
-            AuditLog.resource_type == "device",
-            AuditLog.resource_id == device_id,
-            AuditLog.action == "firmware_upload"
-        ).order_by(AuditLog.created_at.desc()).first()
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
 
-        if not rec:
-            raise HTTPException(status_code=404, detail="No firmware metadata found")
+        content = await file.read()
+        file_size = len(content)
 
-        details = rec.details or {}
-        return FirmwareInfoResponse(
+        # Initialize MinIO client
+        from minio import Minio
+        import io
+        try:
+            minio_client = Minio(
+                f"{settings.minio_endpoint}:{settings.minio_port}",
+                access_key=settings.minio_access_key,
+                secret_key=settings.minio_secret_key,
+                secure=False
+            )
+            if not minio_client.bucket_exists(settings.minio_bucket):
+                minio_client.make_bucket(settings.minio_bucket)
+        except Exception as e:
+            logger.error(f"MinIO init failed: {e}")
+            raise HTTPException(status_code=500, detail=f"S3/MinIO service is unavailable: {e}")
+
+        # Upload binary
+        object_name = f"firmware/{device_id}/{version}/{file.filename}"
+        try:
+            minio_client.put_object(
+                settings.minio_bucket,
+                object_name,
+                io.BytesIO(content),
+                file_size,
+                content_type="application/octet-stream"
+            )
+        except Exception as e:
+            logger.error(f"MinIO put_object failed: {e}")
+            raise HTTPException(status_code=500, detail=f"S3/MinIO upload failed: {e}")
+
+        # Add to database
+        fw = Firmware(
             device_id=device_id,
-            version=details.get("version"),
-            url=details.get("url"),
-            signature=details.get("signature"),
-            uploaded_at=rec.created_at,
-            release_notes=details.get("release_notes"),
+            version=version,
+            url=object_name,
+            signature=signature,
+            release_notes=release_notes,
+            uploaded_at=datetime.utcnow()
+        )
+        db.add(fw)
+        
+        # Add AuditLog entry
+        audit = AuditLog(
+            action="firmware_bin_upload",
+            resource_type="device",
+            resource_id=device_id,
+            details={
+                "version": version,
+                "url": object_name,
+                "signature": signature,
+                "file_size": file_size,
+            }
+        )
+        db.add(audit)
+        db.commit()
+        db.refresh(fw)
+
+        download_url = f"{str(request.base_url).rstrip('/')}/devices/{device_id}/firmware/download?version={version}"
+        return FirmwareInfoResponse(
+            device_id=fw.device_id,
+            version=fw.version,
+            url=download_url,
+            signature=fw.signature,
+            uploaded_at=fw.uploaded_at,
+            release_notes=fw.release_notes
         )
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error fetching latest firmware metadata: {e}")
+        logger.error(f"Error uploading firmware file: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/devices/{device_id}/firmware/latest", response_model=FirmwareInfoResponse)
+async def get_latest_firmware(
+    request: Request,
+    device_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    GET /devices/{device_id}/firmware/latest
+    Consults the database for the newest binary version.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        fw = db.query(Firmware).filter(
+            Firmware.device_id == device_id
+        ).order_by(Firmware.uploaded_at.desc()).first()
+
+        if not fw:
+            raise HTTPException(status_code=404, detail="No firmware found for this device")
+
+        download_url = f"{str(request.base_url).rstrip('/')}/devices/{device_id}/firmware/download?version={fw.version}"
+        return FirmwareInfoResponse(
+            device_id=fw.device_id,
+            version=fw.version,
+            url=download_url,
+            signature=fw.signature,
+            uploaded_at=fw.uploaded_at,
+            release_notes=fw.release_notes
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching latest firmware: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/devices/{device_id}/firmware/download")
+async def download_firmware(
+    device_id: str,
+    version: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    GET /devices/{device_id}/firmware/download
+    Streams compiled firmware binary directly from MinIO object store.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        if version:
+            fw = db.query(Firmware).filter(
+                Firmware.device_id == device_id,
+                Firmware.version == version
+            ).first()
+        else:
+            fw = db.query(Firmware).filter(
+                Firmware.device_id == device_id
+            ).order_by(Firmware.uploaded_at.desc()).first()
+
+        if not fw:
+            raise HTTPException(status_code=404, detail="Firmware binary not found")
+
+        # Initialize MinIO client
+        from minio import Minio
+        try:
+            minio_client = Minio(
+                f"{settings.minio_endpoint}:{settings.minio_port}",
+                access_key=settings.minio_access_key,
+                secret_key=settings.minio_secret_key,
+                secure=False
+            )
+            data = minio_client.get_object(settings.minio_bucket, fw.url)
+        except Exception as e:
+            logger.error(f"MinIO get_object failed for {fw.url}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to retrieve binary from storage")
+
+        from fastapi.responses import StreamingResponse
+        filename = fw.url.split('/')[-1]
+        return StreamingResponse(
+            data,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading firmware: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/devices/{device_id}/firmware/status")
+async def report_firmware_status(
+    device_id: str,
+    request: FirmwareStatusRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    POST /devices/{device_id}/firmware/status
+    Report OTA results and active version. Updates device's firmware_version upon success.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Record update status in audit log
+        audit = AuditLog(
+            action="firmware_status",
+            resource_type="device",
+            resource_id=device_id,
+            details={
+                "status": request.status,
+                "version": request.version,
+                "error_message": request.error_message,
+            }
+        )
+        db.add(audit)
+
+        if request.status == "success":
+            device.firmware_version = request.version
+            logger.info(f"Device {device_id} successfully upgraded to version {request.version}")
+        else:
+            logger.warning(f"Device {device_id} failed firmware upgrade to {request.version}: {request.error_message}")
+
+        db.commit()
+        return {"ok": True, "status": request.status, "version": request.version}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating firmware status: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 

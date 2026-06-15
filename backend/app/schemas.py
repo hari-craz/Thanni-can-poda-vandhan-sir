@@ -176,6 +176,14 @@ class FirmwareInfoResponse(BaseModel):
         }
 
 
+class FirmwareStatusRequest(BaseModel):
+    """POST /devices/:device_id/firmware/status - ESP32 OTA status report."""
+    status: str = Field(..., pattern="^(success|failed)$")
+    version: str = Field(..., min_length=1)
+    error_message: Optional[str] = None
+
+
+
 class KeyRotationResponse(BaseModel):
     """Response for POST /devices/:device_id/keys/rotate."""
     new_key: str
