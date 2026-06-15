@@ -51,8 +51,11 @@ async def predict(payload: SensorPayload, request: Request):
             raise HTTPException(status_code=401, detail='Unauthorized')
     try:
         df = pd.DataFrame([payload.data])
+        print('ml-service request columns:', df.columns.tolist())
+        print('model.feature_names_in_:', getattr(model, 'feature_names_in_', None))
         if preprocessor is not None:
             X = preprocessor.transform(df)
+            print('preprocessor produced array shape', getattr(X,'shape',None))
         else:
             feature_names = getattr(model, 'feature_names_in_', None)
             if feature_names is None:
@@ -62,6 +65,7 @@ async def predict(payload: SensorPayload, request: Request):
             # simple impute: fill numeric NaNs with median-like 0
             df2 = df2.fillna(0)
             X = df2.values
+            print('fallback produced array shape', getattr(X,'shape',None))
         proba = model.predict_proba(X)
         score = float(proba[0, 1])
         pred = int(score >= 0.5)
