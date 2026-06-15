@@ -27,6 +27,19 @@ def engine():
     Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def override_session_local(monkeypatch, engine):
+    """Override SessionLocal with a testing sessionmaker bound to the test engine."""
+    from sqlalchemy.orm import sessionmaker
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
+    import app.database
+    import app.main
+    monkeypatch.setattr(app.database, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(app.main, "SessionLocal", TestingSessionLocal)
+
+
 @pytest.fixture(scope="function")
 def db_session(engine):
     """Create a fresh database session for each test."""
