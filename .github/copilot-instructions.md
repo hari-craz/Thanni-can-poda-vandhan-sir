@@ -1,120 +1,190 @@
 # Copilot instructions — Hydronix (Thanni-can-poda-vandhan-sir)
 
-Purpose
-- Provide concise guidance for future Copilot sessions working on this repository.
+**Purpose**: Provide concise guidance for future Copilot sessions working on this repository.
 
-1) Build / test / lint commands
-- No explicit build/test/lint scripts or manifests (package.json, pyproject.toml, Makefile, etc.) were found in the repo root.
-- The repo contains design and implementation specs only. When implementing a backend or frontend, prefer these common commands as appropriate:
-  - Node backend (if chosen): `npm install`, `npm run dev` (or `node index.js`), `npm test` (or `npm run test`), `npm run lint` if added.
-  - Python backend (if chosen): `python -m venv .venv && .\.venv\Scripts\activate`, `pip install -r requirements.txt`, `pytest -k <pattern>`.
-  - Frontend (React/Next): `npm install`, `npm run dev`, `npm run build`, `npm run test`.
-- If you add project manifests (package.json, pyproject.toml, Makefile), add explicit commands here so Copilot can use them.
+## 1) Build, test, and lint commands
 
-2) High-level architecture (short)
-- Three main components documented under /docs:
-  1. Edge (ESP32 devices): collects pH, temperature, turbidity, TDS, flow; hosts a local WiFi setup portal (`Hydronix_Setup`) and buffers to SD when offline.
-  2. Backend Server: ingests telemetry (MQTT preferred, HTTP fallback), persists sensor data (Postgres or InfluxDB suggested), provides REST APIs for devices and dashboard.
-  3. Frontend Dashboard: web UI (React/Next recommended) showing real-time and historical charts, device status, alerts and maps.
-- Key integration points: MQTT broker or HTTP POST /data endpoint; devices include device_id and timestamp in JSON payloads; backend exposes `/devices`, `/data/:device_id`, `/status` as described in docs/Backend-Spec.md.
-- See docs/Architecture-Overview.md, Backend-Spec.md, Frontend-Spec.md, and ESP32-Firmware-Spec.md for API shapes, ER diagram, and flows.
+### Backend (Python/FastAPI)
+- **Setup**: `python -m venv .venv && .\.venv\Scripts\activate && pip install -r backend/requirements.txt`
+- **Run locally**: `uvicorn backend.app.main:app --reload` (or `python -m uvicorn backend.app.main:app --reload`)
+- **Run with Docker**: `docker-compose up --build` (starts backend, db, ml-service)
+- **Test single endpoint**: `curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d '{"device_id":"HYDRO_001","data":{"ph":7.2,"turbidity":3.1}}'`
 
-3) Key conventions and repository-specific patterns
-- Device identity: device IDs use the HYDRO_### pattern (example: `HYDRO_001`). Keep device_id stable and unique.
-- Telemetry format: JSON with a `timestamp` string in ISO 8601 and numeric fields for `ph`, `turbidity`, `tds`, `temperature`, `flow_rate`. Example in docs/Architecture-Overview.md.
-- Communication preference: MQTT is the preferred transport; HTTP is allowed as fallback. Implement retry/backoff and offline buffering on the device side (SD card) — sync buffered data when connection restored.
-- Security: Devices may use an API key per device for authentication. Protect ingestion endpoints and validate device identity server-side.
-- Local device setup: ESP32 acts as hotspot named `Hydronix_Setup` and exposes a config portal at `192.168.4.1` for WiFi, server, port, device_id, API key.
-- Data modeling: Docs recommend a Devices table and a Sensor Data table (device_id, timestamp, ph, turbidity, tds, temperature, flow_rate). Consult docs/ER-Diagram.md and Backend-Spec.md for column names and constraints.
+### ML Model (Python/scikit-learn/XGBoost)
+- **Setup**: `pip install -r ML-Model/requirements.txt`
+- **Run Phase C (best model, ~68% accuracy)**: `python ML-Model/phase_c_stacking.py` (3-5 minutes)
+- **Run Phase G (full tuning)**: `python ML-Model/phase_g_optuna_stack.py --trials_xgb 80 --trials_lgb 60` (20+ minutes)
+- **Quick diagnostics**: `python ML-Model/phase_g_optuna_stack.py --trials_xgb 20 --trials_lgb 15` (5 minutes)
+- **Run NN meta-learner**: `python ML-Model/colab_nn_meta.py` (best on Colab GPU)
+- **View latest report**: `python -c "import glob,json; print(open(sorted(glob.glob('ML-Model/logs/*phase_*.json') )[-1]).read())"`
 
-4) Useful doc locations (quick pointers)
-- README.md — project overview and one-line pitch
-- docs/Architecture-Overview.md — system diagrams and component interactions
-- docs/Backend-Spec.md — API endpoints, payload examples, DB suggestions
-- docs/ESP32-Firmware-Spec.md — device firmware responsibilities and setup portal details
-- docs/Frontend-Spec.md — dashboard features and UI expectations
-- docs/ER-Diagram.md, docs/Data-Flow-Diagram.md — DB and flow diagrams
+### Frontend (if/when implemented)
+- **Setup**: `npm install` in frontend directory
+- **Run**: `npm run dev` (development) or `npm start` (production)
+- **Build**: `npm run build`
+- **Test**: `npm test` (if added)
 
-5) When working as Copilot in this repo
-- Prefer reading docs/* before making API or data-modeling changes.
-- If adding code, update README and the relevant spec file in docs/ so future sessions can find the contract.
-- Add manifest files (package.json / pyproject.toml / Makefile) at repo root and update this Copilot instructions file with exact commands.
+## 2) High-level architecture
 
-6) Other AI assistant configs
-- No CLAUDE.md, AGENTS.md, .cursorrules, .windsurfrules, or AIDER/CLINE conventions detected. If such files are added, merge important directives into this file.
+**Hydronix** is a 4-layer IoT water monitoring system with 3-phase implementation roadmap:
 
-7) ML Anomaly Detection (Phase 2 — Future Enhancement)
-- **Status**: Planned for future implementation. Current exploratory work shows ~65% accuracy on 30k sample dataset using XGBoost and other models.
-- **Why 65% is not ready**: For a safety-critical water monitoring system, this accuracy is insufficient for autonomous alerting (35% error rate = 1 in 3 decisions wrong). False negatives (missing real issues) pose health/safety risks.
-- **Recommended approach**: Hybrid system where ML complements, not replaces, the rule-based logic (see Backend-Spec.md, Quality Score Logic section).
-  - **Primary layer**: Deterministic rule-based anomaly detection (pH, turbidity, TDS thresholds).
+### System Layers
+1. **Edge (ESP32 devices)**: Collect pH, temperature, turbidity, TDS, flow; host local WiFi setup portal (`Hydronix_Setup` at `192.168.4.1`); buffer data to SD card when offline.
+2. **Backend (FastAPI + PostgreSQL)**: Ingest telemetry via MQTT (preferred) or HTTP POST `/ingest`; store sensor data; compute rule-based quality scores; serve REST APIs; integrate ML for anomaly detection (Phase 2+).
+3. **Frontend (React/Next)**: Web dashboard showing real-time and historical charts, device status, water quality scores, alerts, and optional map view.
+4. **ML/Anomaly Detection**: Stacking ensemble (Phase C: 68% accuracy, Phase G tuning: TBD) for anomaly flagging. **Status**: Research phase; not ready for primary alerting yet. Use rule-based system as primary layer, ML as secondary enrichment.
+
+### Integration Points
+- **Device → Backend**: JSON payloads with `device_id` (format: `HYDRO_###`), timestamp (ISO 8601), and sensor readings (ph, turbidity, tds, temperature, flow_rate).
+- **Backend → DB**: SQLAlchemy ORM; Devices table (device_id PK, name, location, status, last_seen); Sensor Data table (id, device_id FK, all 5 readings, timestamp).
+- **Backend → Frontend**: WebSocket for real-time updates; REST endpoints for historical queries.
+- **Backend → ML Service**: HTTP POST to ml-service:8000 with sensor vector; returns anomaly score + confidence.
+
+### Data Flow
+```
+ESP32 (sensor readings)
+  ↓ MQTT / HTTP POST
+Backend /ingest endpoint
+  ↓ Insert + Rule-based scoring
+PostgreSQL (devices, sensor_data tables)
+  ↓ Query + ML enrichment
+ML Service (Phase C stacking model)
+  ↓ Return anomaly flags + confidence
+Dashboard WebSocket/REST
+  ↓ Visualize
+User (charts, alerts, status)
+```
+
+### Offline-First Design
+- ESP32 stores readings on SD card (72-hour buffer).
+- On reconnection, device syncs buffered data (no loss).
+- Backend stores all data; dashboard shows "offline" status for unreachable devices.
+
+## 3) Key conventions and repository-specific patterns
+
+### Device Identity & Telemetry
+- **Device ID format**: `HYDRO_###` (e.g., `HYDRO_001`, `HYDRO_042`). Keep device_id stable and unique; used as primary key in Devices table.
+- **Telemetry JSON payload**:
+  ```json
+  {
+    "device_id": "HYDRO_001",
+    "ph": 7.2,
+    "turbidity": 3.1,
+    "tds": 120,
+    "temperature": 25.0,
+    "flow_rate": 10.5,
+    "timestamp": "2026-04-09T10:30:00Z"
+  }
+  ```
+- **All timestamps** must be ISO 8601 (UTC preferred).
+
+### Communication & Retry Strategy
+- **Primary transport**: MQTT (HiveMQ broker at broker.hivemq.com:1883 or on-prem EMQX cluster).
+- **Fallback transport**: HTTP POST to `/ingest` endpoint.
+- **Retry/Backoff**: Exponential backoff (max 30s). If MQTT unavailable, switch to HTTP. Buffer on SD card if both fail.
+- **Authentication**: API key per device (stored in backend, validated on POST).
+
+### Backend Code Structure
+- `backend/app/main.py` — FastAPI app, route definitions.
+- `backend/app/database.py` — SQLAlchemy setup, connection pooling.
+- `backend/app/schemas.py` — Pydantic models for request/response validation.
+- `backend/app/ingest.py` — MQTT subscriber + HTTP handler logic.
+- `backend/app/config.py` — Environment config (DATABASE_URL, MQTT_BROKER, etc.).
+- `backend/requirements.txt` — Python dependencies (FastAPI, SQLAlchemy, psycopg2, paho-mqtt, scikit-learn, xgboost, joblib, numpy, pandas).
+
+### ML Model Artifacts & Naming
+- **Models directory**: `ML-Model/models/` contains `.pkl` files (RandomForest, XGBoost, GradientBoosting, IsolationForest, Preprocessor).
+- **Log naming**: `phase_*_report_YYYYMMDD_HHMMSS.json` (timestamps help identify runs).
+- **Dataset**: `ML-Model/balanced_water_potability_3000.csv` (3000 balanced samples, 9 features, binary target).
+- **Preprocessor**: Always stored in `models/Preprocessor.pkl` (handles feature scaling + imputation; load before prediction).
+- **Randomness**: Scripts use `RANDOM_STATE=42` constant; avoid passing it twice to XGBoost.
+- **Imputation method**: IterativeImputer (MICE) is default; KNNImputer used in alternatives.
+
+### Database Schema
+- **Devices table**: `device_id` (PK), `name`, `location`, `status` (online/offline), `last_seen`, `created_at`.
+- **Sensor Data table**: `id` (PK), `device_id` (FK), `ph`, `turbidity`, `tds`, `temperature`, `flow_rate`, `timestamp`, `quality_score`, `anomaly_flags` (JSONB, Phase 2+).
+- **ML Anomalies table** (optional, Phase 2+): `id`, `device_id`, `timestamp`, `ml_score`, `confidence`, `reasoning`.
+- See docs/ER-Diagram.md for detailed schema.
+
+## 4) ML Model Status & When to Use
+
+### Current State (as of 2026-06-14)
+- **Best accuracy**: 68.0% (Phase C stacking ensemble, 7 base learners).
+- **Use case**: Research, offline analysis, enriching rule-based alerts (not primary alerting).
+- **Status**: Below 85% target; not production-ready for autonomous safety-critical decisions.
+
+### Why Not Use for Primary Alerts
+- 32% error rate = 1 in 3 decisions wrong; false negatives (missing real issues) pose safety risks in water monitoring.
+- Recommended approach: **Hybrid system**.
+  - **Primary layer**: Rule-based anomaly detection (pH, turbidity, TDS thresholds).
   - **Secondary layer**: ML model flags suspicious patterns, enriches alerts with confidence scores.
-  - **Action threshold**: Only escalate alerts when rule violation + ML confidence (>80%) + optionally cross-device consensus.
-- **Before Phase 2 implementation**:
-  1. Improve accuracy to 85%+ on validation set. Investigate: data quality, class imbalance, feature engineering (rate-of-change, cross-sensor correlation), time-series context (LSTM/Temporal CNN).
-  2. Use unsupervised methods first (Isolation Forest, Local Outlier Factor) for outlier detection — less accuracy risk.
-  3. Add `anomaly_flags` JSONB field in `sensor_data` table (already in schema) to store model confidence and reasoning.
-  4. Update Backend-Spec.md with `/anomalies` endpoint returning ML scores alongside rule-based flags.
-- **Dataset considerations**: Document train/val/test split, label methodology, sensor failure handling, and retraining strategy for model drift.
+  - **Action threshold**: Escalate only when rule violation + ML confidence (>80%) + optionally cross-device consensus.
 
-Maintainers: add any missing commands or conventions directly to this file to help future Copilot sessions.
+### Improvement Roadmap (4-8 weeks to 85%+)
+- **Phase A (Quick wins, 2-3 days)**: KNN imputation (+2-5%), feature engineering (+5-10%), outlier removal (+2-3%). Target: 70-75%.
+- **Phase B (Optimization, 1 week)**: GridSearchCV tuning (+3-5%), feature selection (+1-3%), new algorithms (MLP, SVM, +5-10%). Target: 75-80%.
+- **Phase C (Production, 2 weeks)**: Collect 500-1000 real production samples, get domain expert labels, retrain, validate. Target: 85%+.
+
+### Running ML Experiments
+1. **For quick feedback loop**: Run Phase C stacking (3-5 min, ~68% accuracy).
+2. **For hyperparameter tuning**: Run Phase G with smaller trials (`--trials_xgb 20 --trials_lgb 15`, 5 min).
+3. **For heavy experiments**: Run on Colab GPU (Phase G full: 20+ min, or NN meta-learner).
+4. **For diagnosing accuracy plateaus**: Check SHAP importance, run sulfate ablation test.
+
+### Integrating ML into Backend
+- Import and initialize `MLPredictor` class from `complete_model.py` or best-performing phase script.
+- Call `.predict(sensor_vector)` → returns `{"is_anomaly": bool, "confidence": float, "reasoning": str}`.
+- Load preprocessor first: `joblib.load('models/Preprocessor.pkl')`.
+- Don't forget to validate all 9 features are present in input.
+
+## 5) Useful documentation pointers
+
+### Quick Reads (for current work)
+- **README.md** — One-line pitch, system overview, use cases.
+- **PROJECT-STATUS.md** — Current completion status, ML metrics, team next steps.
+- **docs/Implementation-Roadmap.md** — 3-phase timeline (MVP/Phase 1, Production/Phase 2, Scale/Phase 3).
+
+### Architecture & Design
+- **docs/Architecture-Overview.md** — 4-layer system design, data flow, failure modes.
+- **docs/Backend-Spec.md** — 11 API endpoints, database schema, security (API keys, rate limiting, OAuth2).
+- **docs/Frontend-Spec.md** — 6 dashboard screens, WebSocket real-time, RBAC roles.
+- **docs/ESP32-Firmware-Spec.md** — 7 FreeRTOS tasks, setup portal, offline buffering, OTA updates.
+
+### Data & ML
+- **docs/ER-Diagram.md** — Full database schema with column types and constraints.
+- **docs/Data-Flow-Diagram.md** — System data flows and failure scenarios.
+- **ML-Model/README.md** — ML overview, dataset, model performance metrics.
+- **ML-Model/TRAINING-RESULTS.md** — Detailed training analysis, improvement path.
+- **ML-Model/ML-INTEGRATION-GUIDE.md** — How to integrate ML into backend, API contract.
+
+### Critical Decisions & Issue Resolution
+- **docs/Known-Issues-and-Solutions.md** — All 12 critical issues identified and solutions applied.
+- **docs/Security-Reliability-Deployment.md** — HA, backups, compliance, SLA requirements.
+- **docs/End-to-End-Workflow.md** — 9 failure scenarios and system response.
+
+## 6) When working as Copilot in this repo
+
+1. **For API/schema changes**: Read `Backend-Spec.md` first; ensure payloads match telemetry JSON format.
+2. **For database changes**: Consult `ER-Diagram.md` and ensure Devices + Sensor Data tables match spec.
+3. **For ML integration**: Review `ML-Model/ML-INTEGRATION-GUIDE.md`; use preprocessor before calling model.
+4. **For frontend work**: Start with `Frontend-Spec.md` (6 screens, WebSocket, RBAC, responsive design).
+5. **For firmware work**: See `ESP32-Firmware-Spec.md` (7 FreeRTOS tasks, WiFi setup, SD buffering).
+6. **Adding new code**: Update README.md (or relevant spec file) with new endpoints/features so future sessions find the contract.
+
+## 7) Repository conventions (key)
+
+- **ML data location**: `ML-Model/balanced_water_potability_3000.csv` (keep larger datasets out of git).
+- **Docker setup**: `docker-compose up --build` runs: db (Postgres), ml-service (port 8001), backend (port 8000).
+- **Environment variables**: See `backend/app/config.py` for DATABASE_URL, MQTT_BROKER, MQTT_PORT, ML_SERVICE_URL.
+- **Development workflow**: Edit code → rebuild container → test via curl/Postman → commit.
+- **Offline testing**: Use `--offline` flag in device simulators if added; test SD card sync logic.
+
+## 8) Other AI assistant configs
+
+No CLAUDE.md, AGENTS.md, .cursorrules, .windsurfrules, CONVENTIONS.md, or .clinerules detected. If such files are added, important directives will be merged into this file.
 
 ---
 
-(Generated: 2026-06-14)
-(Updated: 2026-06-14 — ML anomaly detection Phase 2 guidance)
-
----
-Addendum — actionable commands & repository-specific run notes
-
-1) Build / install / run (local)
-- Install Python deps for ML folder: python -m pip install -r ML-Model/requirements.txt
-- Run full Phase G (long): python ML-Model/phase_g_optuna_stack.py --trials_xgb 80 --trials_lgb 60
-- Quick Phase G (diagnostic): python ML-Model/phase_g_optuna_stack.py --trials_xgb 20 --trials_lgb 15
-- Run stacking-only (phase C): python ML-Model/phase_c_stacking.py
-- Run NN meta (Colab/local CPU/GPU): python ML-Model/colab_nn_meta.py
-
-2) Colab notes
-- Open ML-Model/Run_PhaseG_Colab.ipynb or Run_NN_Meta_Colab.ipynb. Set Runtime -> GPU (T4), upload ML-Model/* files or mount Drive and copy files into /content/ML-Model.
-- Notebooks move uploaded files into ML-Model automatically and show latest logs in ML-Model/logs.
-
-3) Logs, models and artifacts
-- Reports: ML-Model/logs/*phase_*.json (phase_g_report_YYYYMMDD_HHMMSS.json is final Phase G output).
-- Models: ML-Model/models/*.pkl — canonical inference artifacts live here. Archived artifacts: ML-Model/models/archived_YYYYMMDD_HHMMSS/
-- To view latest report: python -c "import glob,json; print(open(sorted(glob.glob('ML-Model/logs/*phase_g_report*.json') )[-1]).read())"
-
-4) Quick diagnostics (when accuracy stalls)
-- Run SHAP importance: add shap TreeExplainer on RandomForest/XGBoost models saved in ML-Model/models, inspect top 10 features.
-- Sulfate ablation: run phase_e1_mice_stack.py with Sulfate column removed or imputed differently; compare ML-Model/logs outputs.
-
-5) Repository conventions (key)
-- DATA location: ML-Model/balanced_water_potability_3000.csv used for experiments. Keep raw datasets out of git for larger sets.
-- Logs naming: phase_*_report_YYYYMMDD_HHMMSS.json — use timestamp to find runs.
-- Randomness: scripts use RANDOM_STATE=42 constant; avoid passing random_state twice into XGB (patch applied).
-- Imputation: IterativeImputer (MICE) is default; KNNImputer used in alternatives. Preprocessor stored in models/Preprocessor.pkl.
-
-6) Patches & notes for Copilot sessions
-- Patched: phase_g_optuna_stack.py removed duplicate random_state injection; see commit when modifying.
-- Patched: colab_nn_meta.py replaced joblib.dumps/loads with sklearn.clone to support minimal joblib distributions.
-- Heavy experiments: run in Colab GPU for NN meta; use quick/local runs for tuning/debug.
-
-7) AI assistant configs
-- No CLAUDE.md, AGENTS.md, .cursorrules, .windsurfrules, or AIDER/CLINE conventions present. Add to this file if introduced.
-
----
-Checklist — restoring archived models & safe Phase G runs
-
-- Restore archived models (if needed):
-  1. Confirm archive folder: ML-Model/models/archived_YYYYMMDD_HHMMSS
-  2. Move desired files back to models/: Move-Item ML-Model\models\archived_YYYYMMDD_HHMMSS\* ML-Model\models\
-  3. Verify preprocessor and model load: python -c "import joblib; print(joblib.load('ML-Model/models/Preprocessor.pkl'))"
-
-- Safe Phase G run checklist (minimize wasted compute):
-  1. Ensure ML-Model/logs exists and is writable: mkdir -Force ML-Model\logs
-  2. Confirm dataset present: ML-Model/balanced_water_potability_3000.csv
-  3. For long runs use GPU/Colab for NN meta; for base-model Optuna tuning CPU is fine.
-  4. Run quick diagnostic first: python ML-Model/phase_g_optuna_stack.py --trials_xgb 20 --trials_lgb 15
-  5. If diagnostic succeeds, run full: python ML-Model/phase_g_optuna_stack.py --trials_xgb 80 --trials_lgb 60
-  6. After completion, inspect report: ML-Model/logs/phase_g_report_YYYYMMDD_HHMMSS.json
-
-(End of checklist)
+**Generated**: 2026-06-15  
+**Last Updated**: 2026-06-15 — Comprehensive build commands, ML status, and architecture clarity added  
+**Maintainers**: Add any missing commands or conventions directly to this file.
