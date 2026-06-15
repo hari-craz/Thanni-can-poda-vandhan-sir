@@ -23,6 +23,8 @@ try:
 except Exception as e:
     print('ML service: model load error:', e)
 
+import os
+ML_API_KEY = os.environ.get('ML_SERVICE_API_KEY', '')
 try:
     preprocessor = joblib.load('models/Preprocessor.pkl')
     print('ML service: Loaded Preprocessor')
@@ -30,10 +32,23 @@ except Exception as e:
     preprocessor = None
     print('ML service: preprocessor load error:', e)
 
+from fastapi import Request
+
+# simple API key auth dependency
+async def require_api_key(request: Request):
+    key = request.headers.get('x-api-key', '')
+    if ML_API_KEY and key != ML_API_KEY:
+        raise HTTPException(status_code=401, detail='Unauthorized')
+
 @app.post('/predict')
-def predict(payload: SensorPayload):
+async def predict(payload: SensorPayload, request: Request):
     if model is None:
         raise HTTPException(status_code=503, detail='Model not available')
+    # auth
+    if ML_API_KEY:
+        key = request.headers.get('x-api-key', '')
+        if key != ML_API_KEY:
+            raise HTTPException(status_code=401, detail='Unauthorized')
     try:
         df = pd.DataFrame([payload.data])
         if preprocessor is not None:

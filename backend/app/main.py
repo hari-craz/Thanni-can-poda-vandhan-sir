@@ -60,7 +60,12 @@ async def predict(payload: SensorPayload):
                 body['timestamp'] = str(body['timestamp'])
             elif body.get('timestamp', None) is not None:
                 body['timestamp'] = str(body['timestamp'])
-            resp = await client.post(f"{ml_url}/predict", json=body)
+            headers = {}
+            import os
+            api_key = os.environ.get('ML_SERVICE_API_KEY', '')
+            if api_key:
+                headers['x-api-key'] = api_key
+            resp = await client.post(f"{ml_url}/predict", json=body, headers=headers)
             resp.raise_for_status()
             return resp.json()
     except httpx.HTTPStatusError as e:

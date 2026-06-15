@@ -28,7 +28,34 @@ services:
       - "8001:8000"
     depends_on:
       - db
+    environment:
+      ML_SERVICE_API_KEY: "hydronix_local_key"
     volumes:
       - ./ML-Model/models:/app/models:ro
+    healthcheck:
+      test: ["CMD-SHELL","python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+      - ml-service
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://hydronix:hydronix_pass@db:5432/hydronix_db
+      MQTT_BROKER: broker.hivemq.com
+      MQTT_PORT: 1883
+      ML_SERVICE_URL: http://ml-service:8000
+      ML_SERVICE_API_KEY: "hydronix_local_key"
+    volumes:
+      - ./ML-Model/models:/app/models:ro
+    healthcheck:
+      test: ["CMD-SHELL","python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 volumes:
   db_data:
