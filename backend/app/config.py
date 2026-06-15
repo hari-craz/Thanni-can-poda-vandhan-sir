@@ -100,6 +100,21 @@ class Settings(BaseSettings):
     # Admin user for OAuth2 (development default)
     admin_username: str = "admin"
     admin_password: str = "admin"  # change in production via env
+    super_admin_email: str = "superadmin@hydronix.com"
+    super_admin_password: str = "superadmin"
+
+    # Storage paths
+    reports_storage: str = "/storage/hydronix/reports"
+    upload_storage: str = "/storage/hydronix/uploads"
+    log_storage: str = "/storage/hydronix/logs"
+    backup_storage: str = "/storage/hydronix/backups"
+
+    # MinIO
+    minio_endpoint: str = "minio"
+    minio_port: int = 9000
+    minio_access_key: str = "minio_admin"
+    minio_secret_key: str = "minio_admin_secret"
+    minio_bucket: str = "hydronix-bucket"
 
     # Logging / ELK
     log_to_elastic: bool = False

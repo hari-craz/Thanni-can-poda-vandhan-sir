@@ -58,6 +58,7 @@ services:
       MQTT_PORT: 1883
       ML_SERVICE_URL: http://ml-service:8000
       ML_SERVICE_API_KEY: "hydronix_local_key"
+      ML_SERVICE_ENABLED: "true"
     volumes:
       - ./ML-Model/models:/app/models:ro
     healthcheck:

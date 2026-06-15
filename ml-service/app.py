@@ -121,7 +121,33 @@ async def predict(payload: SensorPayload, request: Request):
     REQUEST_COUNT.inc()
     with REQUEST_LATENCY.time():
         try:
-            df = pd.DataFrame([payload.data])
+            # Standardize keys to match model features case-insensitively, including mapping synonyms like 'solids'/'tds' to 'Solids'
+            raw_data = payload.data or {}
+            mapped_data = {}
+            for k, v in raw_data.items():
+                k_lower = k.lower()
+                if k_lower in ('solids', 'tds'):
+                    mapped_data['Solids'] = v
+                elif k_lower == 'ph':
+                    mapped_data['ph'] = v
+                elif k_lower == 'hardness':
+                    mapped_data['Hardness'] = v
+                elif k_lower == 'chloramines':
+                    mapped_data['Chloramines'] = v
+                elif k_lower == 'sulfate':
+                    mapped_data['Sulfate'] = v
+                elif k_lower == 'conductivity':
+                    mapped_data['Conductivity'] = v
+                elif k_lower == 'organic_carbon':
+                    mapped_data['Organic_carbon'] = v
+                elif k_lower == 'trihalomethanes':
+                    mapped_data['Trihalomethanes'] = v
+                elif k_lower == 'turbidity':
+                    mapped_data['Turbidity'] = v
+                else:
+                    mapped_data[k] = v
+
+            df = pd.DataFrame([mapped_data])
             if preprocessor is not None:
                 # ensure columns are in the same order model expects
                 feature_names = getattr(model, 'feature_names_in_', None)
@@ -132,7 +158,7 @@ async def predict(payload: SensorPayload, request: Request):
                 feature_names = getattr(model, 'feature_names_in_', None)
                 if feature_names is None:
                     raise HTTPException(status_code=503, detail='Model feature names unknown')
-                row = {col: payload.data.get(col, np.nan) for col in feature_names}
+                row = {col: mapped_data.get(col, np.nan) for col in feature_names}
                 df2 = pd.DataFrame([row], columns=feature_names)
                 df2 = df2.fillna(0)
                 X = df2.values

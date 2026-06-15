@@ -8,6 +8,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from passlib.context import CryptContext
 from .config import settings
+from sqlalchemy.orm import Session
+from .database import get_db, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -21,35 +23,11 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def authenticate_admin(username: str, password: str) -> Optional[dict]:
-    # In-memory check for role-based credentials.
-    normalized_username = username.lower().strip()
-    
-    # 1. Superadmin check
-    if normalized_username in ["superadmin", "superadmin@hydronix.com"] and password == "superadmin":
-        return {
-            "username": "superadmin@hydronix.com",
-            "role": "superadmin",
-            "name": "Super Administrator"
-        }
-    
-    # 2. Admin check (defaults or settings override)
-    if (normalized_username in ["admin", "admin@hydronix.com"] and password == "admin") or \
-       (username == settings.admin_username and password == settings.admin_password):
-        return {
-            "username": settings.admin_username + "@hydronix.com" if "@" not in settings.admin_username else settings.admin_username,
-            "role": "admin",
-            "name": "System Administrator"
-        }
-        
-    # 3. Standard User check
-    if normalized_username in ["user", "user@hydronix.com"] and password == "user":
-        return {
-            "username": "user@hydronix.com",
-            "role": "user",
-            "name": "Water Quality Viewer"
-        }
-        
+def authenticate_admin(db: Session, username: str, password: str) -> Optional[User]:
+    # Query user from database
+    user = db.query(User).filter(User.email == username.lower().strip()).first()
+    if user and verify_password(password, user.hashed_password):
+        return user
     return None
 
 
@@ -93,22 +71,22 @@ async def get_current_admin_optional(token: str = Depends(oauth2_scheme)):
 
 
 # Token endpoint handler to be wired into FastAPI app
-async def token_endpoint(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_admin(form_data.username, form_data.password)
+async def token_endpoint(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_admin(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
     access_token = create_access_token({
-        "username": user["username"],
-        "role": user["role"]
+        "username": user.email,
+        "role": user.role
     })
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": {
-            "email": user["username"],
-            "role": user["role"],
-            "name": user["name"]
+            "email": user.email,
+            "role": user.role,
+            "name": user.name or user.email
         }
     }

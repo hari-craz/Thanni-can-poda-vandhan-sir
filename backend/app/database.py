@@ -19,6 +19,23 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+class User(Base):
+    """User accounts for web/admin access."""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False, default="admin") # superadmin, admin
+    name = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        CheckConstraint("role IN ('superadmin', 'admin')", name='check_user_role'),
+    )
+
+
 class Device(Base):
     """Device (ESP32 unit) metadata and status."""
     __tablename__ = "devices"

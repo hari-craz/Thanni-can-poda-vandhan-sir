@@ -41,7 +41,7 @@ from .schemas import (
 )
 import httpx
 from .database import (
-    Device, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
+    Device, User, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
     get_db, init_db
 )
 from .auth import validate_api_key, create_api_key_for_device, rotate_api_key
@@ -115,7 +115,7 @@ quality_scorer = QualityScorer()
 alert_manager = AlertManager()
 
 # Register auth token endpoint
-from .security import token_endpoint, get_current_admin
+from .security import token_endpoint, get_current_admin, get_password_hash
 app.post("/auth/token")(token_endpoint)
 app.post("/auth/login")(token_endpoint)
 
@@ -173,6 +173,27 @@ async def startup_event():
     logger.info(f"Starting Hydronix Backend API (env: {settings.environment})")
     init_db()
     logger.info("Database initialized")
+
+    # Bootstrap superadmin if users table is empty
+    db = next(get_db())
+    try:
+        if db.query(User).count() == 0:
+            if settings.super_admin_email and settings.super_admin_password:
+                hashed = get_password_hash(settings.super_admin_password)
+                super_admin = User(
+                    email=settings.super_admin_email.lower().strip(),
+                    hashed_password=hashed,
+                    role="superadmin",
+                    name="Super Administrator"
+                )
+                db.add(super_admin)
+                db.commit()
+                logger.info("Bootstrap: Created Super Admin account successfully")
+            else:
+                logger.warning("Bootstrap: SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD environment variables not set. Skipping bootstrap admin creation.")
+    except Exception as e:
+        logger.error(f"Failed to bootstrap superadmin: {e}")
+        db.rollback()
 
     # Start MQTT processor if enabled
     global mqtt_processor
