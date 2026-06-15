@@ -14,7 +14,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
 
   return (
     <Link href={`/devices/${device.device_id}`}>
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer h-full">
+      <div className="liquid-card cursor-pointer h-full">
         <div className="p-6">
           {/* Header */}
           <div className="flex items-start justify-between mb-4">

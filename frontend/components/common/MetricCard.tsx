@@ -28,7 +28,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   const textColorClass = colorClasses[color];
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+    <div className="liquid-card p-6">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-gray-600 text-sm font-medium">{label}</p>

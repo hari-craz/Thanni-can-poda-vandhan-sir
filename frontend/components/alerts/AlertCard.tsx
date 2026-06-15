@@ -42,7 +42,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({
   const icons = { warning: '⚠️', critical: '🔴', emergency: '🚨' };
 
   return (
-    <div className={`${styles.bg} border ${styles.border} rounded-lg p-4 mb-4`}>
+    <div className={`liquid-card mb-4 p-4 ${styles.bg}`}>
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
           <span className="text-2xl mt-1">{icons[severity]}</span>
