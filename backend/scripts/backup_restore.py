@@ -20,6 +20,10 @@ from app.config import settings
 
 def parse_db_url(url):
     # Handles postgresql://user:pass@host:port/db
+    if url.startswith("postgresql+psycopg2://"):
+        url = url.replace("postgresql+psycopg2://", "postgresql://", 1)
+    # If running outside container, translate host 'db' to 'localhost'
+    url = url.replace("@db:", "@localhost:", 1)
     parsed = urlparse(url)
     return {
         'user': parsed.username,

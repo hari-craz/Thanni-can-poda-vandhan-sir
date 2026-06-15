@@ -99,7 +99,7 @@ class SensorData(Base):
     raw_ph = Column(Float)
     quality_score = Column(Integer, default=0)
     anomaly_flags = Column(JSON)  # e.g., {"out_of_range": true, "stuck": false}
-    timestamp = Column(DateTime, nullable=False)  # Device UTC timestamp
+    timestamp = Column(DateTime, primary_key=True, nullable=False)  # Device UTC timestamp, part of composite primary key
     received_at = Column(DateTime, default=datetime.utcnow)  # Server receive time
     timestamp_source = Column(String(20), default="device")  # device, server_adjusted, server_only
     trace_id = Column(String(36))  # UUID for debugging request flow
@@ -107,11 +107,14 @@ class SensorData(Base):
     device = relationship("Device", back_populates="sensor_data")
     
     __table_args__ = (
-        UniqueConstraint('device_id', 'device_reset_count', 'seq_no', name='unique_device_reading'),
+        UniqueConstraint('device_id', 'device_reset_count', 'seq_no', 'timestamp', name='unique_device_reading'),
         CheckConstraint("timestamp_source IN ('device', 'server_adjusted', 'server_only')", name='check_timestamp_source'),
         Index('idx_device_timestamp', 'device_id', 'timestamp'),
         Index('idx_timestamp', 'timestamp'),
         Index('idx_device_id', 'device_id'),
+        {
+            'postgresql_partition_by': 'RANGE (timestamp)'
+        }
     )
 
 
@@ -186,6 +189,42 @@ def get_db():
         db.close()
 
 
+def setup_database_partitions():
+    """Ensure monthly partitions exist for the next 12 months (PostgreSQL declarative partitioning)."""
+    if engine.dialect.name != "postgresql":
+        return
+
+    from sqlalchemy import text
+    from datetime import datetime
+    
+    now = datetime.utcnow().replace(day=1)
+    
+    with engine.begin() as conn:
+        # Create partitions for the next 12 months
+        for i in range(12):
+            y = (now.year + (now.month - 1 + i) // 12)
+            m = ((now.month - 1 + i) % 12) + 1
+            start = datetime(y, m, 1)
+            if m == 12:
+                end = datetime(y + 1, 1, 1)
+            else:
+                end = datetime(y, m + 1, 1)
+                
+            partition_name = f"sensor_data_{y}_{str(m).zfill(2)}"
+            
+            # Create partition of the parent table
+            create_partition_sql = f"""
+            CREATE TABLE IF NOT EXISTS {partition_name} PARTITION OF sensor_data
+            FOR VALUES FROM ('{start.strftime("%Y-%m-%d")}') TO ('{end.strftime("%Y-%m-%d")}');
+            """
+            conn.execute(text(create_partition_sql))
+
+
 def init_db():
-    """Create all tables."""
+    """Create all tables and setup partitions."""
     Base.metadata.create_all(bind=engine)
+    try:
+        setup_database_partitions()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to auto-setup database partitions: {e}")

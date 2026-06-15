@@ -32,7 +32,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 def get_conn():
-    return psycopg2.connect(settings.database_url)
+    db_url = settings.database_url
+    if db_url.startswith("postgresql+psycopg2://"):
+        db_url = db_url.replace("postgresql+psycopg2://", "postgresql://", 1)
+    # If run outside docker container, redirect 'db' to 'localhost'
+    db_url = db_url.replace("@db:", "@localhost:", 1)
+    return psycopg2.connect(db_url)
 
 
 def month_ranges(start_month: datetime, months: int):
