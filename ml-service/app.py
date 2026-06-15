@@ -54,6 +54,10 @@ async def predict(payload: SensorPayload, request: Request):
         print('ml-service request columns:', df.columns.tolist())
         print('model.feature_names_in_:', getattr(model, 'feature_names_in_', None))
         if preprocessor is not None:
+            # ensure columns are in the same order model expects
+            feature_names = getattr(model, 'feature_names_in_', None)
+            if feature_names is not None:
+                df = df.reindex(columns=list(feature_names))
             X = preprocessor.transform(df)
             print('preprocessor produced array shape', getattr(X,'shape',None))
         else:
