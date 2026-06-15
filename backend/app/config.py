@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
 
+    # Slack and Twilio SMS Gateway Integrations
+    slack_webhook_url: Optional[str] = None
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_phone_from: Optional[str] = None
+    twilio_phone_to: Optional[str] = None
+
     # EMA smoothing for noisy sensors
     smoothing_enabled: bool = True
     smoothing_alpha: float = 0.3  # EMA alpha (0-1). Higher = faster response

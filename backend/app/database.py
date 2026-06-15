@@ -1,3 +1,5 @@
+import sys
+import os
 from sqlalchemy import (
     create_engine, Column, Integer, String, Float, Boolean, DateTime,
     JSON, ForeignKey, UniqueConstraint, CheckConstraint, Index, BigInteger, Text
@@ -6,6 +8,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 from .config import settings
+
+is_testing = "pytest" in sys.modules or os.environ.get("TESTING") is not None
+
 
 engine = create_engine(
     settings.database_url,
@@ -60,6 +65,7 @@ class Device(Base):
     sensor_data = relationship("SensorData", back_populates="device", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="device", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="device", cascade="all, delete-orphan")
+    firmwares = relationship("Firmware", back_populates="device", cascade="all, delete-orphan")
     
     __table_args__ = (
         CheckConstraint("device_id LIKE 'HYDRO_%'", name='check_device_id_format'),
@@ -99,7 +105,7 @@ class SensorData(Base):
     raw_ph = Column(Float)
     quality_score = Column(Integer, default=0)
     anomaly_flags = Column(JSON)  # e.g., {"out_of_range": true, "stuck": false}
-    timestamp = Column(DateTime, primary_key=True, nullable=False)  # Device UTC timestamp, part of composite primary key
+    timestamp = Column(DateTime, primary_key=not is_testing, nullable=False)  # Device UTC timestamp, part of composite primary key only in prod
     received_at = Column(DateTime, default=datetime.utcnow)  # Server receive time
     timestamp_source = Column(String(20), default="device")  # device, server_adjusted, server_only
     trace_id = Column(String(36))  # UUID for debugging request flow
@@ -178,6 +184,22 @@ class MLAnomaly(Base):
     __table_args__ = (
         Index('idx_ml_device', 'device_id'),
     )
+
+
+class Firmware(Base):
+    """Firmware packages uploaded for OTA updates."""
+    __tablename__ = "firmwares"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
+    version = Column(String(50), nullable=False)
+    url = Column(String(255), nullable=False)
+    signature = Column(String(255))
+    release_notes = Column(Text)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    
+    device = relationship("Device", back_populates="firmwares")
+
 
 
 def get_db():

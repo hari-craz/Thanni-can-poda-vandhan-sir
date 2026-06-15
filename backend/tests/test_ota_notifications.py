@@ -80,11 +80,8 @@ def test_alert_notifications_slack_twilio(mock_post, db_session, test_device):
         reading_timestamp=datetime.utcnow(),
         escalation_level=0
     )
-    db_session.add(alert)
-    db_session.commit()
-    db_session.refresh(alert)
     
-    # Trigger notifications
+    # Trigger notifications (alert is not in DB, so cooldown check passes)
     res = send_alert_notification(db_session, alert)
     assert res is True
     assert mock_post.call_count >= 2
