@@ -1,0 +1,54 @@
+name: Build and publish ML Service
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine model version
+        id: modelver
+        run: |
+          if [ -f ML-Model/models/MODEL_VERSION ]; then
+            echo "model_ver=$(cat ML-Model/models/MODEL_VERSION)" >> $GITHUB_OUTPUT
+          else
+            echo "model_ver=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push image (ml-service)
+        uses: docker/build-push-action@v4
+        with:
+          context: ./ml-service
+          file: ./ml-service/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/thanni-ml-service:${{ steps.modelver.outputs.model_ver }}
+            ghcr.io/${{ github.repository_owner }}/thanni-ml-service:${{ github.sha }}
+
+      - name: Publish model version as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-version
+          path: ML-Model/models/MODEL_VERSION
