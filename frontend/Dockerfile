@@ -1,15 +1,13 @@
-# Frontend Dockerfile for local development
-FROM node:20-bullseye-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps --silent
+COPY package*.json ./
 
-# Copy source
-COPY . ./
+RUN npm install
+
+COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

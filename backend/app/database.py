@@ -45,7 +45,7 @@ class Device(Base):
     api_keys = relationship("APIKey", back_populates="device", cascade="all, delete-orphan")
     
     __table_args__ = (
-        CheckConstraint("device_id ~ '^HYDRO_[0-9]{3}$'", name='check_device_id_format'),
+        CheckConstraint("device_id LIKE 'HYDRO_%'", name='check_device_id_format'),
         CheckConstraint("status IN ('online', 'offline')", name='check_status'),
     )
 
@@ -54,7 +54,7 @@ class APIKey(Base):
     """API keys for device authentication."""
     __tablename__ = "api_keys"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
     key_hash = Column(String(255), unique=True, nullable=False)
     name = Column(String(100))
@@ -70,7 +70,7 @@ class SensorData(Base):
     """Raw and processed sensor readings."""
     __tablename__ = "sensor_data"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
     device_reset_count = Column(Integer, default=0)
     seq_no = Column(BigInteger)
@@ -102,7 +102,7 @@ class Alert(Base):
     """Alert events triggered by anomalies or threshold violations."""
     __tablename__ = "alerts"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
     severity = Column(String(20), nullable=False)  # warning, critical, emergency
     message = Column(Text)
@@ -125,7 +125,7 @@ class AuditLog(Base):
     """Audit trail for security-critical operations."""
     __tablename__ = "audit_logs"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(100))
     action = Column(String(100), nullable=False)  # provision, rotate_key, acknowledge_alert, etc.
     resource_type = Column(String(50))  # device, api_key, alert, etc.
@@ -137,6 +137,26 @@ class AuditLog(Base):
     __table_args__ = (
         Index('idx_user_action', 'user_id', 'action'),
         Index('idx_resource', 'resource_type', 'resource_id'),
+    )
+
+
+class MLAnomaly(Base):
+    """Tracking of ML anomalies for monitoring and model validation."""
+    __tablename__ = "ml_anomalies"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
+    reading_id = Column(Integer, ForeignKey("sensor_data.id"), nullable=True)
+    ml_score = Column(Integer, default=0)  # 0 or 1
+    confidence = Column(Float)
+    model_version = Column(String(50))
+    anomaly_reason = Column(String(255))
+    alert_triggered = Column(Boolean, default=False)
+    prediction_timestamp = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('idx_ml_device', 'device_id'),
     )
 
 

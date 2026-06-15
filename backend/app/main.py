@@ -39,8 +39,9 @@ from .schemas import (
     MLPredictionRequest,
     MLPredictionResponse,
 )
+import httpx
 from .database import (
-    Device, SensorData, Alert, APIKey, AuditLog,
+    Device, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
     get_db, init_db
 )
 from .auth import validate_api_key, create_api_key_for_device, rotate_api_key
@@ -80,13 +81,13 @@ try:
 except Exception:
     pass
 
-# Add CORS middleware
+# Add CORS middleware (permissive for development)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=settings.cors_allow_methods,
-    allow_headers=settings.cors_allow_headers,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Trace ID middleware (adds X-Trace-Id and binds to structlog context)
@@ -116,6 +117,11 @@ alert_manager = AlertManager()
 # Register auth token endpoint
 from .security import token_endpoint, get_current_admin
 app.post("/auth/token")(token_endpoint)
+app.post("/auth/login")(token_endpoint)
+
+@app.post("/auth/logout")
+async def logout():
+    return {"ok": True}
 
 # MQTT processor (initialized at startup)
 mqtt_processor = None
@@ -384,12 +390,16 @@ async def ingest_sensor_data(
 
         # Apply NTP/time-drift handling
         server_now = datetime.utcnow()
-        drift_seconds = abs((request.timestamp - server_now).total_seconds()) if request.timestamp else 0
+        request_ts = request.timestamp
+        if request_ts and request_ts.tzinfo is not None:
+            request_ts = request_ts.replace(tzinfo=None)
+            
+        drift_seconds = abs((request_ts - server_now).total_seconds()) if request_ts else 0
         if drift_seconds > settings.max_drift_seconds:
             sensor_timestamp = server_now
             timestamp_source = "server_adjusted"
         else:
-            sensor_timestamp = request.timestamp
+            sensor_timestamp = request_ts
             timestamp_source = "device"
 
         # Create sensor data record
@@ -412,14 +422,79 @@ async def ingest_sensor_data(
             trace_id=trace_id,
         )
         db.add(sensor_data)
+        db.flush() # Assign ID to sensor_data
+        
+        # Call ML Service if enabled (Phase 2+)
+        if settings.ml_service_enabled:
+            try:
+                ml_payload = {
+                    "device_id": device_id,
+                    "timestamp": sensor_data.timestamp.isoformat() + "Z",
+                    "data": {
+                        "ph": sensor_data.ph,
+                        "turbidity": sensor_data.turbidity,
+                        "solids": sensor_data.tds,
+                        "temperature": sensor_data.temperature,
+                        "flow_rate": sensor_data.flow_rate
+                    }
+                }
+                ml_headers = {}
+                if settings.ml_service_api_key:
+                    ml_headers["x-api-key"] = settings.ml_service_api_key
+                
+                async with httpx.AsyncClient() as client:
+                    ml_resp = await client.post(
+                        f"{settings.ml_service_url}/predict",
+                        json=ml_payload,
+                        headers=ml_headers,
+                        timeout=3.0
+                    )
+                
+                if ml_resp.status_code == 200:
+                    ml_data = ml_resp.json()
+                    prediction = ml_data.get("prediction", 0)
+                    score = ml_data.get("score", 0.0)
+                    model_version = ml_data.get("model_version", "unknown")
+                    
+                    is_anomaly = (prediction == 1) and (score >= settings.ml_confidence_threshold)
+                    decision_reason = f"ML prediction: {'Anomaly' if prediction == 1 else 'Normal'} (confidence: {score:.2f})"
+                    
+                    # Update sensor data anomaly flags
+                    current_flags = anomaly_flags or {}
+                    current_flags["ml_score"] = score
+                    current_flags["ml_predicted_anomaly"] = (prediction == 1)
+                    if is_anomaly:
+                        current_flags["outlier"] = True
+                        if "reasons" not in current_flags:
+                            current_flags["reasons"] = []
+                        current_flags["reasons"].append(f"ML Anomaly (confidence: {score:.2f})")
+                    
+                    sensor_data.anomaly_flags = current_flags
+                    
+                    # Log to ml_anomalies
+                    ml_anomaly_rec = MLAnomaly(
+                        device_id=device_id,
+                        reading_id=sensor_data.id,
+                        ml_score=prediction,
+                        confidence=score,
+                        model_version=model_version,
+                        anomaly_reason=decision_reason,
+                        alert_triggered=False,
+                        prediction_timestamp=datetime.utcnow()
+                    )
+                    db.add(ml_anomaly_rec)
+                    db.flush()
+            except Exception as ml_err:
+                logger.warning(f"Failed to run ML prediction during ingestion: {ml_err}")
         
         # Update device last_seen
         if device:
             device.last_seen = datetime.utcnow()
             device.status = "online"
         
-        # Check for alerts
+        # Check for alerts (primary rule-based)
         alert_severity = alert_manager.get_alert_severity(quality_score)
+        alert = None
         if alert_severity:
             alert_message = alert_manager.get_alert_message(quality_score, anomaly_flags)
             alert = Alert(
@@ -431,6 +506,27 @@ async def ingest_sensor_data(
             )
             db.add(alert)
             logger.warning(f"Alert for {device_id}: {alert_message}")
+            db.flush()
+            
+        # Link ML anomaly to triggered alert if active
+        if settings.ml_service_enabled and 'ml_anomaly_rec' in locals() and is_anomaly:
+            # If a rule-based alert was triggered, link it; otherwise create a warnings alert
+            if alert:
+                ml_anomaly_rec.alert_triggered = True
+                ml_anomaly_rec.alert_id = alert.id
+            else:
+                alert_message = f"ML WARNING: Anomaly predicted with {score:.2f} confidence"
+                ml_warn = Alert(
+                    device_id=device_id,
+                    severity="warning",
+                    message=alert_message,
+                    triggered_at=datetime.utcnow(),
+                    reading_timestamp=request.timestamp,
+                )
+                db.add(ml_warn)
+                db.flush()
+                ml_anomaly_rec.alert_triggered = True
+                ml_anomaly_rec.alert_id = ml_warn.id
         
         db.commit()
 
@@ -1028,16 +1124,57 @@ async def predict_anomaly(
         )
     
     try:
+        payload = {
+            "device_id": request.device_id,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "data": {
+                "ph": request.ph,
+                "hardness": request.hardness,
+                "solids": request.solids,
+                "chloramines": request.chloramines,
+                "sulfate": request.sulfate,
+                "conductivity": request.conductivity,
+                "organic_carbon": request.organic_carbon,
+                "trihalomethanes": request.trihalomethanes,
+                "turbidity": request.turbidity
+            }
+        }
+        
+        headers = {}
+        if settings.ml_service_api_key:
+            headers["x-api-key"] = settings.ml_service_api_key
+            
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.ml_service_url}/predict",
+                json=payload,
+                headers=headers,
+                timeout=5.0
+            )
+            
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=f"ML Service error: {response.text}")
+            
+        res_data = response.json()
+        prediction = res_data.get("prediction", 0)
+        score = res_data.get("score", 0.0)
+        model_version = res_data.get("model_version", "unknown")
+        
+        is_anomaly = (prediction == 1) and (score >= settings.ml_confidence_threshold)
+        decision_reason = f"ML anomaly prediction (prediction: {prediction}, score: {score:.2f}, version: {model_version})"
+        
         return MLPredictionResponse(
             device_id=request.device_id,
-            is_anomaly=False,
-            confidence=0.65,
-            ml_score=0,
+            is_anomaly=is_anomaly,
+            confidence=score,
+            ml_score=prediction,
             timestamp=datetime.utcnow(),
-            model_version="v1.0",
-            decision_reason="ML service not yet integrated"
+            model_version=model_version,
+            decision_reason=decision_reason
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in ML prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))

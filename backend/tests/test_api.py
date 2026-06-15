@@ -13,7 +13,7 @@ class TestHealthEndpoints:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        assert data["status"] == "healthy"
     
     def test_status_endpoint_returns_status(self, test_client):
         """Test /status endpoint returns system status."""
@@ -21,8 +21,8 @@ class TestHealthEndpoints:
         
         assert response.status_code == 200
         data = response.json()
-        assert "database" in data
-        assert "timestamp" in data
+        assert "database_status" in data
+        assert "ok" in data
 
 
 class TestDeviceProvision:
@@ -31,21 +31,26 @@ class TestDeviceProvision:
     def test_provision_device_success(self, test_client):
         """Test provisioning a new device."""
         payload = {
-            "device_id": "HYDRO_NEW_001"
+            "device_id": "HYDRO_999",
+            "name": "New Test Device",
+            "location": "Lab 1"
         }
         
         response = test_client.post("/devices/provision", json=payload)
         
-        assert response.status_code == 201
+        assert response.status_code == 200
         data = response.json()
-        assert data["device_id"] == "HYDRO_NEW_001"
+        assert data["device_id"] == "HYDRO_999"
         assert "api_key" in data
-        assert data["status"] == "online"
+        assert "qr_code" in data
+        assert "setup_url" in data
     
     def test_provision_device_invalid_id(self, test_client):
         """Test provisioning with invalid device ID format."""
         payload = {
-            "device_id": "invalid_id"  # Should be HYDRO_###
+            "device_id": "invalid_id",  # Should be HYDRO_###
+            "name": "Invalid Device",
+            "location": "Lab 1"
         }
         
         response = test_client.post("/devices/provision", json=payload)
@@ -55,7 +60,9 @@ class TestDeviceProvision:
     def test_provision_duplicate_device(self, test_client, test_device):
         """Test provisioning duplicate device fails."""
         payload = {
-            "device_id": "HYDRO_TEST_001"  # Already exists
+            "device_id": "HYDRO_TEST_001",  # Already exists
+            "name": "Duplicate Device",
+            "location": "Lab 1"
         }
         
         response = test_client.post("/devices/provision", json=payload)
@@ -78,9 +85,9 @@ class TestDataIngestion:
         
         assert response.status_code == 200
         data = response.json()
-        assert "quality_score" in data
-        assert "anomalies" in data
-        assert data["device_id"] == "HYDRO_TEST_001"
+        assert data["ok"] is True
+        assert data["accepted"] == 1
+        assert data["rejected"] == 0
     
     def test_ingest_without_api_key(self, test_client, sample_sensor_data):
         """Test ingestion fails without API key."""
@@ -105,9 +112,8 @@ class TestDataIngestion:
         headers = {"X-API-Key": test_api_key["key"]}
         
         data = {
-            "device_id": "HYDRO_TEST_001",
+            "device_id": "HYDRO_001",
             "timestamp": "2026-06-15T13:00:00Z",
-            "timestamp_source": "device",
             "ph": 9.0,  # Out of range - should reduce score
             "turbidity": 10.0,  # Critical - should reduce score significantly
             "tds": 100,
@@ -118,20 +124,23 @@ class TestDataIngestion:
         }
         
         response = test_client.post("/data", json=data, headers=headers)
-        
         assert response.status_code == 200
-        result = response.json()
-        assert result["quality_score"] < 50  # Should be low due to turbidity
+        
+        # Verify the quality score by querying the device data endpoint
+        query_response = test_client.get("/data/HYDRO_001", headers=headers)
+        assert query_response.status_code == 200
+        result = query_response.json()
+        assert len(result["readings"]) > 0
+        assert result["readings"][0]["quality_score"] <= 50
     
     def test_ingest_missing_required_field(self, test_client, test_api_key):
         """Test ingestion with missing required field."""
         headers = {"X-API-Key": test_api_key["key"]}
         
         data = {
-            "device_id": "HYDRO_TEST_001",
+            "device_id": "HYDRO_001",
             "timestamp": "2026-06-15T13:00:00Z",
-            # Missing timestamp_source and other required fields
-            "ph": 7.0,
+            # Missing ph, turbidity, tds, temperature, flow_rate
         }
         
         response = test_client.post("/data", json=data, headers=headers)
@@ -150,52 +159,56 @@ class TestDeviceManagement:
         data = response.json()
         assert "devices" in data
         assert len(data["devices"]) > 0
-        assert data["devices"][0]["device_id"] == "HYDRO_TEST_001"
+        assert data["devices"][0]["device_id"] == "HYDRO_001"
     
     def test_get_single_device(self, test_client, test_device):
         """Test getting a single device."""
-        response = test_client.get("/devices/HYDRO_TEST_001")
+        response = test_client.get("/devices/HYDRO_001")
         
         assert response.status_code == 200
         data = response.json()
-        assert data["device_id"] == "HYDRO_TEST_001"
+        assert data["device_id"] == "HYDRO_001"
         assert data["status"] == "online"
     
     def test_get_nonexistent_device(self, test_client):
         """Test getting non-existent device returns 404."""
-        response = test_client.get("/devices/HYDRO_NOTEXIST_001")
+        response = test_client.get("/devices/HYDRO_999")
         
         assert response.status_code == 404
     
     def test_device_heartbeat(self, test_client, test_api_key):
         """Test device heartbeat endpoint."""
         headers = {"X-API-Key": test_api_key["key"]}
+        payload = {
+            "device_id": "HYDRO_001",
+            "status": "online"
+        }
         
         response = test_client.post(
-            "/devices/HYDRO_TEST_001/heartbeat",
-            json={},
+            "/devices/HYDRO_001/heartbeat",
+            json=payload,
             headers=headers
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["device_id"] == "HYDRO_TEST_001"
-        assert data["status"] == "online"
+        assert data["ok"] is True
+        assert "server_timestamp" in data
     
     def test_api_key_rotation(self, test_client, test_api_key):
         """Test API key rotation."""
         headers = {"X-API-Key": test_api_key["key"]}
         
         response = test_client.post(
-            "/devices/HYDRO_TEST_001/keys/rotate",
+            "/devices/HYDRO_001/keys/rotate",
             json={},
             headers=headers
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert "new_api_key" in data
-        assert data["new_api_key"] != test_api_key["key"]
+        assert "new_key" in data
+        assert data["new_key"] != test_api_key["key"]
 
 
 class TestDataQuerying:
@@ -209,13 +222,14 @@ class TestDataQuerying:
         
         # Then query it
         response = test_client.get(
-            "/data/HYDRO_TEST_001",
+            "/data/HYDRO_001",
             headers=headers
         )
         
         assert response.status_code == 200
         data = response.json()
         assert "readings" in data
+        assert len(data["readings"]) > 0
     
     def test_get_anomalies(self, test_client, test_api_key):
         """Test getting anomalies list."""

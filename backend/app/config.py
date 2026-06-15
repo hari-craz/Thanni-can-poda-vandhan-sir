@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # CORS Configuration
     cors_origins: list = [
         "http://localhost:3000",
+        "http://localhost:3002",
         "http://localhost:5173",
         "https://dashboard.hydronix.local"
     ]

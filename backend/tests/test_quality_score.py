@@ -199,13 +199,10 @@ class TestAlertManager:
     def test_alert_message_generation(self):
         """Test alert message is generated correctly."""
         manager = AlertManager()
-        message = manager.generate_alert_message(
-            device_id="HYDRO_001",
+        message = manager.get_alert_message(
             quality_score=25,
-            anomalies={"out_of_range": ["pH > 10"]},
-            severity="critical"
+            anomaly_flags={"reasons": ["pH > 10"]}
         )
         
         assert message is not None
-        assert "HYDRO_001" in message
         assert "25" in message or "critical" in message.lower()

@@ -39,14 +39,20 @@ def db_session(engine):
     yield session
     
     session.rollback()
+    # Clear all tables to prevent UNIQUE constraint violation between tests
+    from app.database import Base
+    for table in reversed(Base.metadata.sorted_tables):
+        session.execute(table.delete())
+    session.commit()
     session.close()
 
 
 @pytest.fixture(scope="function")
 def test_client(db_session):
-    """Create a FastAPI test client with a test database."""
+    """Create a FastAPI test client with a test database and mocked admin auth."""
     from app.main import app
     from app.database import get_db
+    from app.security import get_current_admin
     
     def override_get_db():
         try:
@@ -55,6 +61,7 @@ def test_client(db_session):
             pass
     
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_admin] = lambda: "admin"
     
     client = TestClient(app)
     
@@ -67,12 +74,15 @@ def test_client(db_session):
 def test_device(db_session):
     """Create a test device."""
     from app.database import Device
+    from datetime import datetime
     
     device = Device(
-        device_id="HYDRO_TEST_001",
+        device_id="HYDRO_001",
+        name="Test Device",
+        location="Test Location",
         status="online",
         firmware_version="1.0.0",
-        last_heartbeat_timestamp="2026-06-15T13:00:00Z"
+        last_heartbeat=datetime.utcnow()
     )
     db_session.add(device)
     db_session.commit()
@@ -87,16 +97,15 @@ def test_api_key(db_session, test_device):
     from app.auth import hash_api_key
     from datetime import datetime, timedelta
     
-    test_key = "hydro_HYDRO_TEST_001_test_token_1234567890abcdef"
+    test_key = "hydro_HYDRO_001_test_token_1234567890abcdef"
     hashed = hash_api_key(test_key)
     
     api_key = APIKey(
-        device_id="HYDRO_TEST_001",
+        device_id="HYDRO_001",
         key_hash=hashed,
         created_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + timedelta(days=90),
-        is_active=True,
-        is_revoked=False
+        is_active=True
     )
     db_session.add(api_key)
     db_session.commit()
@@ -109,7 +118,7 @@ def test_api_key(db_session, test_device):
 def sample_sensor_data():
     """Sample sensor data for testing."""
     return {
-        "device_id": "HYDRO_TEST_001",
+        "device_id": "HYDRO_001",
         "timestamp": "2026-06-15T13:00:00Z",
         "timestamp_source": "device",
         "ph": 7.2,
