@@ -14,21 +14,23 @@ app = FastAPI(title='Hydronix Ingest')
 def startup_event():
     database.init_db()
     ingest.start_in_background()
-    # Load ML artifacts if present
+    # ML service URL for forwarding predictions
+    import os
+    app.state.ml_service_url = os.environ.get('ML_SERVICE_URL', 'http://ml-service:8000')
+    print('ML service URL:', app.state.ml_service_url)
+    # keep backward-compatible model load attempt (optional)
     try:
         app.state.preprocessor = joblib.load('models/Preprocessor.pkl')
         print('Loaded Preprocessor from models/Preprocessor.pkl')
     except Exception as e:
         app.state.preprocessor = None
-        app.state.model_load_error = f'preprocessor load error: {e}'
-        print(app.state.model_load_error)
+        print('preprocessor load error:', e)
     try:
         app.state.model = joblib.load('models/XGBoost.pkl')
         print('Loaded model from models/XGBoost.pkl')
     except Exception as e:
         app.state.model = None
-        app.state.model_load_error = getattr(app.state, 'model_load_error', '') + f' | model load error: {e}'
-        print(getattr(app.state, 'model_load_error'))
+        print('model load error:', e)
 
 
 @app.post('/ingest', response_model=IngestResponse)
@@ -46,31 +48,18 @@ def ingest_http(payload: SensorPayload):
 
 
 @app.post('/predict')
-def predict(payload: SensorPayload):
-    # Require model loaded
-    if not getattr(app.state, 'model', None):
-        raise HTTPException(status_code=503, detail='Model not available')
+async def predict(payload: SensorPayload):
+    # Forward prediction request to ML microservice
+    import httpx
+    ml_url = app.state.ml_service_url if hasattr(app.state, 'ml_service_url') else 'http://ml-service:8000'
     try:
-        # create single-row DataFrame from payload.data
-        df = pd.DataFrame([payload.data])
-        if getattr(app.state, 'preprocessor', None):
-            X = app.state.preprocessor.transform(df)
-        else:
-            # Fallback: align to model's expected feature names and simple impute
-            feature_names = getattr(app.state.model, 'feature_names_in_', None)
-            if feature_names is None:
-                raise HTTPException(status_code=503, detail='Model feature names unknown')
-            row = {col: payload.data.get(col, np.nan) for col in feature_names}
-            df2 = pd.DataFrame([row], columns=feature_names)
-            # simple impute: fill numeric NaNs with 0
-            df2 = df2.fillna(0)
-            X = df2.values
-        proba = app.state.model.predict_proba(X)
-        score = float(proba[0, 1])
-        pred = int(score >= 0.5)
-        return {'prediction': pred, 'score': score}
-    except HTTPException:
-        raise
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(f"{ml_url}/predict", json=payload.dict())
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response is not None else 500
+        raise HTTPException(status_code=status, detail=f'ML service error: {e.response.text if e.response is not None else str(e)}')
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

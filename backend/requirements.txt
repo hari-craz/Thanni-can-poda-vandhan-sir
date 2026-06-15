@@ -3,6 +3,11 @@ uvicorn[standard]
 SQLAlchemy
 psycopg2-binary
 pydantic==1.10.12
+fastapi
+uvicorn[standard]
+SQLAlchemy
+psycopg2-binary
+pydantic==1.10.12
 paho-mqtt
 python-dotenv
 scikit-learn
@@ -10,3 +15,4 @@ joblib
 numpy
 pandas
 xgboost
+httpx
