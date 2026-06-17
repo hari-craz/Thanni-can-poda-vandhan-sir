@@ -335,7 +335,8 @@ void loadFactoryDefaults() {
   strcpy(config.device_id,   "HYDRO_001");
   config.reset_count         = 0;
   config.sample_interval_sec = 60;
-  strcpy(config.api_base_url, "https://api.hydronix.com");
+  // Default to Cloudflare Tunnel API base (includes /v2 prefix)
+  strcpy(config.api_base_url, "https://api.hydronix.local/v2");
   strcpy(config.firmware_channel, "stable");
   config.server_config_version = 0;
   config.timezone_offset_sec = 19800;  // Asia/Kolkata (+5:30)
