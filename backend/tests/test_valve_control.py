@@ -7,18 +7,9 @@ from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.database import Device, SensorData, ValveOperation, SessionLocal
+from app.database import Device, SensorData, ValveOperation
 from app.valve_control import ValveController
 from app.schemas import ValveCommandRequest
-
-
-@pytest.fixture
-def db_session():
-    """Fixture for database session."""
-    session = SessionLocal()
-    yield session
-    session.rollback()
-    session.close()
 
 
 @pytest.fixture

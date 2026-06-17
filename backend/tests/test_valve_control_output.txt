@@ -1,0 +1,1778 @@
+.......FFFFFF.F...FFF                                                    [100%]
+================================== FAILURES ===================================
+_____________ TestValveController.test_execute_valve_action_close _____________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001950755AA80>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', 'admin_001', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x00000195075EB5C0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveController object at 0x0000019506C36E50>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507386660>
+test_device = <app.database.Device object at 0x0000019507386A50>
+
+    def test_execute_valve_action_close(self, db_session: Session, test_device: Device):
+        """Test closing valve via execute_valve_action."""
+        controller = ValveController(db_session)
+    
+>       response = controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="close",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Manual safety override"
+        )
+
+backend\tests\test_valve_control.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x00000195075EB5C0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', 'admin_001', '2026-06-17 16:16:04.543738', '2026-06-17 16:16:04.545538')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_____________ TestValveController.test_execute_valve_action_open ______________
+
+self = <test_valve_control.TestValveController object at 0x000001950733AF50>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507618590>
+test_device = <app.database.Device object at 0x0000019507596710>
+
+    def test_execute_valve_action_open(self, db_session: Session, test_device: Device):
+        """Test opening valve via execute_valve_action."""
+        # First close it
+        test_device.valve_status = "closed"
+        db_session.commit()
+    
+        controller = ValveController(db_session)
+        response = controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="open",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Conditions improved"
+        )
+    
+>       assert response["success"] is True
+               ^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not subscriptable
+
+backend\tests\test_valve_control.py:174: TypeError
+_________ TestValveController.test_execute_valve_action_rate_limited __________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001950926F770>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA510>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test close', 'admin_001', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019507803DC0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test close', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA510>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveController object at 0x0000019506719B80>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507618EC0>
+test_device = <app.database.Device object at 0x0000019507596850>
+
+    def test_execute_valve_action_rate_limited(self, db_session: Session, test_device: Device):
+        """Test rate limiting prevents rapid toggles."""
+        controller = ValveController(db_session)
+    
+        # First action should succeed
+>       response1 = controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="close",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Test close"
+        )
+
+backend\tests\test_valve_control.py:186: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019507803DC0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test close', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA510>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test close', 'admin_001', '2026-06-17 16:16:04.995747', '2026-06-17 16:16:04.996128')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+____________ TestValveController.test_valve_operation_audit_trail _____________
+
+self = <sqlalchemy.engine.base.Connection object at 0x0000019507470AD0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA690>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'pH out of range (6.2)', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019509AF4240>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'pH out of range (6.2)', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA690>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveController object at 0x0000019507336300>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507386660>
+test_device = <app.database.Device object at 0x0000019507635E00>
+
+    def test_valve_operation_audit_trail(self, db_session: Session, test_device: Device):
+        """Test that valve operations are logged to audit trail."""
+        controller = ValveController(db_session)
+    
+>       controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="close",
+            triggered_by="auto_safety_cutoff",
+            operator_id=None,
+            reason="pH out of range (6.2)"
+        )
+
+backend\tests\test_valve_control.py:210: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019509AF4240>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'pH out of range (6.2)', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195072EA690>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'pH out of range (6.2)', None, '2026-06-17 16:16:05.324080', '2026-06-17 16:16:05.324401')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+__________ TestValveController.test_valve_operation_device_not_found __________
+
+self = <test_valve_control.TestValveController object at 0x0000019507470130>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507386A50>
+
+    def test_valve_operation_device_not_found(self, db_session: Session):
+        """Test error handling when device not found."""
+        controller = ValveController(db_session)
+    
+        response = controller.execute_valve_action(
+            device_id="HYDRO_NONEXISTENT",
+            action="close",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Test"
+        )
+    
+>       assert response["success"] is False
+               ^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not subscriptable
+
+backend\tests\test_valve_control.py:240: TypeError
+------------------------------ Captured log call ------------------------------
+ERROR    app.valve_control:valve_control.py:146 Device HYDRO_NONEXISTENT not found for valve control
+_____________ TestValveAPIEndpoints.test_get_valve_status_success _____________
+
+self = <test_valve_control.TestValveAPIEndpoints object at 0x00000195074191D0>
+client = <starlette.testclient.TestClient object at 0x0000019507618AD0>
+test_device = <app.database.Device object at 0x0000019507636520>
+
+    def test_get_valve_status_success(self, client: TestClient, test_device: Device):
+        """Test GET /devices/{device_id}/valve/status returns device valve status."""
+        response = client.get("/devices/HYDRO_TEST_001/valve/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["device_id"] == "HYDRO_TEST_001"
+>       assert data["valve_status"] in ["open", "closed"]
+               ^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'valve_status'
+
+backend\tests\test_valve_control.py:253: KeyError
+_____________ TestValveAPIEndpoints.test_post_valve_close_success _____________
+
+self = <sqlalchemy.engine.base.Connection object at 0x0000019509103AF0>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019509194290>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x00000195093DDB40>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019509194290>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveAPIEndpoints object at 0x0000019507458640>
+client = <starlette.testclient.TestClient object at 0x00000195076F4A50>
+test_device = <app.database.Device object at 0x0000019507567BF0>
+
+    def test_post_valve_close_success(self, client: TestClient, test_device: Device):
+        """Test POST /devices/{device_id}/valve/close closes valve."""
+        payload = {
+            "reason": "Manual safety override",
+            "operator_id": "admin_001"
+        }
+>       response = client.post(
+            "/devices/HYDRO_TEST_001/valve/close",
+            json=payload,
+            headers={"X-API-Key": "test_key"}
+        )
+
+backend\tests\test_valve_control.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\testclient.py:546: in post
+    return super().post(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:1144: in post
+    return self.request(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\testclient.py:445: in request
+    return super().request(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\testclient.py:348: in handle_request
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\testclient.py:345: in handle_request
+    portal.call(self.app, scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\anyio\from_thread.py:334: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Program Files\Python313\Lib\concurrent\futures\_base.py:456: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Program Files\Python313\Lib\concurrent\futures\_base.py:401: in __get_result
+    raise self._exception
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\anyio\from_thread.py:259: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:1160: in __call__
+    await super().__call__(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\applications.py:107: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+                                   ^^^^^^^^^^^^^^^^^^^^
+C:\Program Files\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_utils.py:87: in collapse_excgroups
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\app\main.py:283: in rate_limiting_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+                                   ^^^^^^^^^^^^^^^^^^^^
+C:\Program Files\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_utils.py:87: in collapse_excgroups
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\app\main.py:148: in add_trace_id
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+                                   ^^^^^^^^^^^^^^^^^^^^
+C:\Program Files\Python313\Lib\contextlib.py:162: in __exit__
+    self.gen.throw(value)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_utils.py:87: in collapse_excgroups
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\app\hmac_middleware.py:113: in dispatch
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\cors.py:87: in __call__
+    await self.app(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\routing.py:716: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\routing.py:736: in app
+    await route.handle(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\routing.py:290: in handle
+    await self.app(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\routing.py:130: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\routing.py:116: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\routing.py:670: in app
+    raw_response = await run_endpoint_function(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\routing.py:324: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\app\valve_routes.py:107: in close_valve_manual
+    success = valve_ctrl.execute_valve_action(
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x00000195093DDB40>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019509194290>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Manual safety override', None, '2026-06-17 16:16:05.810547', '2026-06-17 16:16:05.810931')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_______ TestValveStateTransitions.test_state_transition_open_to_closed ________
+
+self = <sqlalchemy.engine.base.Connection object at 0x000001950760F930>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019507613950>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test', 'admin_001', ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019508A47F40>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019507613950>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveStateTransitions object at 0x0000019507419090>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507386660>
+test_device = <app.database.Device object at 0x000001950636B9B0>
+
+    def test_state_transition_open_to_closed(self, db_session: Session, test_device: Device):
+        """Test valid transition from open to closed."""
+        assert test_device.valve_status == "open"
+    
+        controller = ValveController(db_session)
+>       response = controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="close",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Test"
+        )
+
+backend\tests\test_valve_control.py:316: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019508A47F40>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test', 'admin_001', ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x0000019507613950>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'manual_operator', None, 'Test', 'admin_001', '2026-06-17 16:16:06.533389', '2026-06-17 16:16:06.533698')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+_______ TestValveStateTransitions.test_state_transition_closed_to_open ________
+
+self = <test_valve_control.TestValveStateTransitions object at 0x0000019507419590>
+db_session = <sqlalchemy.orm.session.Session object at 0x0000019507618AD0>
+test_device = <app.database.Device object at 0x00000195074372F0>
+
+    def test_state_transition_closed_to_open(self, db_session: Session, test_device: Device):
+        """Test valid transition from closed to open."""
+        test_device.valve_status = "closed"
+        db_session.commit()
+    
+        controller = ValveController(db_session)
+        response = controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="open",
+            triggered_by="manual_operator",
+            operator_id="admin_001",
+            reason="Test"
+        )
+    
+>       assert response["success"] is True
+               ^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'bool' object is not subscriptable
+
+backend\tests\test_valve_control.py:343: TypeError
+_______ TestValveStateTransitions.test_multiple_operations_same_device ________
+
+self = <sqlalchemy.engine.base.Connection object at 0x00000195090B1390>
+dialect = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x000001950762C160>
+parameters = [('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'Safety threshold', None, ...)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019509868FC0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'Safety threshold', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlite3.IntegrityError: CHECK constraint failed: check_valve_action
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+self = <test_valve_control.TestValveStateTransitions object at 0x00000195074588A0>
+db_session = <sqlalchemy.orm.session.Session object at 0x00000195076182F0>
+test_device = <app.database.Device object at 0x0000019507578CB0>
+
+    def test_multiple_operations_same_device(self, db_session: Session, test_device: Device):
+        """Test multiple sequential operations are logged."""
+        controller = ValveController(db_session)
+    
+        # Close
+>       controller.execute_valve_action(
+            device_id="HYDRO_TEST_001",
+            action="close",
+            triggered_by="auto_safety_cutoff",
+            operator_id=None,
+            reason="Safety threshold"
+        )
+
+backend\tests\test_valve_control.py:353: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+backend\app\valve_control.py:178: in execute_valve_action
+    self.log_valve_operation(
+backend\app\valve_control.py:123: in log_valve_operation
+    self.db.commit()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\orm\persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <sqlalchemy.dialects.sqlite.pysqlite.SQLiteDialect_pysqlite object at 0x0000019507385940>
+cursor = <sqlite3.Cursor object at 0x0000019509868FC0>
+statement = 'INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+parameters = ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'Safety threshold', None, ...)
+context = <sqlalchemy.dialects.sqlite.base.SQLiteExecutionContext object at 0x00000195076125D0>
+
+    def do_execute(self, cursor, statement, parameters, context=None):
+>       cursor.execute(statement, parameters)
+E       sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) CHECK constraint failed: check_valve_action
+E       [SQL: INSERT INTO valve_operations (device_id, action, triggered_by, quality_score_at_trigger, reason, operator_id, timestamp, received_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)]
+E       [parameters: ('HYDRO_TEST_001', 'closed', 'auto_safety_cutoff', None, 'Safety threshold', None, '2026-06-17 16:16:06.788229', '2026-06-17 16:16:06.788541')]
+E       (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\engine\default.py:952: IntegrityError
+============================== warnings summary ===============================
+backend\app\config.py:6
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+backend\app\database.py:24
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\database.py:24: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+backend\app\schemas.py:44
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:44: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    @validator('device_id')
+
+backend\app\schemas.py:28
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:28: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class SensorDataIngestionRequest(BaseModel):
+
+backend\app\schemas.py:67
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:67: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class DeviceHeartbeatRequest(BaseModel):
+
+backend\app\schemas.py:121
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:121: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class DataIngestionResponse(BaseModel):
+
+backend\app\schemas.py:137
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:137: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ErrorResponse(BaseModel):
+
+backend\app\schemas.py:165
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:165: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class DeviceRemoteConfigResponse(BaseModel):
+
+backend\app\schemas.py:206
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:206: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class FirmwareCheckResponse(BaseModel):
+
+backend\app\schemas.py:252
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:252: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class FirmwareInfoResponse(BaseModel):
+
+backend\app\schemas.py:289
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:289: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class SensorDataResponse(BaseModel):
+
+backend\app\schemas.py:307
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:307: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class DeviceResponse(BaseModel):
+
+backend\app\schemas.py:335
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:335: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AlertResponse(BaseModel):
+
+backend\app\schemas.py:357
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:357: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AnomalyResponse(BaseModel):
+
+backend\app\schemas.py:390
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:390: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CalibrationResponse(BaseModel):
+
+backend\app\schemas.py:405
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:405: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class SystemStatusResponse(BaseModel):
+
+backend\app\schemas.py:449
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:449: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MLPredictionResponse(BaseModel):
+
+backend\app\schemas.py:485
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:485: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserResponse(UserBase):
+
+backend\app\schemas.py:503
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:503: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ValveStatusResponse(BaseModel):
+
+backend\app\schemas.py:524
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:524: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ValveOperationResponse(BaseModel):
+
+backend\app\schemas.py:540
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:540: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ValveHistoryResponse(BaseModel):
+
+backend\app\schemas.py:568
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\schemas.py:568: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ValveCommandResponse(BaseModel):
+
+backend\app\main.py:310
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\main.py:310: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4599
+..\..\..\..\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4599
+  C:\Users\harik\AppData\Roaming\Python\Python313\site-packages\fastapi\applications.py:4599: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)
+
+backend\app\main.py:343
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\main.py:343: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("shutdown")
+
+backend/tests/test_valve_control.py: 11 warnings
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\tests\test_valve_control.py:23: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    last_seen=datetime.utcnow(),
+
+backend/tests/test_valve_control.py: 42 warnings
+  C:\Users\harik\AppData\Roaming\Python\Python313\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_close
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_open
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_rate_limited
+backend/tests/test_valve_control.py::TestValveController::test_valve_operation_audit_trail
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_close_success
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_open_success
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_open_to_closed
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_closed_to_open
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_multiple_operations_same_device
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\valve_control.py:173: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    device.valve_last_toggled = datetime.utcnow()
+
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_close
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_open
+backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_rate_limited
+backend/tests/test_valve_control.py::TestValveController::test_valve_operation_audit_trail
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_close_success
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_open_success
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_open_to_closed
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_closed_to_open
+backend/tests/test_valve_control.py::TestValveStateTransitions::test_multiple_operations_same_device
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\valve_control.py:120: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=device_timestamp or datetime.utcnow()
+
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_get_valve_status_success
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\valve_control.py:207: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow()
+
+backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_open_success
+  C:\Users\harik\OneDrive\Desktop\Git\Thanni-can-poda-vandhan-sir\backend\app\valve_routes.py:172: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_close
+FAILED backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_open
+FAILED backend/tests/test_valve_control.py::TestValveController::test_execute_valve_action_rate_limited
+FAILED backend/tests/test_valve_control.py::TestValveController::test_valve_operation_audit_trail
+FAILED backend/tests/test_valve_control.py::TestValveController::test_valve_operation_device_not_found
+FAILED backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_get_valve_status_success
+FAILED backend/tests/test_valve_control.py::TestValveAPIEndpoints::test_post_valve_close_success
+FAILED backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_open_to_closed
+FAILED backend/tests/test_valve_control.py::TestValveStateTransitions::test_state_transition_closed_to_open
+FAILED backend/tests/test_valve_control.py::TestValveStateTransitions::test_multiple_operations_same_device
+10 failed, 11 passed, 99 warnings in 11.12s

@@ -2,6 +2,13 @@
 
 **Purpose**: Provide concise guidance for future Copilot sessions working on this repository.
 
+## 0) Repo layout and agent guidance
+
+- This repo is primarily a Python/FastAPI backend with IoT firmware, ML model training, and a Docker Compose local dev stack.
+- Use `backend/app/` for implementation details, `docs/` for API contracts and architecture, `ML-Model/` for model training and artifacts, `ml-service/` for runtime ML inference, and `firmware/` for ESP32 firmware.
+- When changing backend APIs or schemas, update the relevant docs (`docs/Backend-Spec.md`, `docs/ER-Diagram.md`) and backend tests.
+- Do not invent a new server framework for the backend; preserve FastAPI/SQLAlchemy and Docker Compose integration.
+
 ## 1) Build, test, and lint commands
 
 ### Backend (Python/FastAPI)

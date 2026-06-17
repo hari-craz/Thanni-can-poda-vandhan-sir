@@ -155,17 +155,34 @@ class ValveController:
                     f"only {elapsed_sec:.1f}s since last toggle"
                 )
                 return False
+
+        # Normalize action into valid valve operation value ('open' or 'close')
+        normalized_action = None
+        normalized_state = None
+        
+        if action == "close":
+            normalized_action = "close"
+            normalized_state = ValveState.CLOSED.value
+        elif action == "open":
+            normalized_action = "open"
+            normalized_state = ValveState.OPEN.value
+        elif action in ("open", "close"):
+            normalized_action = action
+            normalized_state = ValveState.OPEN.value if action == "open" else ValveState.CLOSED.value
+        else:
+            logger.error(f"Invalid valve action '{action}' for device {device_id}")
+            return False
         
         # Update device valve state
-        device.valve_status = action  # 'open' or 'closed'
+        device.valve_status = normalized_state
         device.valve_last_toggled = datetime.utcnow()
-        device.valve_close_reason = reason if action == ValveState.CLOSED else None
+        device.valve_close_reason = reason if normalized_state == ValveState.CLOSED.value else None
         self.db.add(device)
         
-        # Log the operation
+        # Log the operation (use normalized_action for database constraint compliance)
         self.log_valve_operation(
             device_id=device_id,
-            action=action,
+            action=normalized_action,
             triggered_by=triggered_by,
             quality_score=quality_score,
             reason=reason,
@@ -175,7 +192,7 @@ class ValveController:
         self.db.commit()
         
         logger.info(
-            f"Valve state changed: device={device_id}, action={action}, "
+            f"Valve state changed: device={device_id}, action={normalized_action}, "
             f"triggered_by={triggered_by}"
         )
         
