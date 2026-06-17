@@ -7,12 +7,12 @@ Ingest, authenticate, store, process, and serve water monitoring data from multi
 
 1. API: FastAPI (or Express)
 2. Database: PostgreSQL
-3. Broker: MQTT (Mosquitto/EMQX)
+3. Transport: HTTPS via Cloudflare Tunnel
 4. Deployment: Docker Compose
 
 ## Core Modules
 
-1. `ingestion-service` for POST and MQTT data intake
+1. `ingestion-service` for POST data intake (HTTPS only)
 2. `auth-service` for device API key validation
 3. `processing-service` for score and alert generation
 4. `query-service` for dashboard APIs
@@ -370,9 +370,9 @@ Alert triggers:
    - Return 429 Too Many Requests + Retry-After header
 
 4. **Transport Security**:
-   - HTTPS/TLS required for production
+   - HTTPS/TLS required via Cloudflare Tunnel
    - Certificate pinning on devices (optional Phase 2)
-   - MQTT: TLS on port 8883, MQTT unencrypted on port 1883 (local networks only)
+   - All device communication uses HTTPS POST to the API endpoint
 
 5. **Authorization**:
    - Devices can only access their own data (POST /data, GET /data/:device_id where device matches JWT)
@@ -391,11 +391,10 @@ Alert triggers:
 1. `api` — FastAPI/Express server (port 8000)
 2. `worker` — Async job processor (score calculation, alerts, notifications)
 3. `postgres` — Time-series database (port 5432)
-4. `mqtt` — EMQX broker cluster (port 1883, 8883)
-5. `redis` — Cache + rate limiting (port 6379)
-6. `frontend` — React/Vite dashboard (port 3000)
-7. `prometheus` — Metrics (Phase 2, port 9090)
-8. `loki` — Log aggregation (Phase 2, port 3100)
+4. `redis` — Cache + rate limiting (port 6379)
+5. `frontend` — React/Vite dashboard (port 3000)
+6. `prometheus` — Metrics (Phase 2, port 9090)
+7. `loki` — Log aggregation (Phase 2, port 3100)
 
 ## Database Schema
 
@@ -713,5 +712,5 @@ POST /data now optionally includes valve fields:
 1. `api`
 2. `worker`
 3. `postgres`
-4. `mqtt`
+4. `redis`
 5. `frontend`

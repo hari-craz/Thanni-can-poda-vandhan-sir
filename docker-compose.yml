@@ -7,30 +7,22 @@ services:
       POSTGRES_PASSWORD: hydronix_pass
       POSTGRES_DB: hydronix_db
     ports:
-      - "5432:5432"
+      - "10017:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
     ports:
-      - "6379:6379"
+      - "10016:6379"
     volumes:
       - redis_data:/data
-
-  mqtt:
-    image: eclipse-mosquitto:2.0
-    ports:
-      - "1883:1883"
-    volumes:
-      - ./mqtt/config:/mosquitto/config:ro
-      - mqtt_data:/mosquitto/data
 
   ml-service:
     build: ./ml-service
     image: ghcr.io/hari-craz/hydronix-ml-service:latest
     ports:
-      - "8001:8000"
+      - "10019:8000"
     depends_on:
       - db
     environment:
@@ -50,14 +42,11 @@ services:
       - db
       - ml-service
       - redis
-      - mqtt
     ports:
-      - "8000:8000"
+      - "10020:8000"
     environment:
       DATABASE_URL: postgresql+psycopg2://hydronix:hydronix_pass@db:5432/hydronix_db
       REDIS_URL: redis://redis:6379/0
-      MQTT_BROKER: mqtt
-      MQTT_PORT: 1883
       ML_SERVICE_URL: http://ml-service:8000
       ML_SERVICE_API_KEY: "hydronix_local_key"
       ML_SERVICE_ENABLED: "true"
@@ -72,7 +61,7 @@ services:
   loki:
     image: grafana/loki:2.9.2
     ports:
-      - "3100:3100"
+      - "10021:3100"
     command: -config.file=/etc/loki/local-config.yaml
     restart: always
 
@@ -90,4 +79,3 @@ services:
 volumes:
   db_data:
   redis_data:
-  mqtt_data:

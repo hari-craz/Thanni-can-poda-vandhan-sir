@@ -1,13 +1,14 @@
 """Comprehensive smoke test runner for Hydronix services.
 
-Runs exactly 100 distinct verification tests against:
+Runs 98 distinct verification tests against:
 - PostgreSQL Database (port 5432)
 - Redis Cache (port 6379)
-- Mosquitto MQTT Broker (port 1883)
 - ML Prediction Service (port 8001)
 - FastAPI Backend API (port 8000)
 - Prometheus Server (port 9415)
 - Grafana Dashboard (port 3001)
+
+Note: MQTT/Mosquitto checks removed — system is HTTPS-only via Cloudflare Tunnel.
 """
 import sys
 import socket
@@ -67,25 +68,9 @@ def test_redis_ping():
     except Exception as e:
         return False, str(e)
 
-def test_mqtt_connect():
-    """Verify MQTT Broker directly with a basic CONNECT sequence."""
-    try:
-        s = socket.create_connection(("localhost", 1883), timeout=2.0)
-        # Send MQTT Connect Packet (v3.1.1)
-        connect_packet = bytes.fromhex("100c00044d5154540402003c0000")
-        s.sendall(connect_packet)
-        response = s.recv(4)
-        s.close()
-        
-        if len(response) >= 4 and response[0] == 0x20 and response[3] == 0x00:
-            return True, None
-        return False, f"Expected CONNACK with code 0, got response: {response.hex()}"
-    except Exception as e:
-        return False, str(e)
-
 def main():
     print("=" * 80)
-    print("                  HYDRONIX SMOKE TEST SYSTEM (100 CHECKS)")
+    print("                  HYDRONIX SMOKE TEST SYSTEM (98 CHECKS)")
     print("=" * 80)
     
     tests_run = 0
@@ -104,47 +89,39 @@ def main():
             if error:
                 print(f"          Error: {error}")
 
-    # --- PART 1: SOCKET AND INFRASTRUCTURE CHECKS (7 Checks) ---
+    # --- PART 1: SOCKET AND INFRASTRUCTURE CHECKS (6 Checks) ---
     print("\n[Section 1: Socket Connectivity & Protocols]")
-    
+
     # Check 1: PostgreSQL Socket
     ok, err = check_socket("localhost", 5432, "PostgreSQL")
     log_test("Database Socket Check (Port 5432)", ok, err)
-    
+
     # Check 2: Redis Socket
     ok, err = check_socket("localhost", 6379, "Redis")
     log_test("Redis Socket Check (Port 6379)", ok, err)
-    
-    # Check 3: Mosquitto Socket
-    ok, err = check_socket("localhost", 1883, "Mosquitto")
-    log_test("Mosquitto Socket Check (Port 1883)", ok, err)
-    
-    # Check 4: ML Service Socket
+
+    # Check 3: ML Service Socket
     ok, err = check_socket("localhost", 8001, "ML Service")
     log_test("ML Service Socket Check (Port 8001)", ok, err)
-    
-    # Check 5: Backend Socket
+
+    # Check 4: Backend Socket
     ok, err = check_socket("localhost", 8000, "Backend")
     log_test("Backend Socket Check (Port 8000)", ok, err)
-    
-    # Check 6: Prometheus Socket
+
+    # Check 5: Prometheus Socket
     ok, err = check_socket("localhost", 9415, "Prometheus")
     log_test("Prometheus Socket Check (Port 9415)", ok, err)
-    
-    # Check 7: Grafana Socket
+
+    # Check 6: Grafana Socket
     ok, err = check_socket("localhost", 3001, "Grafana")
     log_test("Grafana Socket Check (Port 3001)", ok, err)
 
-    # --- PART 2: PROTOCOL VALIDATIONS (2 Checks) ---
+    # --- PART 2: PROTOCOL VALIDATIONS (1 Check) ---
     print("\n[Section 2: Protocol Handshakes]")
-    
-    # Check 8: Redis PING
+
+    # Check 7: Redis PING
     ok, err = test_redis_ping()
     log_test("Redis RESP Handshake (PING -> PONG)", ok, err)
-    
-    # Check 9: MQTT CONNECT
-    ok, err = test_mqtt_connect()
-    log_test("Mosquitto MQTT Protocol Handshake (CONNECT -> CONNACK)", ok, err)
 
     # --- PART 3: AUTHENTICATION AND PROVISIONING (2 Checks) ---
     print("\n[Section 3: Authentication & Device Provisioning]")
@@ -350,8 +327,8 @@ def main():
     print(f"Checks Failed:         {tests_failed}")
     print("=" * 80)
     
-    if tests_failed == 0 and tests_run == 100:
-        print("\n[SUCCESS] All 100 checks passed! All systems are healthy and operational.")
+    if tests_failed == 0 and tests_run == 98:
+        print("\n[SUCCESS] All 98 checks passed! All systems are healthy and operational.")
         return 0
     else:
         print(f"\n[WARNING] {tests_failed} test(s) failed, or only {tests_run} checks were run.")

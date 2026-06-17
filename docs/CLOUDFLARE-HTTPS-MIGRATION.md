@@ -180,9 +180,9 @@ Devices must be updated to send HTTPS POST requests instead of MQTT:
 - 🔄 Verify device→backend HTTPS connectivity
 
 ### Phase 3: Production Rollout
-- ⏳ Monitor device connectivity during migration
-- ⏳ Disable MQTT broker (no longer needed)
-- ⏳ Archive MQTT configuration
+- ✅ Monitor device connectivity during migration
+- ✅ Disable MQTT broker (removed from docker-compose)
+- ✅ Archive MQTT configuration (mqtt/config/ retained for reference only)
 - ⏳ Verify 100% device HTTPS coverage
 
 ## Testing Cloudflare Tunnel Setup
@@ -264,5 +264,5 @@ If issues occur during migration:
 ---
 
 **Version**: 2.0.0  
-**Date**: 2026-06-17  
-**Status**: Backend HTTPS-Ready, Awaiting Device Firmware Updates
+**Date**: 2026-06-18  
+**Status**: Backend HTTPS-Ready, MQTT Broker Removed, Awaiting Full Device Firmware Rollout
