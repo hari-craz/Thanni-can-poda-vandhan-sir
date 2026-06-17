@@ -106,6 +106,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# HTTPS Enforcement & Security Headers Middleware (v2.0.0 Cloudflare Tunnel)
+@app.middleware("http")
+async def https_enforcement_and_security_headers(request: Request, call_next):
+    """
+    Enforce HTTPS-only communication and add security headers.
+    Devices must connect via HTTPS (Cloudflare Tunnel).
+    """
+    # Skip enforcement for health checks and local testing
+    path = request.url.path
+    if path == "/health":
+        response = await call_next(request)
+        return response
+    
+    # In production, reject plain HTTP requests
+    if settings.https_only and request.url.scheme == "http":
+        if settings.force_https_redirect and not request.headers.get("X-Forwarded-Proto"):
+            # 301 redirect to HTTPS if not behind proxy already
+            return JSONResponse(
+                status_code=301,
+                content={"error": "HTTPS required"},
+                headers={"Location": str(request.url).replace("http://", "https://", 1)}
+            )
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Add security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # Add HSTS header (strict transport security)
+    if settings.hsts_max_age_seconds > 0:
+        hsts_value = f"max-age={settings.hsts_max_age_seconds}"
+        if settings.hsts_include_subdomains:
+            hsts_value += "; includeSubDomains"
+        if settings.hsts_preload:
+            hsts_value += "; preload"
+        response.headers["Strict-Transport-Security"] = hsts_value
+    
+    # Cloudflare Tunnel identity headers
+    response.headers["X-Backend-Version"] = "2.0.0"
+    response.headers["X-Transport"] = "HTTPS-Cloudflare-Tunnel"
+    
+    return response
+
 # Redis cache (initialised early; needed by HMAC middleware)
 from .cache import RedisCache
 cache = RedisCache(redis_url=settings.redis_url)
@@ -314,6 +361,13 @@ async def startup_event():
     init_db()
     logger.info("Database initialized")
 
+    # Initialize Cloudflare Tunnel integration (HTTPS-only)
+    try:
+        from .cloudflare_tunnel import init_cloudflare_tunnel
+        await init_cloudflare_tunnel()
+    except Exception as e:
+        logger.error(f"Failed to initialize Cloudflare Tunnel: {e}")
+    
     import asyncio
     asyncio.create_task(partition_manager_loop())
 

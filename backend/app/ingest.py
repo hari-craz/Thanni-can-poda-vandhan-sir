@@ -1,33 +1,109 @@
-import json
-import threading
-import time
-from paho.mqtt import client as mqtt
-from .config import settings
-from .database import SessionLocal, SensorData
+"""
+Data ingestion handler for Hydronix v2.0.0 (HTTPS-only, no MQTT).
+
+All device data arrives via HTTPS POST to /data or /ingest endpoints.
+MQTT has been removed in favor of Cloudflare Tunnel HTTPS transport.
+"""
+import logging
+from typing import Optional
+from datetime import datetime
+from sqlalchemy.orm import Session
+
+from .database import SensorData, Device
+from .quality_score import QualityScorer
+
+logger = logging.getLogger(__name__)
 
 
-def on_message(client, userdata, msg):
+def ingest_sensor_data(
+    db: Session,
+    device_id: str,
+    timestamp: datetime,
+    ph: float,
+    turbidity: float,
+    tds: float,
+    temperature: float,
+    flow_rate: float,
+    trace_id: Optional[str] = None,
+    **kwargs
+) -> Optional[SensorData]:
+    """
+    Ingest a sensor reading from a device via HTTPS.
+    Applies quality scoring and anomaly detection.
+    
+    Args:
+        db: Database session
+        device_id: Device identifier (HYDRO_###)
+        timestamp: Timestamp of reading (ISO 8601, UTC)
+        ph: pH reading
+        turbidity: Turbidity in NTU
+        tds: Total dissolved solids in ppm
+        temperature: Temperature in Celsius
+        flow_rate: Flow rate in L/min
+        trace_id: Optional trace ID for debugging
+        **kwargs: Additional fields (device_reset_count, seq_no, etc.)
+    
+    Returns:
+        SensorData object if ingestion successful, None otherwise
+    """
     try:
-        payload = json.loads(msg.payload.decode())
-    except Exception:
-        payload = {'raw': msg.payload.decode()}
-    # store to DB
-    db = SessionLocal()
-    sd = SensorData(device_id=payload.get('device_id', 'unknown'), raw=payload)
-    db.add(sd)
-    db.commit()
-    db.close()
-
-
-def start_mqtt_loop():
-    client = mqtt.Client()
-    client.on_message = on_message
-    client.connect(settings.mqtt_broker, settings.mqtt_port, 60)
-    client.subscribe(settings.mqtt_topic)
-    client.loop_forever()
-
-
-def start_in_background():
-    t = threading.Thread(target=start_mqtt_loop, daemon=True)
-    t.start()
-    return t
+        # Verify device exists and is active
+        device = db.query(Device).filter_by(device_id=device_id).first()
+        if not device:
+            logger.warning(f"Ingest: Device {device_id} not found")
+            return None
+        
+        if not device.is_active:
+            logger.warning(f"Ingest: Device {device_id} is inactive")
+            return None
+        
+        # Update device status
+        device.status = "online"
+        device.last_seen = datetime.utcnow()
+        device.last_heartbeat = datetime.utcnow()
+        
+        # Calculate quality score
+        scorer = QualityScorer()
+        quality_score = scorer.calculate_score({
+            "ph": ph,
+            "turbidity": turbidity,
+            "tds": tds,
+            "temperature": temperature,
+            "flow_rate": flow_rate
+        })
+        
+        # Create sensor data record
+        sensor_data = SensorData(
+            device_id=device_id,
+            timestamp=timestamp,
+            received_at=datetime.utcnow(),
+            timestamp_source=kwargs.get("timestamp_source", "device"),
+            ph=ph,
+            turbidity=turbidity,
+            tds=tds,
+            temperature=temperature,
+            flow_rate=flow_rate,
+            quality_score=quality_score,
+            trace_id=trace_id,
+            device_reset_count=kwargs.get("device_reset_count", 0),
+            seq_no=kwargs.get("seq_no"),
+            valve_state=kwargs.get("valve_state"),
+        )
+        
+        db.add(device)
+        db.add(sensor_data)
+        db.commit()
+        db.refresh(sensor_data)
+        
+        logger.info(
+            f"Ingest: {device_id} quality={quality_score} "
+            f"ph={ph:.1f} turbidity={turbidity:.1f} tds={tds:.0f} "
+            f"temp={temperature:.1f} (trace_id={trace_id})"
+        )
+        
+        return sensor_data
+        
+    except Exception as e:
+        logger.exception(f"Ingest error for {device_id}: {e}")
+        db.rollback()
+        return None

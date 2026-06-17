@@ -124,6 +124,25 @@ class Settings(BaseSettings):
     # Logging / ELK
     log_to_elastic: bool = False
     elastic_url: Optional[str] = None
+    
+    # Cloudflare Tunnel Configuration (HTTPS-only transport)
+    cloudflare_tunnel_enabled: bool = True  # Set False to disable Cloudflare integration
+    cloudflare_tunnel_url: Optional[str] = None  # e.g., "https://hydronix-tunnel.example.com"
+    cloudflare_api_token: Optional[str] = None  # Cloudflare API token for programmatic access
+    cloudflare_zone_id: Optional[str] = None  # Cloudflare Zone ID
+    cloudflare_tunnel_id: Optional[str] = None  # Tunnel UUID
+    
+    # Device API Endpoint (public URL for devices to POST to)
+    device_api_endpoint: str = "https://api.hydronix.local/v2"
+    device_api_timeout_sec: int = 30  # HTTP request timeout
+    device_max_payload_size_bytes: int = 8192  # Max POST body size
+    
+    # HTTPS Enforcement
+    https_only: bool = True  # Reject HTTP requests (v2.0.0+)
+    force_https_redirect: bool = True  # 301 redirect HTTP to HTTPS
+    hsts_max_age_seconds: int = 31536000  # 1 year HSTS policy
+    hsts_include_subdomains: bool = True
+    hsts_preload: bool = True
 
     class Config:
         env_file = ".env"
