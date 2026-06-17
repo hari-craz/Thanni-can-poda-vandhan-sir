@@ -9,26 +9,15 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+psycopg2://hydronix:hydronix_pass@db:5432/hydronix_db"
     
-    # MQTT
-    mqtt_broker: str = "broker.hivemq.com"
-    mqtt_port: int = 1883
-    mqtt_use_tls: bool = False  # Set to True for port 8883
-    mqtt_topic: str = "hydronix/sensor/+"
-    mqtt_client_id: str = "hydronix_backend"
-    mqtt_username: Optional[str] = None
-    mqtt_password: Optional[str] = None
-    mqtt_keepalive: int = 60
-    mqtt_queue_max: int = 1000  # Max in-memory queue size for incoming MQTT messages
-    
-    # Redis (for rate limiting and caching)
+    # Redis (for rate limiting, caching, and HMAC nonce dedup)
     redis_url: str = "redis://localhost:6379/0"
     
     # API Configuration
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_title: str = "Hydronix Backend API"
-    api_version: str = "1.0.0"
-    api_description: str = "Water monitoring system ingestion and query API"
+    api_version: str = "2.0.0"  # Bumped: MQTT removed, HTTPS-only
+    api_description: str = "Water monitoring system — HTTPS/Cloudflare Tunnel transport"
     
     # Security
     api_key_expiry_days: int = 90
@@ -45,7 +34,16 @@ class Settings(BaseSettings):
         "https://dashboard.hydronix.local"
     ]
     cors_allow_methods: list = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
-    cors_allow_headers: list = ["Content-Type", "Authorization", "X-API-Key"]
+    # HMAC signature headers added in v2
+    cors_allow_headers: list = [
+        "Content-Type", "Authorization", "X-API-Key",
+        "X-Timestamp", "X-Nonce", "X-Signature",
+    ]
+
+    # HMAC Signature Validation (firmware v2.0.0)
+    hmac_timestamp_tolerance_sec: int = 300   # ±5 minutes
+    hmac_nonce_ttl_sec: int = 600             # Nonce dedup window
+    hmac_validation_enabled: bool = True      # Set False only during migration testing
     
     # Rate Limiting
     rate_limit_per_device_minute: int = 100

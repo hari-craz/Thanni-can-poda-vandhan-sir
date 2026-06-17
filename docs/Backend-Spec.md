@@ -547,6 +547,160 @@ Scoring strategy:
 1. Mark `online` when data or heartbeat received within last 2 minutes.
 2. Mark `offline` otherwise.
 
+## Solenoid Valve Control (NEW)
+
+### Automatic Safety Cutoff Logic
+
+When a sensor reading arrives, check quality thresholds:
+- If any threshold violated → valve auto-closes + log to `valve_operations`
+- If conditions improve → valve auto-opens + log to `valve_operations`
+
+**Safety Thresholds:**
+- pH: 6.5 to 8.5
+- Turbidity: ≤ 5.0 NTU
+- TDS: ≤ 500 ppm
+- Temperature: 5°C to 50°C
+
+### Manual Remote Control Endpoints
+
+#### GET /devices/{device_id}/valve/status
+
+Get current valve state for a device.
+
+Response:
+```json
+{
+  "device_id": "HYDRO_001",
+  "valve_state": "open",
+  "valve_last_toggled": "2026-06-17T20:05:00Z",
+  "valve_close_reason": null,
+  "timestamp": "2026-06-17T20:10:00Z"
+}
+```
+
+#### GET /devices/{device_id}/valve/history
+
+Get audit trail of all valve operations (limit: 1-500, default 50).
+
+Response:
+```json
+{
+  "device_id": "HYDRO_001",
+  "operations": [
+    {
+      "id": 42,
+      "device_id": "HYDRO_001",
+      "action": "close",
+      "triggered_by": "auto_safety_cutoff",
+      "quality_score_at_trigger": 45,
+      "reason": "pH out of range (6.2)",
+      "operator_id": null,
+      "timestamp": "2026-06-17T20:05:00Z",
+      "received_at": "2026-06-17T20:05:10Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+#### POST /devices/{device_id}/valve/close
+
+Manually close valve (operator auth required).
+
+Request:
+```json
+{
+  "reason": "Manual inspection required"
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "device_id": "HYDRO_001",
+  "action": "close",
+  "new_state": "closed",
+  "message": "Valve closed successfully",
+  "timestamp": "2026-06-17T20:05:00Z"
+}
+```
+
+#### POST /devices/{device_id}/valve/open
+
+Manually open valve (operator auth required).
+
+Request:
+```json
+{
+  "reason": "Inspection complete, resuming monitoring"
+}
+```
+
+Response:
+```json
+{
+  "ok": true,
+  "device_id": "HYDRO_001",
+  "action": "open",
+  "new_state": "open",
+  "message": "Valve opened successfully",
+  "timestamp": "2026-06-17T20:05:00Z"
+}
+```
+
+### Valve Operations Table (New)
+
+```sql
+CREATE TABLE valve_operations (
+  id SERIAL PRIMARY KEY,
+  device_id VARCHAR(50) NOT NULL REFERENCES devices(device_id),
+  action VARCHAR(10) NOT NULL CHECK (action IN ('open', 'close')),
+  triggered_by VARCHAR(50) NOT NULL CHECK (triggered_by IN ('auto_safety_cutoff', 'manual_operator', 'remote_command')),
+  quality_score_at_trigger INT,
+  reason TEXT,
+  operator_id VARCHAR(100),
+  timestamp TIMESTAMP DEFAULT NOW(),
+  received_at TIMESTAMP DEFAULT NOW(),
+  INDEX idx_valve_device_timestamp (device_id, timestamp DESC),
+  INDEX idx_valve_device (device_id)
+);
+```
+
+### Device Table Updates (New Columns)
+
+```sql
+ALTER TABLE devices ADD COLUMN valve_status VARCHAR(20) DEFAULT 'open' CHECK (valve_status IN ('open', 'closed'));
+ALTER TABLE devices ADD COLUMN valve_last_toggled TIMESTAMP;
+ALTER TABLE devices ADD COLUMN valve_close_reason VARCHAR(255);
+```
+
+### Sensor Data Table Updates (New Columns)
+
+```sql
+ALTER TABLE sensor_data ADD COLUMN valve_state VARCHAR(20);  -- 'open' or 'closed'
+ALTER TABLE sensor_data ADD COLUMN valve_last_toggled TIMESTAMP;
+```
+
+### Telemetry Payload Addition
+
+POST /data now optionally includes valve fields:
+
+```json
+{
+  "device_id": "HYDRO_001",
+  "ph": 7.2,
+  "turbidity": 3.1,
+  "tds": 120,
+  "temperature": 25.0,
+  "flow_rate": 10.5,
+  "timestamp": "2026-06-17T20:05:00Z",
+  "seq_no": 1,
+  "valve_state": "open",
+  "valve_last_toggled": "2026-06-17T19:54:32Z"
+}
+```
+
 ## Security Controls
 
 1. API key in header (`x-api-key`) or JWT device token.

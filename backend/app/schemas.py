@@ -37,6 +37,9 @@ class SensorDataIngestionRequest(BaseModel):
     seq_no: Optional[int] = Field(None, ge=0)
     device_reset_count: Optional[int] = Field(0, ge=0)
     raw_ph: Optional[float] = None
+    # Valve status fields
+    valve_state: Optional[str] = Field(None, pattern="^(open|closed)$")
+    valve_last_toggled: Optional[datetime] = None
 
     @validator('device_id')
     def validate_device_id(cls, v):
@@ -54,20 +57,43 @@ class SensorDataIngestionRequest(BaseModel):
                 "temperature": 25.0,
                 "flow_rate": 10.5,
                 "timestamp": "2026-06-14T21:30:00Z",
-                "seq_no": 9821
+                "seq_no": 9821,
+                "valve_state": "open",
+                "valve_last_toggled": "2026-06-14T21:15:00Z"
             }
         }
 
 
 class DeviceHeartbeatRequest(BaseModel):
-    """POST /devices/:device_id/heartbeat request."""
+    """POST /devices/:device_id/heartbeat request (v2 firmware)."""
     device_id: str = Field(..., pattern=r"^HYDRO_\d{3}$")
     status: str = Field(..., pattern="^(online|offline)$")
-    signal_strength: Optional[int] = None  # dBm
+    signal_strength: Optional[int] = None          # dBm
     sd_usage_percent: Optional[float] = Field(None, ge=0, le=100)
     uptime_seconds: Optional[int] = Field(None, ge=0)
     firmware_version: Optional[str] = None
-    last_reading_at: Optional[datetime] = None
+    last_reading_at: Optional[str] = None          # ISO8601 string or 'never'
+    low_storage: Optional[bool] = None
+    # v2 firmware additions
+    free_heap: Optional[int] = Field(None, ge=0)   # bytes free on ESP32 heap
+    queued_records: Optional[int] = Field(None, ge=0)  # SD offline queue depth
+    config_version: Optional[int] = Field(0, ge=0)    # last known server config version
+    sensor_status: Optional[Dict[str, bool]] = None   # stuck sensor flags
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "status": "online",
+                "signal_strength": -65,
+                "uptime_seconds": 86400,
+                "firmware_version": "2.0.0",
+                "free_heap": 180000,
+                "queued_records": 0,
+                "config_version": 3,
+                "sensor_status": {"ph_stuck": False, "turbidity_stuck": False},
+            }
+        }
 
 
 class DeviceProvisionRequest(BaseModel):
@@ -132,6 +158,75 @@ class DeviceHeartbeatResponse(BaseModel):
     """Response for POST /devices/:device_id/heartbeat."""
     ok: bool
     server_timestamp: datetime
+    # v2 additions: tells the device what server config version is current
+    config_version: int = 0
+
+
+class DeviceRemoteConfigResponse(BaseModel):
+    """Response for GET /devices/:device_id/config."""
+    device_id: str
+    config_version: int
+    sample_interval_sec: int
+    firmware_channel: str
+    ph_offset: float
+    turbidity_offset: float
+    tds_offset: float
+    temp_offset: float
+    flow_offset: float
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "config_version": 4,
+                "sample_interval_sec": 60,
+                "firmware_channel": "stable",
+                "ph_offset": -0.05,
+                "turbidity_offset": 0.0,
+                "tds_offset": 2.0,
+                "temp_offset": 0.0,
+                "flow_offset": 0.0,
+            }
+        }
+
+
+class DeviceRemoteConfigUpdateRequest(BaseModel):
+    """PATCH /devices/:device_id/config — admin sets new remote config values."""
+    sample_interval_sec: Optional[int] = Field(None, ge=30, le=3600)
+    firmware_channel: Optional[str] = Field(None, pattern="^(stable|beta|canary)$")
+    ph_offset: Optional[float] = None
+    turbidity_offset: Optional[float] = None
+    tds_offset: Optional[float] = None
+    temp_offset: Optional[float] = None
+    flow_offset: Optional[float] = None
+
+
+class FirmwareCheckResponse(BaseModel):
+    """Response for GET /devices/:device_id/firmware — device checks for OTA update."""
+    device_id: str
+    update_available: bool
+    current_version: str   # version device reported
+    latest_version: Optional[str] = None
+    url: Optional[str] = None
+    sha256: Optional[str] = None
+    size_bytes: Optional[int] = None
+    release_notes: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "update_available": True,
+                "current_version": "2.0.0",
+                "latest_version": "2.1.0",
+                "url": "https://cdn.hydronix.com/firmware/hydro_2_1_0.bin",
+                "sha256": "abc123...",
+                "size_bytes": 1234567,
+                "release_notes": "Reliability fixes.",
+            }
+        }
 
 
 class DeviceProvisionResponse(BaseModel):
@@ -310,12 +405,13 @@ class CalibrationResponse(BaseModel):
 class SystemStatusResponse(BaseModel):
     """Response for GET /status."""
     ok: bool
-    backend_status: str  # healthy, degraded, unhealthy
+    backend_status: str        # healthy, degraded, unhealthy
     database_status: str
-    mqtt_broker_status: str
+    cache_status: str          # redis status (replaces mqtt_broker_status)
     active_devices: int
     total_devices: int
     uptime_seconds: int
+    transport: str = "https"  # always https in v2
 
     class Config:
         json_schema_extra = {
@@ -323,10 +419,11 @@ class SystemStatusResponse(BaseModel):
                 "ok": True,
                 "backend_status": "healthy",
                 "database_status": "healthy",
-                "mqtt_broker_status": "healthy",
+                "cache_status": "healthy",
                 "active_devices": 5,
                 "total_devices": 10,
-                "uptime_seconds": 864000
+                "uptime_seconds": 864000,
+                "transport": "https",
             }
         }
 
@@ -392,3 +489,99 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# SOLENOID VALVE SCHEMAS
+# ============================================================================
+
+class ValveCommandRequest(BaseModel):
+    """POST /devices/{device_id}/valve/close or /valve/open request."""
+    reason: Optional[str] = None  # Optional reason for manual operation
+
+
+class ValveStatusResponse(BaseModel):
+    """Response for GET /devices/{device_id}/valve/status."""
+    device_id: str
+    valve_state: str  # open, closed
+    valve_last_toggled: Optional[datetime] = None
+    valve_close_reason: Optional[str] = None
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "valve_state": "open",
+                "valve_last_toggled": "2026-06-17T20:05:00Z",
+                "valve_close_reason": None,
+                "timestamp": "2026-06-17T20:10:00Z"
+            }
+        }
+
+
+class ValveOperationResponse(BaseModel):
+    """Single valve operation record."""
+    id: int
+    device_id: str
+    action: str  # open, close
+    triggered_by: str  # auto_safety_cutoff, manual_operator, remote_command
+    quality_score_at_trigger: Optional[int] = None
+    reason: Optional[str] = None
+    operator_id: Optional[str] = None
+    timestamp: datetime
+    received_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ValveHistoryResponse(BaseModel):
+    """Response for GET /devices/{device_id}/valve/history."""
+    device_id: str
+    operations: List[ValveOperationResponse]
+    total: int
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "HYDRO_001",
+                "operations": [
+                    {
+                        "id": 42,
+                        "device_id": "HYDRO_001",
+                        "action": "close",
+                        "triggered_by": "auto_safety_cutoff",
+                        "quality_score_at_trigger": 45,
+                        "reason": "pH out of range (6.2)",
+                        "operator_id": None,
+                        "timestamp": "2026-06-17T20:05:00Z",
+                        "received_at": "2026-06-17T20:05:10Z"
+                    }
+                ],
+                "total": 1
+            }
+        }
+
+
+class ValveCommandResponse(BaseModel):
+    """Response for POST /devices/{device_id}/valve/close or /open."""
+    ok: bool
+    device_id: str
+    action: str  # close or open
+    new_state: str  # open or closed
+    message: str
+    timestamp: datetime
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "ok": True,
+                "device_id": "HYDRO_001",
+                "action": "close",
+                "new_state": "closed",
+                "message": "Valve closed successfully",
+                "timestamp": "2026-06-17T20:05:00Z"
+            }
+        }

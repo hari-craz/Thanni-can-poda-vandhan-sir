@@ -24,6 +24,7 @@ from .schemas import (
     FirmwareUploadRequest,
     FirmwareInfoResponse,
     FirmwareStatusRequest,
+    FirmwareCheckResponse,
     AlertAcknowledgementRequest,
     KeyRotationRequest,
     KeyRotationResponse,
@@ -39,11 +40,18 @@ from .schemas import (
     SystemStatusResponse,
     MLPredictionRequest,
     MLPredictionResponse,
+    DeviceRemoteConfigResponse,
+    DeviceRemoteConfigUpdateRequest,
+    ValveCommandRequest,
+    ValveStatusResponse,
+    ValveOperationResponse,
+    ValveHistoryResponse,
+    ValveCommandResponse,
 )
 import httpx
 from .database import (
     Device, User, SensorData, Alert, APIKey, AuditLog, MLAnomaly,
-    get_db, init_db, Firmware, SessionLocal
+    get_db, init_db, Firmware, DeviceRemoteConfig, SessionLocal, ValveOperation
 )
 from .auth import validate_api_key, create_api_key_for_device, rotate_api_key
 from .quality_score import QualityScorer, AlertManager
@@ -82,6 +90,13 @@ try:
 except Exception:
     pass
 
+# Include valve control routes
+try:
+    from .valve_routes import router as valve_router
+    app.include_router(valve_router)
+except Exception:
+    pass
+
 # Add CORS middleware (permissive for development)
 app.add_middleware(
     CORSMiddleware,
@@ -90,6 +105,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Redis cache (initialised early; needed by HMAC middleware)
+from .cache import RedisCache
+cache = RedisCache(redis_url=settings.redis_url)
+
+# HMAC Signature Validation Middleware (firmware v2.0.0)
+# Must be added AFTER CORS so OPTIONS pre-flights bypass it.
+if settings.hmac_validation_enabled:
+    from .hmac_middleware import HMACSignatureMiddleware
+    import hashlib as _hashlib
+
+    async def _resolve_raw_api_key(x_api_key: str):
+        """
+        Look up the raw (plain-text) API key from the Redis cache.
+        Returns the key itself when found (we store device_id keyed by sha256 of the key;
+        for HMAC we need the raw key string that the device itself holds).
+        The device sends its raw api_key in X-API-Key so we can use it directly as the
+        HMAC signing secret – the server never stores the plain key but validates the
+        HMAC using the provided key (bcrypt validation still happens in the route guard).
+        """
+        # Device sends raw key — we use it directly as HMAC secret.
+        # bcrypt route-guard validates it independently.
+        return x_api_key if x_api_key else None
+
+    app.add_middleware(
+        HMACSignatureMiddleware,
+        cache=cache,
+        get_raw_api_key_fn=_resolve_raw_api_key,
+    )
 
 # Trace ID middleware (adds X-Trace-Id and binds to structlog context)
 @app.middleware("http")
@@ -124,9 +168,6 @@ app.post("/auth/login")(token_endpoint)
 async def logout():
     return {"ok": True}
 
-# MQTT processor (initialized at startup)
-mqtt_processor = None
-
 # WebSocket connections manager
 class WebSocketManager:
     def __init__(self):
@@ -143,7 +184,6 @@ class WebSocketManager:
             pass
 
     async def broadcast_json(self, message: dict):
-        # send concurrently
         import asyncio
         coros = []
         for ws in list(self.active):
@@ -159,9 +199,6 @@ class WebSocketManager:
 
 ws_manager = WebSocketManager()
 
-# Redis cache helper (optional)
-from .cache import RedisCache
-cache = RedisCache(redis_url=settings.redis_url)
 
 
 async def get_device_id_cached(api_key: str) -> Optional[str]:
@@ -272,16 +309,14 @@ async def partition_manager_loop():
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database and background tasks."""
-    logger.info(f"Starting Hydronix Backend API (env: {settings.environment})")
+    """Initialize database and background tasks on v2.0.0 (HTTPS-only, no MQTT)."""
+    logger.info(f"Starting Hydronix Backend API v2 (env: {settings.environment})")
     init_db()
     logger.info("Database initialized")
 
-    # Start database partition manager background loop
     import asyncio
     asyncio.create_task(partition_manager_loop())
 
-    # Bootstrap superadmin if users table is empty
     db = next(get_db())
     try:
         if db.query(User).count() == 0:
@@ -295,75 +330,21 @@ async def startup_event():
                 )
                 db.add(super_admin)
                 db.commit()
-                logger.info("Bootstrap: Created Super Admin account successfully")
+                logger.info("Bootstrap: Created Super Admin account")
             else:
-                logger.warning("Bootstrap: SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD environment variables not set. Skipping bootstrap admin creation.")
+                logger.warning("Bootstrap: SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD not set.")
     except Exception as e:
         logger.error(f"Failed to bootstrap superadmin: {e}")
         db.rollback()
-
-    # Start MQTT processor if enabled
-    global mqtt_processor
-    try:
-        from .mqtt_client import MQTTProcessor
-
-        def _process_mqtt_message(payload: dict):
-            # Basic mapping: pass MQTT message payload into ingest flow.
-            # Expect payload to conform to SensorDataIngestionRequest shape.
-            try:
-                # Synchronous DB call via dependency is not available here — use a short-lived session
-                db = next(get_db())
-                # Build a minimal request-like object
-                class _Req:
-                    pass
-
-                req = _Req()
-                req.device_id = payload.get('device_id')
-                req.ph = payload.get('ph')
-                req.turbidity = payload.get('turbidity')
-                req.tds = payload.get('tds')
-                req.temperature = payload.get('temperature')
-                req.flow_rate = payload.get('flow_rate')
-                req.timestamp = payload.get('timestamp')
-                req.seq_no = payload.get('seq_no')
-                req.device_reset_count = payload.get('device_reset_count', 0)
-                req.raw_ph = payload.get('raw_ph')
-
-                # Call ingest path directly
-                # Note: device authentication/authorization is skipped for MQTT source — broker should filter topics
-                asyncio_run = None
-                try:
-                    import asyncio
-                    asyncio_run = asyncio.get_event_loop().run_until_complete
-                except Exception:
-                    asyncio_run = None
-
-                if asyncio_run:
-                    # Use FastAPI endpoint helper call
-                    asyncio_run(ingest_sensor_data(req, db, client_ip='mqtt', device_id=req.device_id))
-                else:
-                    # Fallback: call ingest_sensor_data synchronously if available
-                    ingest_sensor_data(req, db, client_ip='mqtt', device_id=req.device_id)
-            except Exception as e:
-                logger.exception(f"Error handing MQTT payload: {e}")
-
-        mqtt_processor = MQTTProcessor(on_message_callback=_process_mqtt_message)
-        mqtt_processor.start()
-    except Exception as e:
-        logger.warning(f"MQTT processor failed to start: {e}")
+    finally:
+        db.close()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Cleanup resources."""
-    logger.info("Shutting down Hydronix Backend API")
-    # Stop mqtt processor if running
-    global mqtt_processor
-    try:
-        if mqtt_processor:
-            mqtt_processor.stop()
-    except Exception:
-        pass
+    """Cleanup on shutdown."""
+    logger.info("Shutting down Hydronix Backend API v2")
+
 
 
 # ============================================================================
@@ -399,35 +380,42 @@ async def get_device_id_from_auth(
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    """Health check endpoint (HMAC-exempt)."""
+    redis_ok = cache.is_available
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "transport": "https",
+        "cache": "connected" if redis_ok else "unavailable",
+    }
 
 
 @app.get("/status", response_model=SystemStatusResponse)
 async def get_system_status(db: Session = Depends(get_db)):
     """
     GET /status
-    Returns backend and broker health plus active devices summary.
+    Returns backend health plus active device summary.
+    MQTT broker status replaced with Redis cache status (v2.0.0).
     """
     try:
-        # Count devices
         total_devices = db.query(Device).count()
-        active_devices = db.query(Device).filter(
-            Device.status == "online"
-        ).count()
-        
+        active_devices = db.query(Device).filter(Device.status == "online").count()
+        redis_ok = cache.is_available
+
         return SystemStatusResponse(
             ok=True,
             backend_status="healthy",
             database_status="healthy",
-            mqtt_broker_status="healthy",
+            cache_status="healthy" if redis_ok else "unavailable",
             active_devices=active_devices,
             total_devices=total_devices,
             uptime_seconds=0,
+            transport="https",
         )
     except Exception as e:
         logger.error(f"Error getting system status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ============================================================================
@@ -715,38 +703,75 @@ async def device_heartbeat(
 ):
     """
     POST /devices/:device_id/heartbeat
-    Device sends periodic heartbeat to indicate it's alive.
+    Device sends periodic heartbeat.  Response includes current server
+    config_version so the device knows whether to call GET /config.
+    v2: stores free_heap, queued_records, sd_usage, sensor_status flags.
     """
     try:
         if device_id != auth_device_id:
             raise HTTPException(status_code=403, detail="Device ID mismatch")
-        
         if request.device_id != device_id:
             raise HTTPException(status_code=400, detail="Device ID mismatch in body")
-        
+
         device = db.query(Device).filter(Device.device_id == device_id).first()
         if not device:
             raise HTTPException(status_code=404, detail="Device not found")
-        
-        # Update device status
+
+        # Update core status
         device.last_heartbeat = datetime.utcnow()
+        device.last_seen = datetime.utcnow()
         device.status = "online"
+
         if request.firmware_version:
             device.firmware_version = request.firmware_version
-        
+        if request.sd_usage_percent is not None:
+            device.last_sd_usage_percent = request.sd_usage_percent
+        if request.free_heap is not None:
+            device.last_free_heap = request.free_heap
+        if request.queued_records is not None:
+            device.last_queued_records = request.queued_records
+
+        # Log stuck-sensor flags to AuditLog if any are True
+        if request.sensor_status and any(request.sensor_status.values()):
+            stuck_sensors = [k for k, v in request.sensor_status.items() if v]
+            audit = AuditLog(
+                action="stuck_sensor_alert",
+                resource_type="device",
+                resource_id=device_id,
+                details={"stuck": stuck_sensors},
+            )
+            db.add(audit)
+            logger.warning(
+                f"[HEARTBEAT] Device {device_id} reports stuck sensors: {stuck_sensors}"
+            )
+
+        # Determine current server config_version
+        server_config_version = 0
+        if device.remote_config:
+            server_config_version = device.remote_config.config_version
+        elif hasattr(device, 'config_version'):
+            server_config_version = device.config_version
+
         db.commit()
-        
+
+        logger.info(
+            f"[HB] {device_id} | heap={request.free_heap} | "
+            f"queue={request.queued_records} | fw={request.firmware_version}"
+        )
+
         return DeviceHeartbeatResponse(
             ok=True,
-            server_timestamp=datetime.utcnow()
+            server_timestamp=datetime.utcnow(),
+            config_version=server_config_version,
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error processing heartbeat: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.get("/devices", response_model=DevicesListResponse)
@@ -798,53 +823,54 @@ async def provision_device(
     admin_user: str = Depends(get_current_admin),
 ):
     """
-    POST /devices/provision
-    Provision a new device: create device record and API key.
-    Admin only.
+    POST /devices/provision (Admin only)
+    Provision a new device: create device record, API key, and default remote config.
     """
     try:
-        # Check if device already exists
         existing = db.query(Device).filter(Device.device_id == request.device_id).first()
         if existing:
             raise HTTPException(status_code=400, detail="Device already exists")
-        
-        # Create device
+
         device = Device(
             device_id=request.device_id,
             name=request.name,
             location=request.location,
             status="offline",
             is_active=True,
+            firmware_channel="stable",
+            config_version=0,
         )
         db.add(device)
         db.flush()
-        
-        # Create API key
-        api_key, key_hash = create_api_key_for_device(db, request.device_id)
-        
-        # Generate QR code (simplified)
-        qr_code = f"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-        
-        # Audit log
+
+        # Create default remote config entry
+        remote_cfg = DeviceRemoteConfig(
+            device_id=request.device_id,
+            sample_interval_sec=60,
+            firmware_channel="stable",
+            config_version=0,
+        )
+        db.add(remote_cfg)
+
+        api_key, _ = create_api_key_for_device(db, request.device_id)
+
+        qr_code = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
         audit_log = AuditLog(
             action="provision",
             resource_type="device",
             resource_id=request.device_id,
-            details={
-                "name": request.name,
-                "location": request.location,
-            }
+            details={"name": request.name, "location": request.location},
         )
         db.add(audit_log)
         db.commit()
-        
-        logger.info(f"Provisioned device {request.device_id}")
-        
+
+        logger.info(f"Provisioned device {request.device_id} with default remote config")
+
         return DeviceProvisionResponse(
             device_id=request.device_id,
             api_key=api_key,
             qr_code=qr_code,
-            setup_url=f"http://192.168.4.1?key={api_key}"
+            setup_url=f"https://192.168.4.1?key={api_key}",
         )
     except HTTPException:
         raise
@@ -852,6 +878,139 @@ async def provision_device(
         logger.error(f"Error provisioning device: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# REMOTE CONFIG ENDPOINTS (v2.0.0)
+# ---------------------------------------------------------------------------
+
+@app.get("/devices/{device_id}/config", response_model=DeviceRemoteConfigResponse)
+async def get_device_remote_config(
+    device_id: str,
+    db: Session = Depends(get_db),
+    auth_device_id: str = Depends(get_device_id_from_auth),
+):
+    """
+    GET /devices/:device_id/config
+    Device pulls its current server-side config when config_version has changed.
+    Called by ESP32 firmware v2.0.0 after heartbeat indicates a newer config_version.
+    """
+    if device_id != auth_device_id:
+        raise HTTPException(status_code=403, detail="Device ID mismatch")
+
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    cfg = db.query(DeviceRemoteConfig).filter(
+        DeviceRemoteConfig.device_id == device_id
+    ).first()
+
+    if not cfg:
+        # Auto-create default config if missing (handles pre-v2 devices)
+        cfg = DeviceRemoteConfig(
+            device_id=device_id,
+            sample_interval_sec=60,
+            firmware_channel="stable",
+            config_version=0,
+        )
+        db.add(cfg)
+        db.commit()
+        db.refresh(cfg)
+
+    return DeviceRemoteConfigResponse(
+        device_id=cfg.device_id,
+        config_version=cfg.config_version,
+        sample_interval_sec=cfg.sample_interval_sec,
+        firmware_channel=cfg.firmware_channel,
+        ph_offset=cfg.ph_offset,
+        turbidity_offset=cfg.turbidity_offset,
+        tds_offset=cfg.tds_offset,
+        temp_offset=cfg.temp_offset,
+        flow_offset=cfg.flow_offset,
+        updated_at=cfg.updated_at,
+    )
+
+
+@app.patch("/devices/{device_id}/config", response_model=DeviceRemoteConfigResponse)
+async def update_device_remote_config(
+    device_id: str,
+    request: DeviceRemoteConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
+):
+    """
+    PATCH /devices/:device_id/config (Admin only)
+    Update device remote config. Automatically increments config_version so the
+    device will pull the new config on its next heartbeat.
+    """
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    cfg = db.query(DeviceRemoteConfig).filter(
+        DeviceRemoteConfig.device_id == device_id
+    ).first()
+    if not cfg:
+        cfg = DeviceRemoteConfig(device_id=device_id, config_version=0)
+        db.add(cfg)
+        db.flush()
+
+    # Apply only supplied fields
+    if request.sample_interval_sec is not None:
+        cfg.sample_interval_sec = request.sample_interval_sec
+    if request.firmware_channel is not None:
+        cfg.firmware_channel = request.firmware_channel
+    if request.ph_offset is not None:
+        cfg.ph_offset = request.ph_offset
+    if request.turbidity_offset is not None:
+        cfg.turbidity_offset = request.turbidity_offset
+    if request.tds_offset is not None:
+        cfg.tds_offset = request.tds_offset
+    if request.temp_offset is not None:
+        cfg.temp_offset = request.temp_offset
+    if request.flow_offset is not None:
+        cfg.flow_offset = request.flow_offset
+
+    # Bump version so device detects change on next heartbeat
+    cfg.config_version += 1
+    cfg.updated_by = str(admin_user)
+    cfg.updated_at = datetime.utcnow()
+
+    # Mirror top-level device.config_version for heartbeat response
+    device.config_version = cfg.config_version
+
+    audit = AuditLog(
+        action="remote_config_update",
+        resource_type="device",
+        resource_id=device_id,
+        details={
+            "new_config_version": cfg.config_version,
+            "changes": request.model_dump(exclude_none=True),
+            "updated_by": str(admin_user),
+        },
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(cfg)
+
+    logger.info(
+        f"Remote config updated for {device_id} -> v{cfg.config_version} by {admin_user}"
+    )
+
+    return DeviceRemoteConfigResponse(
+        device_id=cfg.device_id,
+        config_version=cfg.config_version,
+        sample_interval_sec=cfg.sample_interval_sec,
+        firmware_channel=cfg.firmware_channel,
+        ph_offset=cfg.ph_offset,
+        turbidity_offset=cfg.turbidity_offset,
+        tds_offset=cfg.tds_offset,
+        temp_offset=cfg.temp_offset,
+        flow_offset=cfg.flow_offset,
+        updated_at=cfg.updated_at,
+    )
+
 
 
 # ---------------------------------------------------------------------------
@@ -863,49 +1022,110 @@ async def upload_firmware_metadata(
     device_id: str,
     request: FirmwareUploadRequest,
     db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
 ):
     """
-    POST /devices/:device_id/firmware
-    Accept firmware metadata (URL, version, optional signature) and store as AuditLog entry.
-    This is a minimal, non-binary implementation: devices will fetch "url" directly.
+    POST /devices/:device_id/firmware (Admin only)
+    Register new firmware version in the Firmware table for a channel.
     """
     try:
         device = db.query(Device).filter(Device.device_id == device_id).first()
         if not device:
             raise HTTPException(status_code=404, detail="Device not found")
 
-        # Record firmware metadata in audit log (serves as history)
+        # Deactivate previous firmware on same channel
+        db.query(Firmware).filter(
+            Firmware.device_id == device_id,
+            Firmware.channel == getattr(request, 'channel', 'stable'),
+            Firmware.is_active == True,
+        ).update({"is_active": False})
+
+        fw = Firmware(
+            device_id=device_id,
+            version=request.version,
+            channel=getattr(request, 'channel', 'stable'),
+            url=request.url,
+            sha256=getattr(request, 'sha256', None),
+            signature=request.signature,
+            release_notes=request.release_notes,
+            is_active=True,
+            uploaded_at=datetime.utcnow(),
+        )
+        db.add(fw)
+
         audit = AuditLog(
             action="firmware_upload",
             resource_type="device",
             resource_id=device_id,
-            details={
-                "version": request.version,
-                "url": request.url,
-                "signature": request.signature,
-                "release_notes": request.release_notes,
-            }
+            details={"version": request.version, "url": request.url},
         )
         db.add(audit)
-        # Optionally update device firmware_version (not applying yet)
-        device.firmware_version = request.version
         db.commit()
+        db.refresh(fw)
 
         return FirmwareInfoResponse(
             device_id=device_id,
-            version=request.version,
-            url=request.url,
-            signature=request.signature,
-            uploaded_at=audit.created_at,
-            release_notes=request.release_notes,
+            version=fw.version,
+            url=fw.url,
+            signature=fw.signature,
+            uploaded_at=fw.uploaded_at,
+            release_notes=fw.release_notes,
         )
-
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error uploading firmware metadata: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/devices/{device_id}/firmware", response_model=FirmwareCheckResponse)
+async def check_firmware_update(
+    device_id: str,
+    channel: str = Query("stable"),
+    current_version: str = Query("0.0.0"),
+    db: Session = Depends(get_db),
+    auth_device_id: str = Depends(get_device_id_from_auth),
+):
+    """
+    GET /devices/:device_id/firmware?channel=stable&current_version=2.0.0
+    Called by ESP32 firmware to check if an OTA update is available for its channel.
+    Returns update_available=True + download URL when a newer version exists.
+    """
+    if device_id != auth_device_id:
+        raise HTTPException(status_code=403, detail="Device ID mismatch")
+
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    fw = db.query(Firmware).filter(
+        Firmware.device_id == device_id,
+        Firmware.channel == channel,
+        Firmware.is_active == True,
+    ).order_by(Firmware.uploaded_at.desc()).first()
+
+    if not fw:
+        return FirmwareCheckResponse(
+            device_id=device_id,
+            update_available=False,
+            current_version=current_version,
+        )
+
+    # Simple version comparison: if latest != current, update is available
+    update_available = fw.version != current_version
+
+    return FirmwareCheckResponse(
+        device_id=device_id,
+        update_available=update_available,
+        current_version=current_version,
+        latest_version=fw.version if update_available else None,
+        url=fw.url if update_available else None,
+        sha256=fw.sha256 if update_available else None,
+        size_bytes=fw.size_bytes if update_available else None,
+        release_notes=fw.release_notes if update_available else None,
+    )
+
 
 
 @app.post("/devices/firmware/upload", response_model=FirmwareInfoResponse)

@@ -44,7 +44,7 @@ class User(Base):
 class Device(Base):
     """Device (ESP32 unit) metadata and status."""
     __tablename__ = "devices"
-    
+
     device_id = Column(String(50), primary_key=True)
     name = Column(String(255))
     location = Column(String(255))
@@ -55,21 +55,40 @@ class Device(Base):
     calibration_interval_days = Column(Integer, default=30)
     is_active = Column(Boolean, default=True)
     firmware_version = Column(String(50))
+    firmware_channel = Column(String(20), default="stable")  # stable | beta | canary
     device_reset_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # Calibration offsets and last smoothed readings stored as JSON
     calibration_offsets = Column(JSON, default={})
     last_smoothed_readings = Column(JSON, default={})
+    # Remote-config versioning — incremented by admin when config is pushed
+    config_version = Column(Integer, default=0, nullable=False)
+    # Diagnostic fields from v2 firmware heartbeats
+    last_free_heap = Column(Integer)       # bytes
+    last_queued_records = Column(Integer)  # SD queue depth
+    last_sd_usage_percent = Column(Float)
+    # Solenoid valve fields
+    valve_status = Column(String(20), default="open", nullable=False)  # open, closed
+    valve_last_toggled = Column(DateTime)
+    valve_close_reason = Column(String(255))  # auto_safety_cutoff, manual_operator, remote_command
 
     sensor_data = relationship("SensorData", back_populates="device", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="device", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="device", cascade="all, delete-orphan")
     firmwares = relationship("Firmware", back_populates="device", cascade="all, delete-orphan")
-    
+    remote_config = relationship("DeviceRemoteConfig", back_populates="device",
+                                 uselist=False, cascade="all, delete-orphan")
+    valve_operations = relationship("ValveOperation", back_populates="device", cascade="all, delete-orphan")
+
     __table_args__ = (
         CheckConstraint("device_id LIKE 'HYDRO_%'", name='check_device_id_format'),
         CheckConstraint("status IN ('online', 'offline')", name='check_status'),
+        CheckConstraint("valve_status IN ('open', 'closed')", name='check_valve_status'),
+        CheckConstraint(
+            "firmware_channel IN ('stable', 'beta', 'canary')",
+            name='check_firmware_channel',
+        ),
     )
 
 
@@ -109,6 +128,9 @@ class SensorData(Base):
     received_at = Column(DateTime, default=datetime.utcnow)  # Server receive time
     timestamp_source = Column(String(20), default="device")  # device, server_adjusted, server_only
     trace_id = Column(String(36))  # UUID for debugging request flow
+    # Solenoid valve fields
+    valve_state = Column(String(20))  # open, closed (from device report)
+    valve_last_toggled = Column(DateTime)  # Last time valve state changed
     
     device = relationship("Device", back_populates="sensor_data")
     
@@ -186,19 +208,89 @@ class MLAnomaly(Base):
     )
 
 
-class Firmware(Base):
-    """Firmware packages uploaded for OTA updates."""
-    __tablename__ = "firmwares"
+class ValveOperation(Base):
+    """Audit trail for all solenoid valve state changes (auto and manual)."""
+    __tablename__ = "valve_operations"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
+    action = Column(String(10), nullable=False)  # open, close
+    triggered_by = Column(String(50), nullable=False)  # auto_safety_cutoff, manual_operator, remote_command
+    quality_score_at_trigger = Column(Integer)  # Quality score when valve toggled
+    reason = Column(Text)  # Human-readable reason (e.g., "pH out of range (6.2)")
+    operator_id = Column(String(100))  # User email if manual action
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)  # When action occurred (device time)
+    received_at = Column(DateTime, default=datetime.utcnow)  # Server receive time
+    
+    device = relationship("Device", back_populates="valve_operations")
+    
+    __table_args__ = (
+        CheckConstraint("action IN ('open', 'close')", name='check_valve_action'),
+        CheckConstraint("triggered_by IN ('auto_safety_cutoff', 'manual_operator', 'remote_command')", name='check_valve_trigger'),
+        Index('idx_valve_device_timestamp', 'device_id', 'timestamp'),
+        Index('idx_valve_device', 'device_id'),
+    )
+
+
+class Firmware(Base):
+    """Firmware packages uploaded for OTA updates."""
+    __tablename__ = "firmwares"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
     version = Column(String(50), nullable=False)
-    url = Column(String(255), nullable=False)
+    channel = Column(String(20), default="stable")   # stable | beta | canary
+    url = Column(String(512), nullable=False)
+    sha256 = Column(String(64))                       # SHA-256 of the binary
     signature = Column(String(255))
+    size_bytes = Column(Integer)
     release_notes = Column(Text)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
-    
+    is_active = Column(Boolean, default=True)         # Only active firmware is served
+
     device = relationship("Device", back_populates="firmwares")
+
+    __table_args__ = (
+        CheckConstraint(
+            "channel IN ('stable', 'beta', 'canary')",
+            name='check_firmware_channel',
+        ),
+        Index('idx_firmware_device_channel', 'device_id', 'channel'),
+    )
+
+
+class DeviceRemoteConfig(Base):
+    """
+    Server-side configuration that devices pull via GET /devices/{id}/config.
+    Edited by admins; version is bumped on every change.
+    ESP32 firmware compares its cached config_version with the heartbeat
+    response and pulls a fresh config when behind.
+    """
+    __tablename__ = "device_remote_configs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_id = Column(
+        String(50), ForeignKey("devices.device_id"),
+        nullable=False, unique=True,
+    )
+    # Operational config pushed to device
+    sample_interval_sec = Column(Integer, default=60)
+    firmware_channel = Column(String(20), default="stable")
+    ph_offset = Column(Float, default=0.0)
+    turbidity_offset = Column(Float, default=0.0)
+    tds_offset = Column(Float, default=0.0)
+    temp_offset = Column(Float, default=0.0)
+    flow_offset = Column(Float, default=0.0)
+    # Version counter — increment to push new config to device
+    config_version = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = Column(String(100))   # admin email
+
+    device = relationship("Device", back_populates="remote_config")
+
+    __table_args__ = (
+        Index('idx_remote_config_device', 'device_id'),
+    )
 
 
 

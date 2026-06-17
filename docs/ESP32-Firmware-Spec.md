@@ -255,8 +255,107 @@ Firmware must validate on startup:
 4. `task_uplink_sender`
 5. `task_offline_sync`
 6. `task_health_heartbeat`
+7. `task_valve_control` (Phase 2+)
 
-## Message Contract
+### Valve Control Task (FreeRTOS task_valve_control)
+
+**Trigger & Execution:**
+- Runs every 5 seconds after sensor readings are processed
+- Evaluates water quality parameters (pH, turbidity, TDS, temperature) against safety thresholds
+- Automatically closes solenoid valve if ANY parameter violates safety limits
+- Auto-reopens when all conditions return to safe range
+
+**Safety Thresholds (Auto-Cutoff):**
+- pH: 6.5–8.5 (acidic/basic water rejected)
+- Turbidity: ≤5.0 NTU (excessive sediment/cloudiness)
+- TDS (Total Dissolved Solids): ≤500 ppm (salinity/contamination)
+- Temperature: 5–50°C (frozen or overheated water unsafe)
+
+**State Machine:**
+- **OPEN** (normal): Water flows, sensor data ingested normally
+- **CLOSED** (safety cutoff): Solenoid de-energized, valve closes (normally-open failsafe design)
+  - GPIO 27 set LOW (relay de-energized)
+  - Device continues monitoring conditions
+  - Sends alert to backend with quality_score and violation reason
+- **CLOSED** (manual operator): Initiated by backend command via MQTT/HTTP
+
+**Rate Limiting:**
+- Minimum 2-second lockout between consecutive valve toggles to protect solenoid coil
+- Prevents rapid cycling that could cause overheating or mechanical failure
+
+**Logging & Audit Trail:**
+```cpp
+// Each valve operation logged to SD card for offline sync:
+{
+  "device_id": "HYDRO_001",
+  "action": "close",           // open or close
+  "triggered_by": "auto_safety_cutoff",  // or manual_operator, remote_command
+  "reason": "pH too low (6.2)",
+  "quality_score": 15,
+  "timestamp": "2026-06-17T10:30:00Z",
+  "operator_id": null          // Non-null if manual_operator or remote_command
+}
+```
+
+**Remote Command Reception (TODO - Phase 2):**
+- Device subscribes to MQTT topic: `hydronix/devices/{device_id}/valve/command`
+- Message format: `{"action": "open", "operator_id": "admin@example.com"}`
+- Validates command signature (HMAC-based)
+- Executes toggle and logs to audit trail with `triggered_by: remote_command`
+- Publishes confirmation: `hydronix/devices/{device_id}/valve/status`
+
+**Integration with Main Sensor Pipeline:**
+```
+task_sensor_read (reads all 5 sensors)
+  ↓
+task_valve_control (evaluates quality thresholds)
+  ├→ If unsafe: Close valve + set `valve_state = closed` in payload
+  └→ If safe: Keep valve open + set `valve_state = open` in payload
+  ↓
+task_uplink_sender (sends payload with valve_state included)
+  ↓
+backend /ingest (receives sensor data + valve state, logs audit trail)
+```
+
+**Hardware Configuration:**
+- GPIO Pin: 27 (configurable, see `VALVE_GPIO` in firmware config)
+- Relay/MOSFET Control: 5V/3.3V logic → 12V/24V solenoid
+- Normally-Open Failsafe: LOW=open (water flows), HIGH=closed (water blocked)
+- If power lost or device crashes: Valve defaults to OPEN (fail-safe)
+
+**Display Integration:**
+When valve is CLOSED due to safety violations, local LCD/OLED shows:
+```
+Line 1: ⚠️  ALERT: VALVE CLOSED
+Line 2: Reason: pH too low (6.2)
+Line 3: Action: Wait for safe conditions
+Line 4: Quality: 15/100 | Reopen: Auto
+```
+
+**Edge Cases & Error Handling:**
+- GPIO failure: Log error, try toggle again after 5 sec (max 3 retries then alert backend)
+- Rate limit triggered: Queue action for next available window
+- Conflicting commands: Backend manual close + auto-safety close = Keep valve closed until both conditions resolve
+- SD write failure (offline logging): Continue operation, alert will resync when online
+
+## Valve Control Integration with Firmware
+
+Update the message contract to include valve state:
+
+```json
+{
+  "device_id": "HYDRO_001",
+  "ph": 7.2,
+  "turbidity": 3.1,
+  "tds": 120,
+  "temperature": 25,
+  "flow_rate": 10,
+  "timestamp": "2026-04-09T10:30:00Z",
+  "seq_no": 9821,
+  "valve_state": "open",           // NEW: open | closed
+  "valve_last_toggled": "2026-04-09T10:25:00Z"  // NEW: ISO 8601 timestamp
+}
+```
 
 ```json
 {
