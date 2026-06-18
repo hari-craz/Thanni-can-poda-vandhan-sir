@@ -194,7 +194,7 @@ class MLAnomaly(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
-    reading_id = Column(Integer, ForeignKey("sensor_data.id"), nullable=True)
+    reading_id = Column(Integer, nullable=True)  # Logical FK to sensor_data.id
     ml_score = Column(Integer, default=0)  # 0 or 1
     confidence = Column(Float)
     model_version = Column(String(50))

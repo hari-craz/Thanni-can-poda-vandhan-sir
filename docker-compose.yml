@@ -3,9 +3,9 @@ services:
   db:
     image: postgres:13
     environment:
-      POSTGRES_USER: hydronix
-      POSTGRES_PASSWORD: hydronix_pass
-      POSTGRES_DB: hydronix_db
+      POSTGRES_USER: ${POSTGRES_USER:-hydronix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hydronix_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-hydronix_db}
     ports:
       - "10017:5432"
     volumes:
@@ -26,7 +26,7 @@ services:
     depends_on:
       - db
     environment:
-      ML_SERVICE_API_KEY: "hydronix_local_key"
+      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY:-"hydronix_local_key"}
     volumes:
       - ./ML-Model/models:/app/models:ro
     healthcheck:
@@ -45,10 +45,10 @@ services:
     ports:
       - "10020:8000"
     environment:
-      DATABASE_URL: postgresql+psycopg2://hydronix:hydronix_pass@db:5432/hydronix_db
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-hydronix}:${POSTGRES_PASSWORD:-hydronix_pass}@db:5432/${POSTGRES_DB:-hydronix_db}
       REDIS_URL: redis://redis:6379/0
       ML_SERVICE_URL: http://ml-service:8000
-      ML_SERVICE_API_KEY: "hydronix_local_key"
+      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY:-"hydronix_local_key"}
       ML_SERVICE_ENABLED: "true"
     volumes:
       - ./ML-Model/models:/app/models:ro
