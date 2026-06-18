@@ -26,7 +26,7 @@ Provide concise, agent-friendly guidance for working on the Hydronix repository.
 
 ## Testing guidance
 - Run backend tests with `pytest -q backend/tests`
-- Use `python run_backend_tests.py` for a quick import and smoke check
+- Use `python tests/run_backend_tests.py` for a quick import and smoke check
 - Keep model training work isolated to `ML-Model/` and avoid breaking backend dependencies
 
 ## Documentation links

@@ -17,7 +17,7 @@
 
 // ─── HARDWARE CONFIGURATION ──────────────────────────────────────────────────
 #define VALVE_GPIO_PIN           27      // GPIO pin connected to relay/MOSFET
-#define VALVE_NORMALLY_OPEN      true    // Failsafe: valve open when de-energized
+#define VALVE_NORMALLY_OPEN      false   // Failsafe: valve closed when de-energized
 #define VALVE_DEBOUNCE_MS        2000    // 2-second lockout after toggle
 #define VALVE_RETRY_INTERVAL_MIN 1       // Check conditions every minute
 #define VALVE_STAY_CLOSED_MIN    5       // Alert backend if bad conditions >5 min
@@ -48,7 +48,7 @@ struct ValveOperation {
   ValveTrigger triggered_by;
   float quality_score;
   char reason[256];            // e.g., "pH out of range (6.2)"
-  char operator[100];          // User email if manual
+  char operator_id[100];       // User email if manual
 };
 
 // ─── VALVE CONTROLLER CLASS ──────────────────────────────────────────────────

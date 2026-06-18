@@ -45,6 +45,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "mbedtls/md.h"
+#include "valve_control.h"
 
 // ─── HARDWARE PINS ───────────────────────────────────────────────────────────
 #define SD_CS_PIN       5
@@ -52,7 +53,7 @@
 #define PIN_TURBIDITY   33
 #define PIN_TDS         34
 #define PIN_TEMP        35
-#define PIN_FLOW        36
+#define PIN_FLOW        36    // Pulse-based flow sensor (SAIER HW21WA)
 #define I2C_SDA         21
 #define I2C_SCL         22
 #define LCD_ADDR        0x27
@@ -185,6 +186,16 @@ bool     calibrationRunning     = false;
 uint32_t calibrationStartMs     = 0;
 float    calibrationSamples[30] = {};
 int      calibrationSampleCount = 0;
+
+// Flow sensor ISR
+volatile uint32_t flowPulseCount = 0;
+portMUX_TYPE flowMux = portMUX_INITIALIZER_UNLOCKED;
+
+void IRAM_ATTR flowSensorISR() {
+  portENTER_CRITICAL_ISR(&flowMux);
+  flowPulseCount++;
+  portEXIT_CRITICAL_ISR(&flowMux);
+}
 
 // ─── SANITY BOUNDS ───────────────────────────────────────────────────────────
 const float PH_MIN   = 0.0f,   PH_MAX   = 14.0f;
@@ -819,7 +830,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
 </div>
 
 <script>
-  function runTest(type) {
+  const runTest = (type) => {
     const con = document.getElementById('test-console');
     con.innerText += '\n> Running ' + type + ' test...';
     fetch('/test-' + type)
@@ -832,7 +843,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
   }
 
   let calTimer = null;
-  function startCal() {
+  const startCal = () => {
     const btn = document.getElementById('cal-btn');
     const con = document.getElementById('cal-console');
     btn.disabled = true;
@@ -844,7 +855,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
         calTimer = setInterval(pollCal, 2000);
       });
   }
-  function pollCal() {
+  const pollCal = () => {
     const btn = document.getElementById('cal-btn');
     const con = document.getElementById('cal-console');
     fetch('/calibration-status')
@@ -986,7 +997,7 @@ void handleSavePortal() {
   }
 
   uint32_t interval = (uint32_t)webServer.arg("sample_interval").toInt();
-  config.sample_interval_sec = max(30u, min(3600u, interval));
+  config.sample_interval_sec = max(30UL, min(3600UL, (unsigned long)interval));
 
   String chan = webServer.arg("firmware_channel");
   if (chan == "beta" || chan == "canary") {
@@ -1138,7 +1149,7 @@ void taskSensorRead(void* pvParameters) {
       wasThrottled = throttled;
     }
     uint32_t interval = config.sample_interval_sec * (throttled ? 5 : 1);
-    const uint32_t maxStuckSamples = 86400 / max(1u, config.sample_interval_sec);
+    const uint32_t maxStuckSamples = 86400 / max(1UL, (unsigned long)config.sample_interval_sec);
 
     // Async calibration sample collection
     if (calibrationRunning) {
@@ -1173,7 +1184,18 @@ void taskSensorRead(void* pvParameters) {
     float raw_turb = analogRead(PIN_TURBIDITY) * (1000.0f / 4095.0f);
     float raw_tds  = analogRead(PIN_TDS)       * (5000.0f / 4095.0f);
     float raw_temp = -10.0f + analogRead(PIN_TEMP) * (100.0f / 4095.0f);
-    float raw_flow = analogRead(PIN_FLOW)      * (50.0f / 4095.0f);
+
+    // ── Flow Sensor (Pulse Count) ────────────────────────────────────────
+    uint32_t pulses = 0;
+    portENTER_CRITICAL(&flowMux);
+    pulses = flowPulseCount;
+    flowPulseCount = 0;
+    portEXIT_CRITICAL(&flowMux);
+
+    float hz = (float)pulses / (float)interval;
+    // Typical K-factor for 1/2" flow sensors (like HW21WA) is approx 7.5.
+    // Flow Rate (L/min) = Frequency (Hz) / K_factor
+    float raw_flow = hz / 7.5f;
 
     // ── Calibration offsets ──────────────────────────────────────────────
     float cal_ph   = raw_ph   + config.ph_offset;
@@ -1256,6 +1278,15 @@ void taskSensorRead(void* pvParameters) {
       if (xQueueSend(displayQueue, &rd, 0) != pdPASS) {
         // Display queue drop is non-critical — suppress log
       }
+
+      // ── Valve safety check (inline — runs after each valid reading) ───
+      bool valveChanged = valve_controller.processSensorReading(
+        rd.ph, rd.turbidity, rd.tds, rd.temperature, 0);
+      if (valveChanged) {
+        Serial.printf("[VALVE] State changed to %s after sensor reading.\n",
+          valve_controller.getCurrentState() == VALVE_OPEN ? "OPEN" : "CLOSED");
+      }
+      valve_controller.periodicCheck();
     } else {
       Serial.printf("[SENSOR] Out-of-bounds (pH:%.2f Turb:%.1f TDS:%.1f) — discarded.\n",
                     sm_ph, sm_turb, sm_tds);
@@ -1376,6 +1407,18 @@ void taskUplinkSender(void* pvParameters) {
       doc["timestamp"]          = rd.timestamp;
       doc["timestamp_source"]   = rd.timestamp_source;
       doc["raw_ph"]             = rd.raw_ph;
+
+      // Valve state fields (per ESP32-Firmware-Spec.md contract)
+      doc["valve_state"] = (valve_controller.getCurrentState() == VALVE_OPEN)
+                            ? "open" : "closed";
+      char vtBuf[32];
+      time_t vt = valve_controller.getLastToggleTime();
+      if (vt > 0) {
+        struct tm vtm;
+        gmtime_r(&vt, &vtm);
+        strftime(vtBuf, sizeof(vtBuf), "%Y-%m-%dT%H:%M:%SZ", &vtm);
+        doc["valve_last_toggled"] = vtBuf;
+      }
 
       String payload;
       serializeJson(doc, payload);
@@ -1579,7 +1622,7 @@ void taskHealthHeartbeat(void* pvParameters) {
                   // Apply updatable fields
                   if (cfgDoc.containsKey("sample_interval_sec")) {
                     uint32_t si = (uint32_t)cfgDoc["sample_interval_sec"];
-                    config.sample_interval_sec = max(30u, min(3600u, si));
+                    config.sample_interval_sec = max(30UL, min(3600UL, (unsigned long)si));
                   }
                   if (cfgDoc.containsKey("ph_offset"))
                     config.ph_offset = (float)cfgDoc["ph_offset"];
@@ -1625,6 +1668,13 @@ void setup() {
   lcd.setCursor(0, 0); lcd.print("Hydronix v2.0 Boot");
 
   loadConfiguration();
+
+  // Initialize flow sensor interrupt
+  pinMode(PIN_FLOW, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PIN_FLOW), flowSensorISR, RISING);
+
+  // Initialize valve controller (GPIO 27 → relay/MOSFET)
+  valve_controller.begin();
 
   // Initialize SD card
   if (!SD.begin(SD_CS_PIN)) {

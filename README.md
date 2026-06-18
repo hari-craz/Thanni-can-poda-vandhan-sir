@@ -264,27 +264,28 @@ Develop a scalable, affordable, and intelligent water monitoring platform capabl
 
 ## Documentation
 
-The full implementation brief has been split into focused docs under [docs](docs):
+The project documentation has been organized into focused guides:
 
-1. [Hydronix-Master-Prompt.md](docs/Hydronix-Master-Prompt.md) — Master brief
-2. [Architecture-Overview.md](docs/Architecture-Overview.md) — System layers and components
-3. [Implementation-Roadmap.md](docs/Implementation-Roadmap.md) — 📍 **START HERE** — Phased delivery plan
-4. [Known-Issues-and-Solutions.md](docs/Known-Issues-and-Solutions.md) — All 12 critical issues + mitigations
-5. [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md) — Device firmware architecture
-6. [Backend-Spec.md](docs/Backend-Spec.md) — API endpoints, database schema, security
-7. [Frontend-Spec.md](docs/Frontend-Spec.md) — Dashboard screens and real-time features
-8. [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md) — HA, backups, compliance
-9. [End-to-End-Workflow.md](docs/End-to-End-Workflow.md) — Runtime flows + failure scenarios
-10. [ER-Diagram.md](docs/ER-Diagram.md) — Database schema diagram
-11. [Data-Flow-Diagram.md](docs/Data-Flow-Diagram.md) — System data flow diagram
+### Core Architecture & Specs
+1. [Architecture-Overview.md](docs/Architecture-Overview.md) — High-level system design and components
+2. [Data-Flow-Diagram.md](docs/Data-Flow-Diagram.md) — System data flow
+3. [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md) — Device firmware architecture & telemetry
+4. [Backend-Spec.md](docs/Backend-Spec.md) — API endpoints, logic, and security
+5. [ER-Diagram.md](docs/ER-Diagram.md) — Database schema diagram
+
+### Setup & Deployment Guides
+1. [BACKEND-QUICKSTART.md](BACKEND-QUICKSTART.md) — How to spin up the FastAPI backend locally
+2. [firmware/FIRMWARE_SETUP.md](firmware/FIRMWARE_SETUP.md) — Arduino IDE setup and Captive Portal provisioning
+3. [Hardware-Wiring-Setup.md](docs/Hardware-Wiring-Setup.md) — Physical wiring instructions for the ESP32 and sensors
+4. [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md) — Cloudflare, TLS, and production HA setup
+
+### Operation & Workflows
+1. [End-to-End-Workflow.md](docs/End-to-End-Workflow.md) — Runtime flows and failure recovery scenarios
+2. [Known-Issues-and-Solutions.md](docs/Known-Issues-and-Solutions.md) — Mitigations for common issues
 
 ## Getting Started
 
-1. **Understand the architecture**: Read [Architecture-Overview.md](docs/Architecture-Overview.md)
-2. **Follow the roadmap**: Read [Implementation-Roadmap.md](docs/Implementation-Roadmap.md) for phased approach
-3. **Address critical issues**: Review [Known-Issues-and-Solutions.md](docs/Known-Issues-and-Solutions.md)
-4. **Component specs**: Choose your path:
-   - **Firmware dev?** → [ESP32-Firmware-Spec.md](docs/ESP32-Firmware-Spec.md)
-   - **Backend dev?** → [Backend-Spec.md](docs/Backend-Spec.md)
-   - **Frontend dev?** → [Frontend-Spec.md](docs/Frontend-Spec.md)
-5. **Production ready?** → [Security-Reliability-Deployment.md](docs/Security-Reliability-Deployment.md)
+1. **Backend**: Check out the [BACKEND-QUICKSTART.md](BACKEND-QUICKSTART.md) to get the server and database running.
+2. **Hardware Wiring**: Follow [Hardware-Wiring-Setup.md](docs/Hardware-Wiring-Setup.md) to connect your sensors to the ESP32.
+3. **Firmware Upload**: Follow [firmware/FIRMWARE_SETUP.md](firmware/FIRMWARE_SETUP.md) to flash the code and provision the device to your WiFi network.
+4. **Architecture**: Read [Architecture-Overview.md](docs/Architecture-Overview.md) to understand how the pieces fit together.
