@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix Mission Control | Fleet Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #bdc8cf;
+            border-radius: 10px;
+        }
+        .map-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .sidebar-mask {
+            mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+        }
+
+        /* Premium Editorial Interactions */
+        @media (prefers-reduced-motion: no-preference) {
+            .nav-link-sidebar {
+                position: relative;
+                transition: all 150ms ease-in-out;
+            }
+            .nav-link-sidebar::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                background-color: theme('colors.primary-fixed');
+                transition: width 150ms ease-in-out;
+            }
+            .nav-link-sidebar:hover::before {
+                width: 4px;
+            }
+            .nav-link-sidebar:hover {
+                background-color: rgba(255, 255, 255, 0.05);
+                padding-left: 1rem;
+            }
+
+            .nav-link-top {
+                position: relative;
+                padding-bottom: 4px;
+            }
+            .nav-link-top::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                width: 0;
+                height: 1px;
+                background-color: theme('colors.primary');
+                transition: all 200ms ease-in-out;
+                transform: translateX(-50%);
+            }
+            .nav-link-top:hover::after {
+                width: 100%;
+            }
+
+            .btn-premium {
+                transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+            .btn-premium:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                filter: brightness(1.1);
+            }
+            .btn-premium:active {
+                transform: translateY(0);
+            }
+            
+            /* Shimmer Effect for Primary Action */
+            .btn-shimmer::after {
+                content: "";
+                position: absolute;
+                top: -50%;
+                left: -60%;
+                width: 20%;
+                height: 200%;
+                background: rgba(255, 255, 255, 0.1);
+                transform: rotate(30deg);
+                transition: all 0.6s ease;
+            }
+            .btn-shimmer:hover::after {
+                left: 120%;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "status-nominal": "#22c55e",
+                        "on-primary-fixed": "#001f29",
+                        "background": "#f5fafd",
+                        "border-subtle": "#e2e8f0",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#3d484e",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "surface-container-highest": "#dee3e7",
+                        "primary-fixed": "#bbeaff",
+                        "surface-container-low": "#eff4f8",
+                        "on-error": "#ffffff",
+                        "primary-container": "#11aad4",
+                        "status-warning": "#f59e0b",
+                        "surface-container": "#eaeef2",
+                        "primary-fixed-dim": "#5dd4ff",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "on-status-nominal": "#dcfce7",
+                        "on-surface": "#171c1f",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f5fafd",
+                        "error-container": "#ffdad6",
+                        "primary": "#006782",
+                        "tertiary-container": "#db8b2b",
+                        "outline-variant": "#bdc8cf",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#4f2c00",
+                        "surface": "#ffffff",
+                        "on-background": "#171c1f",
+                        "on-status-critical": "#fee2e2",
+                        "inverse-surface": "#2c3134",
+                        "on-primary-container": "#003a4a",
+                        "outline": "#6d797f",
+                        "surface-tint": "#006782",
+                        "tertiary": "#8a5100",
+                        "on-primary-fixed-variant": "#004d62",
+                        "surface-dim": "#d6dbde",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#d5e3fd",
+                        "on-secondary": "#ffffff",
+                        "status-critical": "#ef4444",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#d5e3fd",
+                        "surface-variant": "#dee3e7",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-tertiary-fixed": "#2c1600",
+                        "secondary": "#515f74",
+                        "inverse-on-surface": "#edf1f5",
+                        "surface-container-high": "#e4e9ec",
+                        "inverse-primary": "#5dd4ff",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "on-secondary-container": "#57657b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "1.5rem",
+                        "container-padding": "2rem",
+                        "stack-gap": "1.5rem",
+                        "sidebar-width": "15rem"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-hidden">
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-[15rem] bg-on-primary-fixed flex flex-col py-gutter shadow-sm z-50">
+<!-- Brand Identity -->
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold tracking-tight">Hydronix</h1>
+<p class="text-primary-fixed-dim opacity-70 text-label-sm uppercase tracking-widest">Mission Control</p>
+</div>
+<!-- Navigation Clusters -->
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto sidebar-mask">
+<div class="text-on-primary-fixed-variant opacity-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Main Operations</div>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">dashboard</span>
+<span class="font-title-md text-[14px]">Dashboard</span>
+</a>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">sensors</span>
+<span class="font-title-md text-[14px]">Live Telemetry</span>
+</a>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">hub</span>
+<span class="font-title-md text-[14px]">Node Network</span>
+</a>
+<!-- ACTIVE TAB -->
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary-fixed/10 text-primary-fixed font-bold border-l-4 border-primary-fixed transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px] filled-icon">local_shipping</span>
+<span class="font-title-md text-[14px]">Fleet Management</span>
+</a>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">notifications_active</span>
+<span class="font-title-md text-[14px]">Alert History</span>
+</a>
+<div class="pt-6 text-on-primary-fixed-variant opacity-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider">Analysis &amp; Reporting</div>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">waves</span>
+<span class="font-title-md text-[14px]">Flow Analysis</span>
+</a>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2.5 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed group" href="#">
+<span class="material-symbols-outlined text-[20px] transition-transform group-hover:scale-110">description</span>
+<span class="font-title-md text-[14px]">Regulatory Reports</span>
+</a>
+</nav>
+<!-- CTA & Footer -->
+<div class="px-4 mt-auto">
+<button class="btn-premium btn-shimmer w-full py-3 mb-6 bg-primary text-on-primary font-bold rounded shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Add New Node
+            </button>
+<div class="border-t border-primary-fixed/10 pt-4 space-y-1">
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="text-label-sm">Support</span>
+</a>
+<a class="nav-link-sidebar flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="text-label-sm">Documentation</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 h-16 w-[calc(100%-15rem)] bg-surface-container-lowest flex justify-between items-center px-gutter z-40 border-b border-border-subtle">
+<div class="flex items-center gap-8">
+<div class="relative w-64 group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-full text-body-md focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search infrastructure..." type="text"/>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="nav-link-top text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Infrastructure</a>
+<a class="nav-link-top text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Analytics</a>
+<a class="nav-link-top text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Security</a>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 px-3 py-1 bg-status-nominal/10 text-status-nominal rounded-full">
+<span class="w-2 h-2 rounded-full bg-status-nominal animate-pulse"></span>
+<span class="text-label-sm font-bold">System Status: Nominal</span>
+</div>
+<div class="h-8 w-px bg-border-subtle"></div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all relative group">
+<span class="material-symbols-outlined transition-transform group-hover:scale-110">notifications</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all group">
+<span class="material-symbols-outlined transition-transform group-hover:rotate-45">settings</span>
+</button>
+<img alt="Senior administrator portrait" class="h-8 w-8 rounded-full object-cover border border-border-subtle hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDL_joHFrF4u6Boy-UW-95U_mt33EyTFiPiDrptFPvV9vz7S1K02E4y6T-Kg-raI-r4V8UCMQqZvLlY3fHzKkNuvkL8iDeSLtHyJoOUWRkAs4S-9xoBkkCNtYQaa6LYzC9RS-9f_b5ru20gpMvXeCvINqjwz_WIHNa1rQNwZsm0KcmwMRVsWMh475EXUBpCL80dH-f3Svk6h6u6m9jkNKSdUmOKB9u8A08VnwZV6T3oP_sx4SBIIQv-A8fq2nrd2XJY9QdFstvZ9tM"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[15rem] mt-16 p-gutter h-[calc(100vh-4rem)] flex flex-col gap-gutter overflow-hidden">
+<!-- Dashboard Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface tracking-tight">Fleet Command Center</h2>
+<p class="text-on-surface-variant">Real-time geospatial visualization of 1,248 active hydrometric nodes across North America.</p>
+</div>
+<div class="flex gap-2">
+<div class="flex bg-surface-container rounded-lg p-1 border border-border-subtle">
+<button class="px-4 py-1.5 bg-surface-container-lowest shadow-sm rounded text-label-sm font-bold text-primary transition-all hover:bg-white">Map View</button>
+<button class="px-4 py-1.5 text-label-sm text-on-surface-variant hover:text-on-surface transition-all rounded hover:bg-white/50">List Analytics</button>
+</div>
+<button class="btn-premium flex items-center gap-2 px-4 py-2 border border-border-subtle rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="font-label-sm">Filters</span>
+</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="flex-1 grid grid-cols-12 gap-gutter min-h-0">
+<!-- Main Map Section -->
+<section class="col-span-12 lg:col-span-9 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm flex flex-col overflow-hidden relative">
+<div class="p-4 border-b border-border-subtle flex justify-between items-center bg-white z-10">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-nominal"></span>
+<span class="text-label-sm text-on-surface-variant">Active (1,242)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-warning"></span>
+<span class="text-label-sm text-on-surface-variant">Warning (4)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-critical"></span>
+<span class="text-label-sm text-on-surface-variant">Critical (2)</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-surface-container rounded transition-all hover:scale-110 active:scale-95"><span class="material-symbols-outlined">zoom_in</span></button>
+<button class="p-1.5 hover:bg-surface-container rounded transition-all hover:scale-110 active:scale-95"><span class="material-symbols-outlined">zoom_out</span></button>
+<button class="p-1.5 hover:bg-surface-container rounded transition-all hover:scale-110 active:scale-95"><span class="material-symbols-outlined">layers</span></button>
+</div>
+</div>
+<!-- Map Interface -->
+<div class="flex-1 relative bg-slate-50 overflow-hidden group">
+<div class="absolute inset-0 grayscale opacity-40 mix-blend-multiply pointer-events-none" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCRJy8I-1SuR0R_3oPfGMLJurHCPo_VJi1Rx6ezVYOAcwgZiYvg8W7dEHaKy_TvlThndx-au386qd1_aWMU5qhsg5-elII7U7xHnVUpNadi03fIPYgp_IzX9qOOe97DGrkZ-sGSGiUIIWXS3Zl03xoDWx43Qy01FzVipfnyCN8iQKxCos3TC3K6tpHb_WD3B5Q_VBbnhqh3jQjWkdJRy05Dp4t5GpFljPS74AK5JLYORS3tdEfKbWbMnU4q-jCkA4XtkvRXj5aMOew')"></div>
+<!-- Pins -->
+<div class="absolute top-1/3 left-1/4">
+<div class="relative cursor-pointer group/pin">
+<div class="absolute inset-0 bg-primary rounded-full map-pulse"></div>
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-lg relative z-10 transition-transform group-hover/pin:scale-150"></div>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-64 bg-surface rounded-xl shadow-xl border border-border-subtle p-4 opacity-0 group-hover/pin:opacity-100 transition-all scale-95 group-hover/pin:scale-100 origin-bottom z-20 pointer-events-none group-hover/pin:pointer-events-auto">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-bold text-on-surface text-title-md">Node: NW-4012</h4>
+<p class="text-label-sm text-on-surface-variant">Columbia River Basin</p>
+</div>
+<span class="px-2 py-0.5 bg-status-nominal/10 text-status-nominal rounded text-[10px] font-black uppercase">Nominal</span>
+</div>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="bg-surface-container p-2 rounded">
+<p class="text-[10px] text-outline uppercase font-bold">Flow Rate</p>
+<p class="text-[14px] font-bold">412 m³/s</p>
+</div>
+<div class="bg-surface-container p-2 rounded">
+<p class="text-[10px] text-outline uppercase font-bold">Temp</p>
+<p class="text-[14px] font-bold">14.2°C</p>
+</div>
+</div>
+<a class="btn-premium block w-full py-2 bg-primary text-on-primary text-center rounded font-bold text-label-sm" href="#">
+                                    Go to Telemetry
+                                </a>
+</div>
+</div>
+</div>
+<div class="absolute top-1/2 left-2/3">
+<div class="relative cursor-pointer group/pin">
+<div class="absolute inset-0 bg-status-critical rounded-full map-pulse" style="animation-delay: 0.5s;"></div>
+<div class="w-4 h-4 bg-status-critical rounded-full border-2 border-white shadow-lg relative z-10 transition-transform group-hover/pin:scale-150"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Sidebar Feed -->
+<aside class="col-span-12 lg:col-span-3 flex flex-col gap-gutter min-h-0">
+<div class="bg-surface p-6 rounded-xl border border-border-subtle shadow-sm">
+<h3 class="font-title-md text-on-surface mb-4">Fleet Health</h3>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-label-sm mb-1.5">
+<span class="text-on-surface-variant font-semibold">Network Uptime</span>
+<span class="text-primary font-bold">99.82%</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 99.82%"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-2">
+<div class="bg-background p-3 rounded-lg border border-border-subtle/50 hover:border-primary/20 transition-colors">
+<span class="text-[10px] uppercase font-black text-outline">Battery Avg</span>
+<p class="text-title-md font-bold text-on-surface">84%</p>
+</div>
+<div class="bg-background p-3 rounded-lg border border-border-subtle/50 hover:border-primary/20 transition-colors">
+<span class="text-[10px] uppercase font-black text-outline">Signal Avg</span>
+<p class="text-title-md font-bold text-on-surface">-92 dBm</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface flex-1 rounded-xl border border-border-subtle shadow-sm flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-subtle flex justify-between items-center bg-surface-container-low">
+<h3 class="font-title-md text-on-surface">Critical Events</h3>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-black">2 LIVE</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-3">
+<div class="p-3 border-l-4 border-status-critical bg-status-critical/5 rounded-r group hover:bg-status-critical/10 transition-all cursor-pointer hover:translate-x-1">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-black text-status-critical uppercase">Critical Failure</span>
+<span class="text-[10px] text-outline">2m ago</span>
+</div>
+<p class="text-body-md font-bold text-on-surface leading-tight">Node SE-902 Connection Lost</p>
+<p class="text-label-sm text-on-surface-variant mb-2">Gulf Coast Sector B - Automated Redundancy Failed.</p>
+<button class="text-primary text-[11px] font-bold uppercase tracking-wider hover:underline flex items-center gap-1 group/btn">
+                                Dispatch Maintenance <span class="material-symbols-outlined text-[14px] transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
+</button>
+</div>
+<div class="p-3 border-l-4 border-status-warning bg-status-warning/5 rounded-r group hover:bg-status-warning/10 transition-all cursor-pointer hover:translate-x-1">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-black text-status-warning uppercase">Sensor Drift</span>
+<span class="text-[10px] text-outline">18m ago</span>
+</div>
+<p class="text-body-md font-bold text-on-surface leading-tight">Node MW-112 Calibration</p>
+<p class="text-label-sm text-on-surface-variant">Pressure variance exceeding threshold (+0.5 PSI).</p>
+</div>
+</div>
+<button class="p-4 bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-bold text-label-sm text-center transition-all">
+                        View Full History
+                    </button>
+</div>
+</aside>
+</div>
+</main>
+<!-- Contextual HUD -->
+<div class="fixed bottom-gutter right-gutter z-30 flex flex-col items-end gap-3 pointer-events-none">
+<div class="bg-on-primary-fixed text-primary-fixed p-4 rounded-xl shadow-2xl border border-primary-fixed/20 backdrop-blur pointer-events-auto min-w-[200px] hover:border-primary-fixed/40 transition-colors cursor-default">
+<div class="flex justify-between items-center mb-3">
+<span class="text-[10px] uppercase font-black opacity-60">Regional Load</span>
+<span class="material-symbols-outlined text-[16px] animate-pulse">show_chart</span>
+</div>
+<div class="flex items-end gap-1 h-8 mb-2">
+<div class="w-full bg-primary-fixed/20 h-[40%] rounded-sm transition-all duration-700 hover:h-[90%]"></div>
+<div class="w-full bg-primary-fixed/20 h-[60%] rounded-sm transition-all duration-700 hover:h-[40%]"></div>
+<div class="w-full bg-primary-fixed/20 h-[80%] rounded-sm transition-all duration-700 hover:h-[100%]"></div>
+<div class="w-full bg-primary-fixed/60 h-[100%] rounded-sm transition-all duration-700 hover:h-[80%]"></div>
+<div class="w-full bg-primary-fixed/40 h-[70%] rounded-sm transition-all duration-700 hover:h-[50%]"></div>
+</div>
+<div class="text-[18px] font-black leading-none">8.2 TB/s</div>
+<div class="text-[10px] opacity-60">Data Throughput</div>
+</div>
+</div>
+<!-- Global Command Floating -->
+<div class="fixed bottom-gutter left-[16.5rem] z-30 pointer-events-none">
+<div class="bg-surface border border-border-subtle shadow-lg rounded-full flex items-center p-1.5 pointer-events-auto">
+<button class="btn-premium flex items-center gap-2 px-4 py-2 hover:bg-surface-container rounded-full transition-all text-on-surface">
+<span class="material-symbols-outlined text-[20px]">public</span>
+<span class="text-label-sm font-bold">Global</span>
+</button>
+<div class="w-px h-6 bg-border-subtle mx-1"></div>
+<button class="btn-premium flex items-center gap-2 px-4 py-2 hover:bg-surface-container rounded-full transition-all text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">map</span>
+<span class="text-label-sm">Satellite</span>
+</button>
+</div>
+</div>
+</body></html>

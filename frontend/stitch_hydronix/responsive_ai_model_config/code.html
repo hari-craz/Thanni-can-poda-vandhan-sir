@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix Mission Control | AI Model Configuration</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .w-sidebar { width: 15rem; }
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        
+        /* Custom Toggle Switch Style */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #006782; /* Primary Teal */
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot {
+            transform: translateX(100%);
+        }
+
+        /* Glassmorphism & Depth */
+        .glass-card {
+            background: #ffffff; /* Surface */
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Premium Editorial Interactions */
+        @media (prefers-reduced-motion: no-preference) {
+            /* Sidebar Slide-in Border */
+            .sidebar-link {
+                position: relative;
+                transition: all 150ms ease-in-out;
+            }
+            .sidebar-link::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                background-color: #bbeaff; /* primary-fixed */
+                transition: width 150ms ease-in-out;
+                border-radius: 0 4px 4px 0;
+            }
+            .sidebar-link:hover::before {
+                width: 4px;
+            }
+            
+            /* Top Bar Underline Reveal */
+            .nav-link {
+                position: relative;
+                padding-bottom: 2px;
+            }
+            .nav-link::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 50%;
+                width: 0;
+                height: 2px;
+                background-color: #006782; /* primary */
+                transition: all 300ms ease-in-out;
+                transform: translateX(-50%);
+            }
+            .nav-link:hover::after {
+                width: 100%;
+            }
+            .nav-link-active::after {
+                width: 100%;
+            }
+
+            /* Primary Button Lift & Shimmer */
+            .btn-premium {
+                transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+                position: relative;
+                overflow: hidden;
+            }
+            .btn-premium:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+            .btn-premium::after {
+                content: "";
+                position: absolute;
+                top: -50%;
+                left: -60%;
+                width: 20%;
+                height: 200%;
+                background: rgba(255, 255, 255, 0.1);
+                transform: rotate(30deg);
+                transition: all 0.6s ease;
+                pointer-events: none;
+            }
+            .btn-premium:hover::after {
+                left: 120%;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "border-subtle": "#e2e8f0",
+                        "tertiary-container": "#db8b2b",
+                        "surface": "#ffffff",
+                        "primary-fixed": "#bbeaff",
+                        "surface-tint": "#006782",
+                        "primary-container": "#006782",
+                        "outline-variant": "#bdc8cf",
+                        "on-background": "#171c1f",
+                        "surface-dim": "#d6dbde",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "status-critical": "#ef4444",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#dee3e7",
+                        "on-status-critical": "#fee2e2",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-primary-fixed": "#001f29",
+                        "on-status-nominal": "#dcfce7",
+                        "secondary-fixed": "#d5e3fd",
+                        "inverse-on-surface": "#edf1f5",
+                        "error": "#ba1a1a",
+                        "outline": "#6d797f",
+                        "secondary-container": "#d5e3fd",
+                        "secondary": "#515f74",
+                        "surface-container-high": "#e4e9ec",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#5dd4ff",
+                        "inverse-surface": "#2c3134",
+                        "on-surface": "#171c1f",
+                        "status-warning": "#f59e0b",
+                        "surface-container": "#eaeef2",
+                        "surface-bright": "#f5fafd",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#3d484e",
+                        "surface-container-highest": "#dee3e7",
+                        "on-primary-container": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "primary": "#006782",
+                        "on-secondary-container": "#57657b",
+                        "background": "#f5fafd",
+                        "on-primary-fixed-variant": "#004d62",
+                        "primary-fixed-dim": "#5dd4ff",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#eff4f8",
+                        "tertiary": "#8a5100",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "status-nominal": "#22c55e",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-tertiary-container": "#4f2c00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-gap": "1.5rem",
+                        "gutter": "1.5rem",
+                        "container-padding": "2rem",
+                        "sidebar-width": "15rem"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "title-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface antialiased overflow-x-hidden">
+<!-- Side Navigation Bar -->
+<aside class="fixed left-0 top-0 h-full w-sidebar bg-on-primary-fixed flex flex-col h-screen py-gutter z-50 hidden md:flex shadow-sm">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold">Hydronix</h1>
+<p class="font-label-sm text-label-sm text-primary-fixed-dim opacity-70 uppercase tracking-widest mt-1">Mission Control</p>
+</div>
+<nav class="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar">
+<!-- Navigation Items -->
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-title-md text-title-md">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span class="font-title-md text-title-md">Live Telemetry</span>
+</a>
+<!-- Active Item: Global Settings / API Access (Contextual mapping) -->
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-title-md text-title-md">Global Settings</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-title-md text-title-md">Node Network</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+<span class="font-title-md text-title-md">API Access</span>
+</a>
+</nav>
+<div class="px-2 mt-auto space-y-1">
+<button class="btn-premium w-full flex items-center justify-center gap-3 px-4 py-3 rounded bg-primary text-on-primary font-bold shadow-md hover:bg-primary/90 transition-all mb-4">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span>Add New Node</span>
+</button>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-title-md text-title-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- Top App Bar -->
+<header class="fixed top-0 right-0 h-16 w-full md:w-[calc(100%-15rem)] bg-surface-container-lowest border-b border-border-subtle flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-low border-none rounded-full py-1.5 pl-10 pr-4 text-body-md w-64 focus:ring-2 focus:ring-primary transition-all" placeholder="Search systems..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden lg:flex items-center gap-8">
+<a class="nav-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Infrastructure</a>
+<a class="nav-link nav-link-active text-primary font-bold font-body-md text-body-md" href="#">Analytics</a>
+<a class="nav-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Security</a>
+</div>
+<div class="h-8 w-px bg-border-subtle hidden lg:block"></div>
+<div class="flex items-center gap-3 text-status-nominal">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-nominal opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-status-nominal"></span>
+</span>
+<span class="text-label-sm font-label-sm uppercase">System Nominal</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<img class="h-8 w-8 rounded-full border border-border-subtle object-cover" data-alt="A professional headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAI-2yjyZLgII17j20dw-jgAOo1qbN6nHcA-2aBERmKk6fomM9fJ53pS6YJtb9XdT-ir9GwBckBr8xX60qJip1Ss8jxBfc-I_Mo9nBUODVLZP6cvfUjEf8FQh9p-9lmDpPrx32AUN4qIm5wc06NM--zl7Yv66GApKxOLJxlSm0mwJsgxQp4dQuqaygMXK6iHuN6BfSDC7UdbiKTokdBMV6OIuA6RLjA9xiFDgVe-QaDVgGMhJv88P3JXOoC-bsSO2tPRddVbmJF6MA"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-12 px-gutter md:ml-[15rem] transition-all min-h-screen">
+<div class="max-w-7xl mx-auto px-gutter lg:px-container-padding">
+<!-- Page Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+<div>
+<nav class="flex items-center gap-2 text-on-surface-variant mb-2">
+<span class="text-label-sm font-label-sm">ANALYTICS</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-label-sm font-label-sm text-primary">AI CONFIGURATION</span>
+</nav>
+<h2 class="font-display-lg text-display-lg text-on-surface tracking-tighter">Anomaly Detection Core</h2>
+<p class="text-on-surface-variant max-w-xl mt-2 font-body-md">Manage the neural weights and training parameters for the Hydronix real-time flow and pressure telemetry models.</p>
+</div>
+<div class="flex gap-3">
+<button class="btn-premium flex items-center gap-2 px-6 py-3 border border-border-subtle rounded font-title-md hover:bg-surface-container text-on-surface">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                        Export Weights
+                    </button>
+<button class="btn-premium flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded font-bold shadow-md active:scale-95" id="forceRetrain">
+<span class="material-symbols-outlined" data-icon="model_training">model_training</span>
+                        Force Retrain Now
+                    </button>
+</div>
+</div>
+<!-- Bento Grid - KPI Section -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-stack-gap mb-12">
+<!-- Version Card -->
+<div class="glass-card p-6 rounded-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-md">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary p-2 bg-primary/10 rounded" data-icon="architecture">architecture</span>
+<span class="text-status-nominal text-label-sm font-label-sm bg-status-nominal/10 px-2 py-0.5 rounded">STABLE</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Model Version</h4>
+<p class="text-4xl font-black text-on-surface">v2.1.0</p>
+</div>
+</div>
+<!-- Training Time Card -->
+<div class="glass-card p-6 rounded-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-md">
+<div class="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-tertiary p-2 bg-tertiary/10 rounded" data-icon="history">history</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Last Training</h4>
+<p class="text-4xl font-black text-on-surface">4h 12m</p>
+<p class="text-on-surface-variant text-label-sm font-label-sm">Finished at 02:00 AM UTC</p>
+</div>
+</div>
+<!-- Accuracy Card -->
+<div class="glass-card p-6 rounded-xl relative overflow-hidden group shadow-sm transition-all hover:shadow-md">
+<div class="absolute top-0 left-0 w-1 h-full bg-status-nominal"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-status-nominal p-2 bg-status-nominal/10 rounded" data-icon="bolt">bolt</span>
+<span class="text-status-nominal text-label-sm font-label-sm">+0.4% from last</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Model Accuracy</h4>
+<p class="text-4xl font-black text-on-surface">99.82%</p>
+</div>
+</div>
+</div>
+<!-- Configuration & Visualization Section -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-stack-gap">
+<!-- Main Control Panel -->
+<div class="lg:col-span-8 flex flex-col gap-stack-gap">
+<!-- Switches Card -->
+<div class="glass-card rounded-xl p-8 shadow-sm">
+<h3 class="font-title-md text-title-md mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                            Automation Parameters
+                        </h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+<!-- Switch Item 1 -->
+<div class="flex items-center justify-between p-4 rounded bg-surface-container-low border border-border-subtle hover:border-primary/30 transition-colors">
+<div>
+<p class="font-title-md text-title-md text-on-surface">Nightly Retraining</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Scheduled for 02:00 UTC</p>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-transparent appearance-none cursor-pointer focus:outline-none transition-transform duration-200 transform translate-x-0" id="toggle1" name="toggle1" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200" for="toggle1"></label>
+</div>
+</div>
+<!-- Switch Item 2 -->
+<div class="flex items-center justify-between p-4 rounded bg-surface-container-low border border-border-subtle hover:border-primary/30 transition-colors">
+<div>
+<p class="font-title-md text-title-md text-on-surface">Drift Detection Alerts</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Threshold: 0.15% shift</p>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-transparent appearance-none cursor-pointer focus:outline-none transition-transform duration-200 transform translate-x-0" id="toggle2" name="toggle2" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200" for="toggle2"></label>
+</div>
+</div>
+<!-- Switch Item 3 -->
+<div class="flex items-center justify-between p-4 rounded bg-surface-container-low border border-border-subtle opacity-60 hover:opacity-100 transition-opacity">
+<div>
+<p class="font-title-md text-title-md text-on-surface">Edge Synthesis</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Beta feature - Disabled</p>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-transparent appearance-none cursor-pointer focus:outline-none transition-transform duration-200 transform translate-x-0" id="toggle3" name="toggle3" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200" for="toggle3"></label>
+</div>
+</div>
+<!-- Switch Item 4 -->
+<div class="flex items-center justify-between p-4 rounded bg-surface-container-low border border-border-subtle hover:border-primary/30 transition-colors">
+<div>
+<p class="font-title-md text-title-md text-on-surface">Auto-Archive Logs</p>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Retention: 90 days</p>
+</div>
+<div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-transparent appearance-none cursor-pointer focus:outline-none transition-transform duration-200 transform translate-x-0" id="toggle4" name="toggle4" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-6 rounded-full bg-outline-variant cursor-pointer transition-colors duration-200" for="toggle4"></label>
+</div>
+</div>
+</div>
+</div>
+<!-- Visual Data Feed Area -->
+<div class="glass-card rounded-xl p-8 h-80 relative flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 z-0 opacity-10">
+<!-- Grid Pattern -->
+<div class="w-full h-full" style="background-image: radial-gradient(#006782 1px, transparent 1px); background-size: 24px 24px;"></div>
+</div>
+<div class="z-10 text-center">
+<span class="material-symbols-outlined text-6xl text-primary/20 mb-4 animate-pulse" data-icon="waves">waves</span>
+<h4 class="font-title-md text-title-md text-on-surface">Live Anomaly Analysis Stream</h4>
+<p class="text-on-surface-variant font-body-md">Model processing 1,420 events per second</p>
+<div class="mt-6 flex justify-center gap-1 h-12 items-end">
+<div class="w-1 bg-primary h-8 animate-[bounce_1s_infinite]"></div>
+<div class="w-1 bg-primary h-12 animate-[bounce_1.2s_infinite]"></div>
+<div class="w-1 bg-primary h-6 animate-[bounce_0.8s_infinite]"></div>
+<div class="w-1 bg-primary h-10 animate-[bounce_1.1s_infinite]"></div>
+<div class="w-1 bg-primary h-4 animate-[bounce_0.9s_infinite]"></div>
+<div class="w-1 bg-primary h-9 animate-[bounce_1.3s_infinite]"></div>
+<div class="w-1 bg-primary h-11 animate-[bounce_1s_infinite]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Alerts & Intelligence -->
+<div class="lg:col-span-4 flex flex-col gap-stack-gap">
+<div class="glass-card rounded-xl shadow-sm flex-1 overflow-hidden flex flex-col">
+<div class="p-6 border-b border-border-subtle bg-surface-container">
+<h3 class="font-title-md text-title-md flex items-center gap-2">
+<span class="material-symbols-outlined text-status-warning" data-weight="fill">priority_high</span>
+                                Intelligence Feed
+                            </h3>
+</div>
+<div class="p-6 space-y-6 overflow-y-auto max-h-[500px]">
+<!-- Timeline Alert 1 -->
+<div class="relative pl-6 border-l-4 border-status-nominal">
+<span class="absolute -left-3 top-0 bg-white border-2 border-status-nominal rounded-full w-5 h-5 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-status-nominal font-bold">check</span>
+</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant">12:05 PM</p>
+<p class="font-title-md text-on-surface">Retraining Success</p>
+<p class="text-body-md text-on-surface-variant mt-1">Version 2.1.0 validated against 'Sector-7' telemetry. Weights updated globally.</p>
+</div>
+<!-- Timeline Alert 2 -->
+<div class="relative pl-6 border-l-4 border-status-warning">
+<span class="absolute -left-3 top-0 bg-white border-2 border-status-warning rounded-full w-5 h-5 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-status-warning font-bold">warning</span>
+</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant">09:14 AM</p>
+<p class="font-title-md text-on-surface">Data Drift Detected</p>
+<p class="text-body-md text-on-surface-variant mt-1">Minor deviation in Pressure Sensor S-202 node input format. Normalization applied.</p>
+</div>
+<!-- Timeline Alert 3 -->
+<div class="relative pl-6 border-l-4 border-primary">
+<span class="absolute -left-3 top-0 bg-white border-2 border-primary rounded-full w-5 h-5 flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-primary font-bold">info</span>
+</span>
+<p class="text-label-sm font-label-sm text-on-surface-variant">04:00 AM</p>
+<p class="font-title-md text-on-surface">API Connection</p>
+<p class="text-body-md text-on-surface-variant mt-1">AWS Sagemaker endpoint successfully rotated keys for primary inference engine.</p>
+</div>
+</div>
+<div class="p-4 bg-surface-container mt-auto">
+<button class="w-full text-center text-primary font-label-sm hover:underline transition-all">VIEW FULL AUDIT LOG</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest flex justify-around items-center h-16 z-50 border-t border-border-subtle px-4">
+<a class="flex flex-col items-center text-on-surface-variant nav-link" href="#"><span class="material-symbols-outlined">dashboard</span><span class="text-[10px] font-bold">HOME</span></a>
+<a class="flex flex-col items-center text-on-surface-variant nav-link" href="#"><span class="material-symbols-outlined">analytics</span><span class="text-[10px] font-bold">ANALYTICS</span></a>
+<div class="p-3 bg-primary text-on-primary rounded-full -translate-y-6 shadow-xl active:scale-95 transition-transform btn-premium">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<a class="flex flex-col items-center text-primary font-bold nav-link nav-link-active" href="#"><span class="material-symbols-outlined">settings</span><span class="text-[10px]">SETTINGS</span></a>
+<a class="flex flex-col items-center text-on-surface-variant nav-link" href="#"><span class="material-symbols-outlined">person</span><span class="text-[10px] font-bold">PROFILE</span></a>
+</nav>
+<script>
+        // Simple Interaction logic
+        const retrainBtn = document.getElementById('forceRetrain');
+        retrainBtn.addEventListener('click', () => {
+            const originalText = retrainBtn.innerHTML;
+            retrainBtn.disabled = true;
+            retrainBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Training...';
+            retrainBtn.classList.add('bg-on-surface-variant');
+            
+            setTimeout(() => {
+                retrainBtn.innerHTML = '<span class="material-symbols-outlined">check</span> Task Queued';
+                retrainBtn.classList.remove('bg-on-surface-variant');
+                retrainBtn.classList.add('bg-status-nominal');
+                
+                setTimeout(() => {
+                    retrainBtn.innerHTML = originalText;
+                    retrainBtn.disabled = false;
+                    retrainBtn.classList.remove('bg-status-nominal');
+                }, 2000);
+            }, 3000);
+        });
+
+        // Toggle Switch Logic Emulation (Visual)
+        const toggles = document.querySelectorAll('.toggle-checkbox');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const parent = this.closest('.flex');
+                if(this.checked) {
+                    parent.classList.remove('opacity-60');
+                } else {
+                    parent.classList.add('opacity-60');
+                }
+            });
+        });
+    </script>
+</body></html>

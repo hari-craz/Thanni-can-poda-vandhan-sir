@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Public Water Quality Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .map-overlay-gradient {
+            background: linear-gradient(to bottom, rgba(245, 250, 253, 0.9) 0%, rgba(245, 250, 253, 0) 100%);
+        }
+
+        .slide-panel {
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide-panel.active {
+            transform: translateX(0);
+        }
+
+        /* Marker Pulse Animation */
+        @keyframes marker-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.3; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-marker {
+            animation: marker-pulse 2s infinite;
+        }
+
+        /* Editorial Interactions */
+        @media (prefers-reduced-motion: no-preference) {
+            .nav-link-underline {
+                position: relative;
+            }
+            .nav-link-underline::after {
+                content: '';
+                position: absolute;
+                bottom: -2px;
+                left: 50%;
+                width: 0;
+                height: 1.5px;
+                background-color: currentColor;
+                transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .nav-link-underline:hover::after {
+                width: 100%;
+                left: 0;
+            }
+
+            .primary-action-btn {
+                transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            }
+            .primary-action-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .primary-action-btn:active {
+                transform: translateY(0px);
+            }
+
+            .sidebar-nav-item {
+                position: relative;
+                transition: background-color 150ms ease-in-out;
+            }
+            .sidebar-nav-item::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                background-color: #006782; /* Primary color */
+                transition: width 150ms ease-in-out;
+            }
+            .sidebar-nav-item:hover::before {
+                width: 3px;
+            }
+            .sidebar-nav-item:hover {
+                background-color: #f1f5f9;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "status-nominal": "#22c55e",
+                        "on-primary-fixed": "#001f29",
+                        "background": "#f5fafd",
+                        "border-subtle": "#e2e8f0",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#3d484e",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "surface-container-highest": "#dee3e7",
+                        "primary-fixed": "#bbeaff",
+                        "surface-container-low": "#eff4f8",
+                        "on-error": "#ffffff",
+                        "primary-container": "#11aad4",
+                        "status-warning": "#f59e0b",
+                        "surface-container": "#eaeef2",
+                        "primary-fixed-dim": "#5dd4ff",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "on-status-nominal": "#dcfce7",
+                        "on-surface": "#171c1f",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f5fafd",
+                        "error-container": "#ffdad6",
+                        "primary": "#006782",
+                        "tertiary-container": "#db8b2b",
+                        "outline-variant": "#bdc8cf",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#4f2c00",
+                        "surface": "#f6f8f8",
+                        "on-background": "#171c1f",
+                        "on-status-critical": "#fee2e2",
+                        "inverse-surface": "#2c3134",
+                        "on-primary-container": "#003a4a",
+                        "outline": "#6d797f",
+                        "surface-tint": "#006782",
+                        "tertiary": "#8a5100",
+                        "on-primary-fixed-variant": "#004d62",
+                        "surface-dim": "#d6dbde",
+                        "error": "#ba1a1a",
+                        "secondary-fixed": "#d5e3fd",
+                        "on-secondary": "#ffffff",
+                        "status-critical": "#ef4444",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#d5e3fd",
+                        "on-secondary-container": "#57657b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "1.5rem",
+                        "container-padding": "2rem",
+                        "stack-gap": "1.5rem",
+                        "sidebar-width": "15rem"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "label-sm": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface-bright text-on-background font-body-md overflow-hidden h-screen w-screen">
+<!-- Main Map Canvas -->
+<main class="relative h-full w-full">
+<!-- Mock Leaflet Map Container -->
+<div class="absolute inset-0 z-0 bg-surface-container overflow-hidden">
+<!-- Simulated Map Image -->
+<div class="w-full h-full bg-cover bg-center grayscale contrast-75 brightness-110 opacity-60" data-alt="A high-fidelity architectural satellite map of Chennai, India, rendered in a minimalist light-mode aesthetic with soft blue and grey tones. The map highlights urban patterns and coastal water bodies with precise, clean lines. Professional cartographic style focusing on high clarity and industrial elegance, utilizing a corporate color palette of slate and cyan-blue." data-location="Chennai, India" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBlltuGzIx4mn49oKZqOba5AXOisaQUiPNpv36JrDnvtVo2xr1LUm3AWakQx6yDipPetddfMXRkneodMb67jiS8JuMH4PFj8GPhGFBOfWs5_nQyOJXrpz2ME5zIof0dehmMUQY6RgFCLeFsndeVfziRmVxKLHJ_fZJN6uv758QrdcVx4k0i7SofI3IuZhBvVpPiIgNCl11-vX_Sc09kQqFtQSVXk4PQpw5CuNZKkE30bnC8sGLZ2o8ccOll8UTccNUXd7HBnIWIGX4')">
+</div>
+<!-- Map Markers -->
+<button class="absolute top-[45%] left-[52%] group z-10 focus:outline-none" onclick="togglePanel('HYDRO_001')">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-8 h-8 bg-status-nominal/30 rounded-full pulse-marker"></div>
+<div class="relative w-4 h-4 bg-status-nominal border-2 border-surface-container-lowest rounded-full shadow-lg transition-transform group-hover:scale-125"></div>
+<div class="absolute top-6 whitespace-nowrap bg-on-primary-fixed text-on-primary px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+<span class="font-label-sm text-label-sm">HYDRO_001: 92 WQI</span>
+</div>
+</div>
+</button>
+<!-- Other Mock Markers -->
+<div class="absolute top-[30%] left-[40%] group opacity-60">
+<div class="relative w-3 h-3 bg-status-warning border-2 border-surface-container-lowest rounded-full"></div>
+</div>
+<div class="absolute top-[60%] left-[55%] group opacity-60">
+<div class="relative w-3 h-3 bg-status-nominal border-2 border-surface-container-lowest rounded-full"></div>
+</div>
+<div class="absolute top-[40%] left-[30%] group opacity-60">
+<div class="relative w-3 h-3 bg-status-critical border-2 border-surface-container-lowest rounded-full"></div>
+</div>
+</div>
+<!-- Top Navigation Overlay -->
+<header class="absolute top-0 left-0 right-0 z-20 px-gutter pt-gutter pointer-events-none">
+<div class="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 bg-surface-container-lowest shadow-sm px-4 py-2 rounded-xl border border-border-subtle">
+<span class="font-headline-md text-headline-md text-on-surface font-black uppercase tracking-tighter cursor-pointer nav-link-underline">HYDRONIX</span>
+<div class="h-4 w-px bg-border-subtle mx-2"></div>
+<span class="font-title-md text-title-md text-primary opacity-80 cursor-pointer nav-link-underline">Public Explorer</span>
+</div>
+<!-- Search Bar -->
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-lowest border-border-subtle rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm text-body-md transition-all" placeholder="Search node, region or coordinate..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-lowest shadow-sm px-4 py-2 rounded-xl border border-border-subtle flex items-center gap-3">
+<div class="flex items-center gap-2 text-status-nominal">
+<span class="w-2 h-2 rounded-full bg-status-nominal animate-pulse"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider font-bold">System Status: Nominal</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Bottom Controls -->
+<div class="absolute bottom-gutter left-gutter z-20 flex flex-col gap-2">
+<div class="bg-surface-container-lowest p-1 rounded-lg shadow-sm border border-border-subtle flex flex-col">
+<button class="p-2 hover:bg-surface-container transition-colors"><span class="material-symbols-outlined">add</span></button>
+<div class="h-px bg-border-subtle mx-2"></div>
+<button class="p-2 hover:bg-surface-container transition-colors"><span class="material-symbols-outlined">remove</span></button>
+</div>
+<button class="bg-surface-container-lowest p-3 rounded-lg shadow-sm border border-border-subtle hover:bg-surface-container transition-colors primary-action-btn">
+<span class="material-symbols-outlined">my_location</span>
+</button>
+</div>
+<!-- Legend Overlay -->
+<div class="absolute bottom-gutter right-gutter z-20 bg-surface-container-lowest/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-border-subtle w-64">
+<h4 class="font-title-md text-title-md mb-4 text-on-surface">Quality Index</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between group cursor-help transition-opacity hover:opacity-100 opacity-90">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-nominal"></span>
+<span class="text-body-md opacity-80">Excellent</span>
+</div>
+<span class="text-label-sm font-bold">90-100</span>
+</div>
+<div class="flex items-center justify-between group cursor-help transition-opacity hover:opacity-100 opacity-90">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-warning"></span>
+<span class="text-body-md opacity-80">Moderate</span>
+</div>
+<span class="text-label-sm font-bold">70-89</span>
+</div>
+<div class="flex items-center justify-between group cursor-help transition-opacity hover:opacity-100 opacity-90">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-status-critical"></span>
+<span class="text-body-md opacity-80">Critical</span>
+</div>
+<span class="text-label-sm font-bold">&lt; 70</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-subtle text-label-sm text-outline flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">info</span>
+                Last globally updated 4m ago
+            </div>
+</div>
+<!-- Right Side Panel (Slide-out) -->
+<aside class="slide-panel fixed top-0 right-0 h-full w-[400px] bg-surface-container-lowest shadow-2xl z-50 border-l border-border-subtle flex flex-col" id="infoPanel">
+<!-- Panel Header -->
+<div class="px-gutter pt-8 pb-4 flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary" id="nodeID">HYDRO_001</h2>
+<p class="text-body-md text-outline">Chennai Metropolitan Network</p>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors text-outline" onclick="togglePanel()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Content Area -->
+<div class="flex-1 overflow-y-auto px-gutter pb-8 space-y-8">
+<!-- Main Score Card -->
+<div class="bg-surface-container-low rounded-2xl p-6 border border-border-subtle relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-status-nominal"></div>
+<div class="flex justify-between items-end">
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-widest">Current WQI Score</span>
+<div class="flex items-baseline gap-2">
+<h1 class="text-[72px] font-black text-primary leading-tight">92</h1>
+<span class="text-status-nominal font-title-md">/ 100</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-status-nominal/10 text-status-nominal px-4 py-1.5 rounded-full font-bold text-label-sm mb-2">SAFE</span>
+<span class="text-label-sm text-outline">Live Telemetry</span>
+</div>
+</div>
+<div class="mt-6 h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-nominal w-[92%] transition-all duration-1000 group-hover:opacity-80"></div>
+</div>
+</div>
+<!-- Secondary Metrics Bento -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest rounded-xl p-4 border border-border-subtle sidebar-nav-item cursor-pointer">
+<span class="material-symbols-outlined text-primary mb-2">thermostat</span>
+<div class="text-outline text-label-sm">Temperature</div>
+<div class="text-title-md">24.5°C</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-4 border border-border-subtle sidebar-nav-item cursor-pointer">
+<span class="material-symbols-outlined text-primary mb-2">opacity</span>
+<div class="text-outline text-label-sm">pH Level</div>
+<div class="text-title-md">7.2 pH</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-4 border border-border-subtle sidebar-nav-item cursor-pointer">
+<span class="material-symbols-outlined text-primary mb-2">blur_on</span>
+<div class="text-outline text-label-sm">Turbidity</div>
+<div class="text-title-md">1.2 NTU</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-4 border border-border-subtle sidebar-nav-item cursor-pointer">
+<span class="material-symbols-outlined text-primary mb-2">science</span>
+<div class="text-outline text-label-sm">Oxidation</div>
+<div class="text-title-md">450 mV</div>
+</div>
+</div>
+<!-- Live Graph Illustration -->
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<h3 class="font-title-md text-title-md">Historical Data</h3>
+<span class="text-label-sm text-primary hover:underline cursor-pointer nav-link-underline">View Full Report</span>
+</div>
+<div class="h-48 bg-surface-container rounded-xl flex items-end justify-between p-4 gap-1">
+<!-- Simulated Bar Chart -->
+<div class="w-full bg-primary/20 h-32 rounded-t-sm transition-all hover:bg-primary/40"></div>
+<div class="w-full bg-primary/30 h-36 rounded-t-sm transition-all hover:bg-primary/50"></div>
+<div class="w-full bg-primary/20 h-28 rounded-t-sm transition-all hover:bg-primary/40"></div>
+<div class="w-full bg-primary/40 h-40 rounded-t-sm transition-all hover:bg-primary/60"></div>
+<div class="w-full bg-primary/60 h-44 rounded-t-sm transition-all hover:bg-primary/80"></div>
+<div class="w-full bg-primary h-48 rounded-t-sm transition-all hover:brightness-110"></div>
+<div class="w-full bg-primary/80 h-42 rounded-t-sm transition-all hover:bg-primary"></div>
+</div>
+</div>
+<!-- Alerts / Timeline -->
+<div class="space-y-4">
+<h3 class="font-title-md text-title-md">Recent Events</h3>
+<div class="space-y-3">
+<div class="flex gap-4 items-start sidebar-nav-item p-2 rounded-lg cursor-pointer">
+<div class="mt-1.5 w-2 h-2 rounded-full bg-status-nominal ring-4 ring-status-nominal/10 flex-shrink-0"></div>
+<div>
+<p class="text-body-md font-semibold">Sensor Calibration Successful</p>
+<p class="text-label-sm text-outline">Today, 08:45 AM • Auto-Maintenance</p>
+</div>
+</div>
+<div class="flex gap-4 items-start sidebar-nav-item p-2 rounded-lg cursor-pointer">
+<div class="mt-1.5 w-2 h-2 rounded-full bg-status-warning ring-4 ring-status-warning/10 flex-shrink-0"></div>
+<div>
+<p class="text-body-md font-semibold">Minor Flow Variance Detected</p>
+<p class="text-label-sm text-outline">Yesterday, 11:30 PM • Secondary Pipe A4</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Action -->
+<div class="p-gutter border-t border-border-subtle bg-surface-container-lowest">
+<button class="w-full bg-primary text-on-primary py-4 rounded-xl font-title-md primary-action-btn flex items-center justify-center gap-2 shadow-lg hover:bg-on-primary-fixed-variant">
+<span class="material-symbols-outlined">ios_share</span>
+                    Export Area Insights
+                </button>
+</div>
+</aside>
+</main>
+<!-- Interactive Micro-Interactions -->
+<script>
+        function togglePanel(nodeId) {
+            const panel = document.getElementById('infoPanel');
+            const nodeDisplay = document.getElementById('nodeID');
+            
+            if (nodeId) {
+                nodeDisplay.innerText = nodeId;
+                panel.classList.add('active');
+            } else {
+                panel.classList.remove('active');
+            }
+        }
+
+        // Close panel when clicking map background (mock)
+        document.querySelector('main').addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('aside')) return;
+            togglePanel();
+        });
+
+        // Add some atmospheric console logging for "Mission Control" feel
+        console.log("Hydronix System Initialized...");
+        console.log("Fetching live telemetry from Chennai Cluster...");
+        console.log("Node HYDRO_001 status: Nominal (WQI 92)");
+    </script>
+</body></html>

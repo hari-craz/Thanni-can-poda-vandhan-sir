@@ -97,6 +97,14 @@ try:
 except Exception:
     pass
 
+# Include user management routes
+try:
+    from .user_routes import router as user_router
+    app.include_router(user_router)
+except Exception as e:
+    logger.error(f"Failed to include user_routes: {e}")
+
+
 # Add CORS middleware (permissive for development)
 app.add_middleware(
     CORSMiddleware,
@@ -360,6 +368,18 @@ async def startup_event():
     logger.info(f"Starting Hydronix Backend API v2 (env: {settings.environment})")
     init_db()
     logger.info("Database initialized")
+
+    # Migrate check constraint on startup
+    from sqlalchemy import text
+    try:
+        db_session = SessionLocal()
+        db_session.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_user_role;"))
+        db_session.execute(text("ALTER TABLE users ADD CONSTRAINT check_user_role CHECK (role IN ('superadmin', 'admin', 'user'));"))
+        db_session.commit()
+        db_session.close()
+        logger.info("Database check constraint migration complete")
+    except Exception as e:
+        logger.warning(f"Failed to migrate database check constraint: {e}")
 
     # Initialize Cloudflare Tunnel integration (HTTPS-only)
     try:

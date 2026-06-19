@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Device Telemetry &amp; Diagnostics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+<style>
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+            background-color: #f5fafd;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .sparkline-container {
+            height: 40px;
+            width: 100px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        
+        /* Premium Interactions */
+        .sidebar-link {
+            position: relative;
+            transition: all 150ms ease-in-out;
+        }
+        .sidebar-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%) scaleX(0);
+            height: 60%;
+            width: 4px;
+            background-color: #bbeaff; /* primary-fixed */
+            border-radius: 0 4px 4px 0;
+            transition: transform 150ms ease-in-out;
+            transform-origin: left;
+        }
+        .sidebar-link:hover::before {
+            transform: translateY(-50%) scaleX(1);
+        }
+        .sidebar-link:hover {
+            background-color: rgba(187, 234, 255, 0.08);
+            color: #bbeaff;
+        }
+
+        .top-nav-link {
+            position: relative;
+            transition: color 150ms ease-in-out;
+        }
+        .top-nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background-color: #006782; /* primary */
+            transform: translateX(-50%) scaleX(0);
+            transition: transform 200ms ease-in-out;
+            transform-origin: center;
+        }
+        .top-nav-link:hover::after {
+            transform: translateX(-50%) scaleX(1);
+        }
+
+        .btn-premium {
+            transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 4px 12px rgba(0, 103, 130, 0.2);
+        }
+        .btn-premium:active {
+            transform: translateY(0);
+        }
+
+        .node-card-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .node-card-hover:hover {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transform: translateY(-2px);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar-link, .sidebar-link::before, .top-nav-link::after, .btn-premium, .node-card-hover {
+                transition: none !important;
+                transform: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "status-nominal": "#22c55e",
+                      "on-primary-fixed": "#001f29",
+                      "background": "#f5fafd",
+                      "border-subtle": "#e2e8f0",
+                      "on-primary": "#ffffff",
+                      "on-surface-variant": "#3d484e",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "surface-container-highest": "#dee3e7",
+                      "primary-fixed": "#bbeaff",
+                      "surface-container-low": "#eff4f8",
+                      "on-error": "#ffffff",
+                      "primary-container": "#11aad4",
+                      "status-warning": "#f59e0b",
+                      "surface-container": "#eaeef2",
+                      "primary-fixed-dim": "#5dd4ff",
+                      "on-tertiary-fixed-variant": "#693c00",
+                      "on-status-nominal": "#dcfce7",
+                      "on-surface": "#171c1f",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#f5fafd",
+                      "error-container": "#ffdad6",
+                      "primary": "#006782",
+                      "tertiary-container": "#db8b2b",
+                      "outline-variant": "#bdc8cf",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-container": "#4f2c00",
+                      "surface": "#f6f8f8",
+                      "on-background": "#171c1f",
+                      "on-status-critical": "#fee2e2",
+                      "inverse-surface": "#2c3134",
+                      "on-primary-container": "#003a4a",
+                      "outline": "#6d797f",
+                      "surface-tint": "#006782",
+                      "tertiary": "#8a5100",
+                      "on-primary-fixed-variant": "#004d62",
+                      "surface-dim": "#d6dbde",
+                      "error": "#ba1a1a",
+                      "secondary-fixed": "#d5e3fd",
+                      "on-secondary": "#ffffff",
+                      "status-critical": "#ef4444",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-container": "#d5e3fd",
+                      "on-secondary-container": "#57657b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "1.5rem",
+                      "container-padding": "2rem",
+                      "stack-gap": "1.5rem",
+                      "sidebar-width": "15rem"
+              },
+              "fontFamily": {
+                      "title-md": ["Hanken Grotesk"],
+                      "headline-md": ["Hanken Grotesk"],
+                      "display-lg": ["Hanken Grotesk"],
+                      "body-md": ["Hanken Grotesk"],
+                      "label-sm": ["Hanken Grotesk"]
+              },
+              "fontSize": {
+                      "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-[15rem] flex flex-col py-gutter bg-on-primary-fixed shadow-sm z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold tracking-tight">Hydronix</h1>
+<p class="text-on-primary-fixed-variant opacity-80 text-xs uppercase tracking-widest font-bold">Mission Control</p>
+</div>
+<nav class="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-title-md text-sm">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed" href="#">
+<span class="material-symbols-outlined mr-3">sensors</span>
+<span class="font-title-md text-sm">Live Telemetry</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">hub</span>
+<span class="font-title-md text-sm">Node Network</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">water_drop</span>
+<span class="font-title-md text-sm">Water Quality</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">waves</span>
+<span class="font-title-md text-sm">Flow Analysis</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">compress</span>
+<span class="font-title-md text-sm">Pressure Map</span>
+</a>
+<div class="pt-4 pb-2 px-4 text-[10px] text-on-primary-fixed-variant opacity-50 uppercase font-black">System</div>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">notifications_active</span>
+<span class="font-title-md text-sm">Alert History</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">monitor_heart</span>
+<span class="font-title-md text-sm">System Health</span>
+</a>
+<a class="sidebar-link flex items-center px-4 py-3 rounded-lg text-on-primary-fixed-variant opacity-80" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-title-md text-sm">Global Settings</span>
+</a>
+</nav>
+<div class="px-3 mt-auto border-t border-primary-fixed/10 pt-4">
+<button class="btn-premium w-full bg-primary-container text-on-primary py-2 px-4 rounded font-bold text-sm mb-4 shadow-sm">Add New Node</button>
+<a class="sidebar-link flex items-center px-4 py-2 text-on-primary-fixed-variant opacity-80 text-sm" href="#">
+<span class="material-symbols-outlined mr-3 text-lg">help</span> Support
+</a>
+</div>
+</aside>
+<!-- Top AppBar Shell -->
+<header class="fixed top-0 right-0 h-16 w-[calc(100%-15rem)] bg-surface-container-lowest flex justify-between items-center px-gutter z-40 border-b border-border-subtle">
+<div class="flex items-center space-x-6">
+<div class="relative group">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-outline">
+<span class="material-symbols-outlined text-xl">search</span>
+</span>
+<input class="bg-surface-container text-body-md font-body-md pl-10 pr-4 py-1.5 rounded-full border-none focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search devices or telemetry..." type="text"/>
+</div>
+<nav class="hidden md:flex space-x-6">
+<a class="top-nav-link font-body-md text-body-md text-primary font-bold pb-1" href="#">Infrastructure</a>
+<a class="top-nav-link font-body-md text-body-md text-on-surface-variant hover:text-primary" href="#">Analytics</a>
+<a class="top-nav-link font-body-md text-body-md text-on-surface-variant hover:text-primary" href="#">Security</a>
+</nav>
+</div>
+<div class="flex items-center space-x-4">
+<span class="text-status-nominal text-xs font-bold bg-status-nominal/10 px-3 py-1 rounded-full flex items-center">
+<span class="w-2 h-2 bg-status-nominal rounded-full mr-2"></span>
+                System Status: Nominal
+            </span>
+<div class="h-8 w-[1px] bg-border-subtle mx-2"></div>
+<button class="text-on-surface-variant hover:text-primary material-symbols-outlined transition-colors duration-150">notifications</button>
+<button class="text-on-surface-variant hover:text-primary material-symbols-outlined transition-colors duration-150">settings</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-border-subtle cursor-pointer hover:border-primary transition-colors">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a corporate engineer in a minimalist office setting with soft natural lighting, reflecting high authority and modern tech industry style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHARl4HZQ9C4TLn22azPJDlwLFmbIS-PWVibrh8W2zP6-IU_iKbHnjd1S_lDbtxTfp0XC_IPGUBFQ9auZsPYEvd-NfOwmW_e5_MtFoxECMi6xrEsljYsmc2e2bbzq1dBxZL8EXcG7FLVJTNqfst5Fu79MHX_G7XkFZ2MMDQoo51E0GakUOOvlFOhYk_WgdNuvyhvu9EnkJNbnH9NNRN3B48f9izx9U63aarOVrcC_ulLdK6XeDwK5SrXCWNtgRgIZzX7oQnRaoSCk"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[15rem] pt-16 min-h-screen p-gutter flex flex-col">
+<!-- Breadcrumbs & Header -->
+<div class="mb-8 flex justify-between items-end">
+<div>
+<nav class="flex items-center space-x-2 text-outline text-xs mb-2 font-bold uppercase tracking-wider">
+<span>Admin</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span>Nodes</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-primary">HYD-9920-XLT</span>
+</nav>
+<h2 class="font-display-lg text-display-lg text-on-surface">Node Diagnostics: HYD-9920-XLT</h2>
+<p class="text-on-surface-variant font-body-md mt-1">Live telemetry stream from Regional Sector 7 — Station Delta.</p>
+</div>
+<div class="flex space-x-3">
+<button class="btn-premium border border-border-subtle bg-surface-container-lowest px-4 py-2 rounded font-bold text-sm text-on-surface flex items-center shadow-sm">
+<span class="material-symbols-outlined mr-2 text-lg">download</span> Export Logs
+                </button>
+<button class="btn-premium bg-primary text-on-primary px-6 py-2 rounded font-bold text-sm flex items-center shadow-md">
+<span class="material-symbols-outlined mr-2 text-lg">settings_input_component</span> Remote Calibration
+                </button>
+</div>
+</div>
+<!-- 2x2 Metric Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-8">
+<!-- pH Metric -->
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 node-card-hover relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-nominal"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Water pH Level</p>
+<h3 class="text-3xl font-black text-on-surface">7.24 <span class="text-sm font-normal text-outline">pH</span></h3>
+</div>
+<div class="bg-status-nominal/10 p-2 rounded">
+<span class="material-symbols-outlined text-status-nominal">water_drop</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-status-nominal text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs mr-1">trending_up</span> +0.2%
+                    </span>
+<canvas class="sparkline-container" id="sparkline-ph"></canvas>
+</div>
+</div>
+<!-- Turbidity Metric -->
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 node-card-hover relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-nominal"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Turbidity Index</p>
+<h3 class="text-3xl font-black text-on-surface">0.12 <span class="text-sm font-normal text-outline">NTU</span></h3>
+</div>
+<div class="bg-status-nominal/10 p-2 rounded">
+<span class="material-symbols-outlined text-status-nominal">opacity</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-status-nominal text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs mr-1">trending_down</span> -1.4%
+                    </span>
+<canvas class="sparkline-container" id="sparkline-turbidity"></canvas>
+</div>
+</div>
+<!-- Pressure Metric -->
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 node-card-hover relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-warning"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Line Pressure</p>
+<h3 class="text-3xl font-black text-on-surface">142 <span class="text-sm font-normal text-outline">PSI</span></h3>
+</div>
+<div class="bg-status-warning/10 p-2 rounded">
+<span class="material-symbols-outlined text-status-warning">compress</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-status-warning text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs mr-1">warning</span> +8.2% High
+                    </span>
+<canvas class="sparkline-container" id="sparkline-pressure"></canvas>
+</div>
+</div>
+<!-- Flow Metric -->
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6 node-card-hover relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-nominal"></div>
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-outline uppercase tracking-wider mb-1">Volumetric Flow</p>
+<h3 class="text-3xl font-black text-on-surface">42.8 <span class="text-sm font-normal text-outline">GPM</span></h3>
+</div>
+<div class="bg-status-nominal/10 p-2 rounded">
+<span class="material-symbols-outlined text-status-nominal">waves</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-status-nominal text-xs font-bold flex items-center">
+<span class="material-symbols-outlined text-xs mr-1">trending_up</span> Nominal
+                    </span>
+<canvas class="sparkline-container" id="sparkline-flow"></canvas>
+</div>
+</div>
+</div>
+<!-- Large Time Series Chart Section -->
+<section class="flex-1 bg-surface-container-lowest rounded-xl border border-border-subtle p-gutter shadow-sm mb-gutter flex flex-col">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Historical Performance Matrix</h3>
+<p class="text-on-surface-variant font-body-md">Comparing aggregate sensor stability over a 24-hour cycle.</p>
+</div>
+<div class="flex items-center space-x-2 bg-surface-container p-1 rounded-lg">
+<button class="px-4 py-1.5 rounded bg-surface-container-lowest shadow-sm text-xs font-bold text-primary transition-all duration-150">24H</button>
+<button class="px-4 py-1.5 rounded text-xs font-bold text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-all duration-150">7D</button>
+<button class="px-4 py-1.5 rounded text-xs font-bold text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest transition-all duration-150">30D</button>
+</div>
+</div>
+<div class="flex-1 w-full relative min-h-[400px]" id="main-chart-container">
+<!-- SVG Visualization -->
+<div class="w-full h-full" id="telemetry-chart">
+<svg class="w-full h-full overflow-visible" viewbox="0 0 1000 400">
+<defs>
+<lineargradient id="chartGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#006782" stop-opacity="0.15"></stop>
+<stop offset="100%" stop-color="#006782" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Background Area -->
+<path d="M0,350 L50,320 L100,340 L150,280 L200,300 L250,220 L300,250 L350,180 L400,190 L450,120 L500,150 L550,80 L600,110 L650,40 L700,90 L750,130 L800,160 L850,140 L900,100 L950,120 L1000,80 L1000,400 L0,400 Z" fill="url(#chartGrad)"></path>
+<!-- Primary Line (Teal #006782) -->
+<path d="M0,350 L50,320 L100,340 L150,280 L200,300 L250,220 L300,250 L350,180 L400,190 L450,120 L500,150 L550,80 L600,110 L650,40 L700,90 L750,130 L800,160 L850,140 L900,100 L950,120 L1000,80" fill="none" stroke="#006782" stroke-linejoin="round" stroke-width="3"></path>
+<!-- Threshold Line -->
+<line stroke="#cbd5e1" stroke-dasharray="5,5" x1="0" x2="1000" y1="200" y2="200"></line>
+<text fill="#6d797f" font-family="Hanken Grotesk" font-size="10" font-weight="bold" x="940" y="190">TARGET THRESHOLD</text>
+</svg>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-border-subtle grid grid-cols-3 gap-8">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">analytics</span>
+</div>
+<div>
+<p class="text-[10px] font-black uppercase text-outline tracking-widest">Mean Deviation</p>
+<p class="font-title-md text-on-surface">0.042 Units</p>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-status-nominal/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-status-nominal">history</span>
+</div>
+<div>
+<p class="text-[10px] font-black uppercase text-outline tracking-widest">Uptime Precision</p>
+<p class="font-title-md text-on-surface">99.982%</p>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-tertiary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">speed</span>
+</div>
+<div>
+<p class="text-[10px] font-black uppercase text-outline tracking-widest">Latency (Avg)</p>
+<p class="font-title-md text-on-surface">14ms</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<script>
+        // Sparkline drawing helper
+        function drawSparkline(id, color) {
+            const canvas = document.getElementById(id);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const data = Array.from({length: 12}, () => Math.floor(Math.random() * 40));
+            
+            canvas.width = 100;
+            canvas.height = 40;
+            
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            
+            const step = canvas.width / (data.length - 1);
+            ctx.moveTo(0, canvas.height - data[0]);
+            
+            for (let i = 1; i < data.length; i++) {
+                ctx.lineTo(i * step, canvas.height - data[i]);
+            }
+            ctx.stroke();
+
+            // Gradient Fill
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, color + '22');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+        }
+
+        // Initialize Sparklines with correct semantic colors
+        window.addEventListener('load', () => {
+            drawSparkline('sparkline-ph', '#22c55e'); // status-nominal
+            drawSparkline('sparkline-turbidity', '#22c55e'); // status-nominal
+            drawSparkline('sparkline-pressure', '#f59e0b'); // status-warning
+            drawSparkline('sparkline-flow', '#22c55e'); // status-nominal
+        });
+    </script>
+</body></html>

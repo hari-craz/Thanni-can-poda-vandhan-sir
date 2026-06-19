@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix Mission Control | Incident Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;700&amp;family=Hanken+Grotesk:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        
+        :root {
+            --sidebar-width: 240px;
+        }
+
+        body {
+            font-family: 'Hanken Grotesk', sans-serif;
+        }
+
+        h1, h2, h3, h4, .font-display-lg {
+            font-family: 'Fraunces', serif;
+        }
+
+        .w-sidebar { width: var(--sidebar-width); }
+        .ml-sidebar { margin-left: var(--sidebar-width); }
+        .top-bar-width { width: calc(100% - var(--sidebar-width)); }
+
+        /* Editorial Intelligence: 0px border radius and high-contrast borders */
+        .editorial-border {
+            border: 1px solid #171c1f;
+            border-radius: 0 !important;
+        }
+        
+        * {
+            border-radius: 0.125rem !important;
+        }
+
+        /* Micro-interactions */
+        .sidebar-link {
+            transition: all 150ms ease-in-out;
+        }
+        .sidebar-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-premium {
+            transition: all 200ms ease-in-out;
+            border: 1px solid #171c1f;
+        }
+        .btn-premium:hover:not(:disabled) {
+            background-color: #171c1f;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .ml-sidebar { margin-left: 0; }
+            .top-bar-width { width: 100%; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#57657b",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "secondary": "#515f74",
+                        "inverse-primary": "#5dd4ff",
+                        "on-primary-fixed": "#001f29",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "on-surface-variant": "#3d484e",
+                        "secondary-container": "#d5e3fd",
+                        "primary-fixed-dim": "#5dd4ff",
+                        "on-tertiary-container": "#4f2c00",
+                        "error-container": "#ffdad6",
+                        "primary": "#006782",
+                        "surface-container-highest": "#dee3e7",
+                        "status-warning": "#f59e0b",
+                        "surface-dim": "#d6dbde",
+                        "surface-variant": "#dee3e7",
+                        "surface-container-high": "#e4e9ec",
+                        "surface-container": "#eaeef2",
+                        "primary-container": "#11aad4",
+                        "on-primary-container": "#003a4a",
+                        "outline-variant": "#bdc8cf",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#bbeaff",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "status-nominal": "#22c55e",
+                        "on-status-critical": "#fee2e2",
+                        "tertiary-fixed": "#ffdcbd",
+                        "surface-tint": "#006782",
+                        "border-subtle": "#e2e8f0",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "on-background": "#171c1f",
+                        "outline": "#6d797f",
+                        "background": "#f5fafd",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#d5e3fd",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-status-nominal": "#dcfce7",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed-variant": "#004d62",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#8a5100",
+                        "status-critical": "#ef4444",
+                        "surface-container-low": "#eff4f8",
+                        "surface-bright": "#f5fafd",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-container": "#db8b2b",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "surface": "#f6f8f8",
+                        "error": "#ba1a1a",
+                        "inverse-on-surface": "#edf1f5",
+                        "inverse-surface": "#2c3134",
+                        "on-surface": "#171c1f"
+                    },
+                    "spacing": {
+                        "gutter": "1.5rem",
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface antialiased overflow-x-hidden">
+<!-- SIDEBAR NAVIGATION -->
+<aside class="fixed left-0 top-0 h-full w-sidebar bg-on-primary-fixed flex flex-col z-50 transition-transform duration-300 -translate-x-full md:translate-x-0 border-r border-on-surface" id="sidebar">
+<div class="p-6 mb-4">
+<h1 class="text-2xl text-white font-bold tracking-tight">Hydronix</h1>
+<p class="text-primary-container opacity-80 text-[10px] uppercase tracking-[0.2em] font-semibold">Mission Control</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-semibold text-sm">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="font-semibold text-sm">Live Telemetry</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 bg-white/10 text-white border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="font-semibold text-sm">Alert History</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-semibold text-sm">Node Network</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white" href="#">
+<span class="material-symbols-outlined">water_drop</span>
+<span class="font-semibold text-sm">Water Quality</span>
+</a>
+</nav>
+<div class="p-4 border-t border-white/10">
+<button class="w-full bg-primary text-white font-bold py-3 px-4 flex items-center justify-center gap-2 hover:bg-opacity-90">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="text-xs uppercase tracking-widest">Add New Node</span>
+</button>
+<div class="mt-4 space-y-2">
+<a class="flex items-center gap-3 px-4 py-1 text-gray-500 hover:text-white text-xs" href="#">Support</a>
+<a class="flex items-center gap-3 px-4 py-1 text-gray-500 hover:text-white text-xs" href="#">Docs</a>
+</div>
+</div>
+</aside>
+<!-- MAIN CONTENT AREA -->
+<main class="ml-sidebar min-h-screen flex flex-col">
+<!-- TOP APP BAR -->
+<header class="fixed top-0 right-0 h-16 top-bar-width bg-surface-container-lowest border-b border-on-surface flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-primary" onclick="document.getElementById('sidebar').classList.toggle('-translate-x-full')">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="hidden sm:flex items-center bg-surface-container-low border border-on-surface px-4 py-2 gap-2 w-80">
+<span class="material-symbols-outlined text-outline text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full p-0" placeholder="Search events..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<span class="hidden lg:flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-on-status-nominal text-status-nominal px-3 py-1 border border-status-nominal">
+<span class="w-2 h-2 bg-status-nominal animate-pulse"></span> System: Nominal
+            </span>
+<div class="flex items-center gap-4 border-l border-on-surface pl-6">
+<button class="relative text-on-surface"><span class="material-symbols-outlined">notifications</span></button>
+<div class="w-8 h-8 border border-on-surface overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4qn-yRYGGBBTsz6U_GAJ3IRbnx8xUVjToAokzr96Nywn2d3sjzGskCC3pZanWDB2exUnQ2Dj0Kre2jVp6mgd4Ae4BnviOKpA43EBJI5_5VuS0oIoUV6qi_CIQXdXJ9wkZTm3xCzEDxxPqJLdQd9KkPf_CQgVI9yWWpRZW6UMAjjLNImFLNLlsX29I1RJfUKm3n-n0z6A_NbLWk6WdoFZ7gSoJYS2g26dtvInCsSqctdKew2SMXeEl8EUUA-of1Yp57cj3t_rvutA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- CONTENT CANVAS -->
+<div class="mt-16 p-8 flex-1">
+<div class="max-w-[1400px] mx-auto space-y-8">
+<!-- HEADER -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-on-surface pb-6">
+<div>
+<h2 class="text-4xl font-bold text-on-surface tracking-tight">Incident Management</h2>
+<p class="text-outline mt-2 text-sm max-w-xl">Real-time environmental triggers and system-wide alert monitoring for the national node network.</p>
+</div>
+<div class="flex gap-2">
+<button class="btn-premium px-6 py-2 bg-surface-container-lowest text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filters
+                    </button>
+<button class="btn-premium px-6 py-2 bg-surface-container-lowest text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span> Export
+                    </button>
+</div>
+</div>
+<!-- UNIFORM METRIC CARDS -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest border border-on-surface p-6 flex flex-col justify-between h-32 relative group">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-status-critical"></div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-outline">Critical Alerts</span>
+<span class="material-symbols-outlined text-status-critical">error</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black">12</span>
+<span class="text-[10px] font-bold text-status-critical">+2/hr</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-on-surface p-6 flex flex-col justify-between h-32 relative">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-status-warning"></div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-outline">Warnings</span>
+<span class="material-symbols-outlined text-status-warning">warning</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black">45</span>
+<span class="text-[10px] font-bold text-outline">Stable</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-on-surface p-6 flex flex-col justify-between h-32 relative">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-primary"></div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-outline">Avg Response</span>
+<span class="material-symbols-outlined text-primary">schedule</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black">4.2m</span>
+<span class="text-[10px] font-bold text-status-nominal">-15%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-on-surface p-6 flex flex-col justify-between h-32 relative">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-outline"></div>
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-outline">Unacknowledged</span>
+<span class="material-symbols-outlined text-outline">mark_chat_unread</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black">08</span>
+<span class="text-[10px] font-bold text-status-warning">Action Req</span>
+</div>
+</div>
+</div>
+<!-- INCIDENT LOG TABLE -->
+<div class="bg-surface-container-lowest border border-on-surface overflow-hidden">
+<div class="p-4 border-b border-on-surface flex justify-between items-center bg-surface-container">
+<h3 class="font-bold text-sm uppercase tracking-widest">Active Incident Log</h3>
+<div class="text-[10px] font-bold uppercase text-outline">Live Updates Enabled</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-on-surface text-[10px] font-bold uppercase tracking-widest text-white bg-on-surface">
+<th class="px-6 py-4">Alert ID</th>
+<th class="px-6 py-4">Source Device</th>
+<th class="px-6 py-4">Severity</th>
+<th class="px-6 py-4">Message</th>
+<th class="px-6 py-4">Timestamp</th>
+<th class="px-6 py-4 text-center">Action</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-on-surface hover:bg-surface-container-low">
+<td class="px-6 py-5 font-bold">#INC-4921</td>
+<td class="px-6 py-5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">hub</span> SE-WTR-NODE-42
+                                </td>
+<td class="px-6 py-5">
+<span class="inline-block px-2 py-0.5 border border-status-critical text-status-critical text-[9px] font-bold uppercase">Critical</span>
+</td>
+<td class="px-6 py-5 italic text-on-surface-variant">Main pressure valve threshold exceeded (&gt;120 PSI)</td>
+<td class="px-6 py-5 text-outline font-medium">2023-11-24 14:22:05</td>
+<td class="px-6 py-5 text-center">
+<button class="px-4 py-1.5 border border-on-surface text-[10px] font-bold uppercase hover:bg-on-surface hover:text-white transition-all">Acknowledge</button>
+</td>
+</tr>
+<tr class="border-b border-on-surface hover:bg-surface-container-low">
+<td class="px-6 py-5 font-bold">#INC-4918</td>
+<td class="px-6 py-5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">hub</span> NW-FLW-SENS-12
+                                </td>
+<td class="px-6 py-5">
+<span class="inline-block px-2 py-0.5 border border-status-warning text-status-warning text-[9px] font-bold uppercase">Warning</span>
+</td>
+<td class="px-6 py-5 text-on-surface-variant">Turbidity sensors reporting abnormal variance</td>
+<td class="px-6 py-5 text-outline font-medium">2023-11-24 14:18:12</td>
+<td class="px-6 py-5 text-center">
+<button class="px-4 py-1.5 border border-on-surface text-[10px] font-bold uppercase hover:bg-on-surface hover:text-white transition-all">Acknowledge</button>
+</td>
+</tr>
+<tr class="border-b border-on-surface hover:bg-surface-container-low">
+<td class="px-6 py-5 font-bold">#INC-4915</td>
+<td class="px-6 py-5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">hub</span> CE-HUB-GLO-01
+                                </td>
+<td class="px-6 py-5">
+<span class="inline-block px-2 py-0.5 border border-outline text-outline text-[9px] font-bold uppercase">Info</span>
+</td>
+<td class="px-6 py-5 text-on-surface-variant">Routine firmware handshake initiated for zone 7</td>
+<td class="px-6 py-5 text-outline font-medium">2023-11-24 14:15:59</td>
+<td class="px-6 py-5 text-center">
+<button class="px-4 py-1.5 border border-outline-variant text-outline-variant text-[10px] font-bold uppercase cursor-not-allowed" disabled="">Logged</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container flex justify-between items-center text-[10px] font-bold text-outline border-t border-on-surface">
+<p class="uppercase tracking-widest">Showing 15 of 1,204</p>
+<div class="flex gap-1">
+<button class="w-8 h-8 border border-on-surface flex items-center justify-center bg-surface-container-lowest">1</button>
+<button class="w-8 h-8 border border-on-surface/20 flex items-center justify-center bg-surface-container-lowest hover:border-on-surface">2</button>
+<button class="w-8 h-8 border border-on-surface/20 flex items-center justify-center bg-surface-container-lowest hover:border-on-surface">3</button>
+</div>
+</div>
+</div>
+<!-- ANALYTICS: SIDE BY SIDE -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
+<!-- FREQUENCY CHART -->
+<div class="lg:col-span-8 bg-surface-container-lowest border border-on-surface p-6">
+<div class="flex justify-between items-center mb-10">
+<h4 class="font-bold text-lg tracking-tight">Frequency Distribution (24h)</h4>
+<div class="flex gap-4">
+<div class="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest">
+<span class="w-2 h-2 bg-status-critical"></span> Critical
+                            </div>
+<div class="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest">
+<span class="w-2 h-2 bg-status-warning"></span> Warning
+                            </div>
+</div>
+</div>
+<div class="h-48 flex items-end gap-3 px-2">
+<div class="flex-1 bg-surface-container-high h-[20%] border border-on-surface/10 hover:border-on-surface transition-colors"></div>
+<div class="flex-1 bg-surface-container-high h-[25%] border border-on-surface/10 hover:border-on-surface transition-colors"></div>
+<div class="flex-1 bg-surface-container-high h-[15%] border border-on-surface/10 hover:border-on-surface transition-colors"></div>
+<div class="flex-1 bg-status-warning/20 border border-status-warning h-[40%]"></div>
+<div class="flex-1 bg-status-critical/30 border border-status-critical h-[90%]"></div>
+<div class="flex-1 bg-status-critical/30 border border-status-critical h-[70%]"></div>
+<div class="flex-1 bg-surface-container-high h-[35%] border border-on-surface/10"></div>
+<div class="flex-1 bg-primary/20 border border-primary h-[50%]"></div>
+<div class="flex-1 bg-surface-container-high h-[45%]"></div>
+<div class="flex-1 bg-surface-container-high h-[30%]"></div>
+<div class="flex-1 bg-surface-container-high h-[20%]"></div>
+<div class="flex-1 bg-surface-container-high h-[15%]"></div>
+</div>
+<div class="flex justify-between mt-4 text-[9px] font-bold uppercase tracking-widest text-outline">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- OPERATOR PERFORMANCE -->
+<div class="lg:col-span-4 bg-on-surface text-white p-8 flex flex-col justify-between">
+<div>
+<h4 class="font-bold text-xl mb-2">Operator Performance</h4>
+<p class="text-xs text-outline-variant leading-relaxed">Shift analytics for resolution and SLA compliance monitoring.</p>
+</div>
+<div class="space-y-6 mt-10">
+<div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-2">
+<span>Resolution Rate</span>
+<span>94%</span>
+</div>
+<div class="w-full h-1 bg-white/10">
+<div class="bg-status-nominal h-full w-[94%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-2">
+<span>SLA Compliance</span>
+<span>88%</span>
+</div>
+<div class="w-full h-1 bg-white/10">
+<div class="bg-status-warning h-full w-[88%]"></div>
+</div>
+</div>
+</div>
+<button class="mt-10 w-full py-3 border border-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-on-surface transition-all">
+                        View Full Report
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<footer class="p-6 bg-surface-container-lowest text-outline text-[10px] font-bold uppercase tracking-[0.2em] text-center border-t border-on-surface">
+        © 2024 Hydronix Environmental Solutions. All systems nominal.
+    </footer>
+</main>
+<script>
+    // Simple table interaction simulation
+    document.querySelectorAll('button').forEach(btn => {
+        if (btn.innerText.trim() === 'ACKNOWLEDGE') {
+            btn.addEventListener('click', function() {
+                this.innerText = 'ACKNOWLEDGED';
+                this.disabled = true;
+                this.classList.replace('hover:bg-on-surface', 'cursor-not-allowed');
+                this.classList.add('opacity-40');
+                this.closest('tr').classList.add('opacity-50');
+            });
+        }
+    });
+</script>
+</body></html>

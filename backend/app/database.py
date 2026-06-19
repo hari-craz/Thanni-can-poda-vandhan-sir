@@ -37,7 +37,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     __table_args__ = (
-        CheckConstraint("role IN ('superadmin', 'admin')", name='check_user_role'),
+        CheckConstraint("role IN ('superadmin', 'admin', 'user')", name='check_user_role'),
     )
 
 

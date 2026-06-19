@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Access Control | Hydronix</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-secondary": "#ffffff",
+                "on-secondary-container": "#57657b",
+                "secondary-fixed-dim": "#b9c7e0",
+                "secondary": "#515f74",
+                "inverse-primary": "#5dd4ff",
+                "on-primary-fixed": "#001f29",
+                "tertiary-fixed-dim": "#ffb86e",
+                "on-surface-variant": "#3d484e",
+                "secondary-container": "#d5e3fd",
+                "primary-fixed-dim": "#5dd4ff",
+                "on-tertiary-container": "#4f2c00",
+                "error-container": "#ffdad6",
+                "primary": "#006782",
+                "surface-container-highest": "#dee3e7",
+                "status-warning": "#f59e0b",
+                "surface-dim": "#d6dbde",
+                "surface-variant": "#dee3e7",
+                "surface-container-high": "#e4e9ec",
+                "surface-container": "#eaeef2",
+                "primary-container": "#11aad4",
+                "on-primary-container": "#003a4a",
+                "outline-variant": "#bdc8cf",
+                "on-error": "#ffffff",
+                "primary-fixed": "#bbeaff",
+                "on-tertiary-fixed-variant": "#693c00",
+                "status-nominal": "#22c55e",
+                "on-status-nominal": "#dcfce7",
+                "tertiary-fixed": "#ffdcbd",
+                "surface-tint": "#006782",
+                "border-subtle": "#e2e8f0",
+                "on-secondary-fixed-variant": "#3a485c",
+                "on-background": "#171c1f",
+                "outline": "#6d797f",
+                "background": "#f5fafd",
+                "on-error-container": "#93000a",
+                "secondary-fixed": "#d5e3fd",
+                "on-tertiary-fixed": "#2c1600",
+                "on-status-nominal": "#dcfce7",
+                "surface-container-lowest": "#ffffff",
+                "on-primary-fixed-variant": "#004d62",
+                "on-primary": "#ffffff",
+                "tertiary": "#8a5100",
+                "status-critical": "#ef4444",
+                "surface-container-low": "#eff4f8",
+                "surface-bright": "#f5fafd",
+                "on-tertiary": "#ffffff",
+                "tertiary-container": "#db8b2b",
+                "on-secondary-fixed": "#0d1c2f",
+                "surface": "#ffffff",
+                "error": "#ba1a1a",
+                "inverse-on-surface": "#edf1f5",
+                "inverse-surface": "#2c3134",
+                "on-surface": "#171c1f"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "stack-gap": "1.5rem",
+                "container-padding": "2rem",
+                "sidebar-width": "15rem",
+                "gutter": "1.5rem"
+        },
+        "fontFamily": {
+                "display-lg": [
+                        "Hanken Grotesk"
+                ],
+                "body-md": [
+                        "Hanken Grotesk"
+                ],
+                "label-sm": [
+                        "Hanken Grotesk"
+                ],
+                "title-md": [
+                        "Hanken Grotesk"
+                ],
+                "headline-md": [
+                        "Hanken Grotesk"
+                ]
+        },
+        "fontSize": {
+                "display-lg": [
+                        "36px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "title-md": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "700"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Premium Sidebar Hover */
+        .nav-link-sidebar {
+            position: relative;
+            transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+        }
+        .nav-link-sidebar::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: transparent;
+            transition: background-color 150ms ease-in-out, transform 150ms ease-in-out;
+            transform: scaleY(0);
+        }
+        .nav-link-sidebar:hover::before {
+            background-color: currentColor;
+            transform: scaleY(0.7);
+        }
+        .nav-link-sidebar:hover {
+            background-color: rgba(187, 234, 255, 0.08);
+        }
+
+        /* Top Bar Underline Animation */
+        .nav-link-top {
+            position: relative;
+        }
+        .nav-link-top::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 1.5px;
+            background-color: currentColor;
+            transition: width 250ms ease-in-out, left 250ms ease-in-out;
+        }
+        .nav-link-top:hover::after {
+            width: 100%;
+            left: 0;
+        }
+
+        /* Primary Button Lift & Shimmer */
+        .btn-premium {
+            transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 200ms ease, box-shadow 200ms ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-premium:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 103, 130, 0.25);
+            background-color: #004d62;
+        }
+        .btn-premium::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.05),
+                transparent
+            );
+            transform: rotate(45deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+        .btn-premium:hover::after {
+            left: 100%;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .nav-link-sidebar::before,
+            .nav-link-top::after,
+            .btn-premium,
+            .btn-premium::after {
+                transition: none !important;
+                transform: none !important;
+                animation: none !important;
+            }
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .bento-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-[15rem] bg-on-primary-fixed flex flex-col py-gutter z-50 shadow-sm md:flex hidden">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold tracking-tighter">Hydronix</h1>
+<p class="text-on-primary-fixed-variant opacity-60 text-label-sm uppercase tracking-widest mt-1">Mission Control</p>
+</div>
+<nav class="flex-1 overflow-y-auto px-3 space-y-1 custom-scrollbar">
+<!-- Navigation Items -->
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span> Dashboard
+            </a>
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">sensors</span> Live Telemetry
+            </a>
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">hub</span> Node Network
+            </a>
+<div class="pt-4 pb-2 px-4 text-on-primary-fixed-variant opacity-40 text-label-sm uppercase font-bold">Administration</div>
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">settings</span> Global Settings
+            </a>
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">terminal</span> API Access
+            </a>
+</nav>
+<div class="mt-auto px-3 border-t border-primary-fixed-variant/10 pt-4">
+<a class="nav-link-sidebar flex items-center px-4 py-3 rounded text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed font-title-md text-title-md" href="#">
+<span class="material-symbols-outlined mr-3">help</span> Support
+            </a>
+</div>
+</aside>
+<!-- Top AppBar Shell -->
+<header class="fixed top-0 right-0 h-16 bg-surface-container-lowest flex justify-between items-center px-gutter md:w-[calc(100%-15rem)] w-full z-40 border-b border-border-subtle">
+<div class="flex items-center gap-6">
+<div class="md:hidden flex items-center">
+<span class="material-symbols-outlined text-primary cursor-pointer">menu</span>
+</div>
+<div class="hidden md:flex items-center bg-surface-container-low px-4 py-1.5 rounded-full border border-border-subtle focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-outline-variant text-[20px] mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-64 placeholder:text-outline-variant" placeholder="Search registry..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex items-center gap-6">
+<a class="nav-link-top text-label-sm text-on-surface-variant hover:text-primary transition-colors font-bold uppercase tracking-wider" href="#">Reports</a>
+<a class="nav-link-top text-label-sm text-on-surface-variant hover:text-primary transition-colors font-bold uppercase tracking-wider" href="#">Audit logs</a>
+</nav>
+<div class="hidden lg:flex items-center gap-2 text-label-sm font-bold text-status-nominal px-3 py-1 bg-on-status-nominal rounded-full">
+<span class="w-2 h-2 rounded-full bg-status-nominal animate-pulse"></span>
+                System Status: Nominal
+            </div>
+<div class="flex items-center gap-3 ml-2">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all p-1 hover:bg-surface-container-low rounded-full">notifications</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary font-bold text-xs border border-on-primary-container/20 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAl7KCfqc_VTmOOI7UaANZcLBQlY0YW9pdBcgKZOqgXvNDeW8svBZqrGiQqtcX6v-aN4r3LBQ0tykH4Tzcn8nRE14lE05snAGpxW2saTWgedCSCv_2Yyac-gxm1KX4KO1y4uSLcqZ7ceW1aTXVZSc6XKv7J7xj6vTHcHpJv5VWrOmCHrpU0faferaj8wVXDv4ZJ0dm2ClFLbsl3_kB5XzLEphg61eRxAAbhclsV2G5txlbusRL0aLKMWNU2gYZ4XUbdEGf_cDNGKWw"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="md:ml-[15rem] mt-16 p-gutter min-h-[calc(100vh-4rem)]">
+<!-- Dashboard Header Area -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<div>
+<nav class="flex items-center gap-2 text-label-sm text-on-surface-variant mb-2">
+<span class="nav-link-top inline-block pb-0.5 cursor-pointer">Administration</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-bold">User Access Control</span>
+</nav>
+<h2 class="font-display-lg text-display-lg tracking-tight text-on-background">System Registry</h2>
+<p class="text-body-md text-on-surface-variant max-w-2xl mt-1">Manage global administrator privileges and facility-level access credentials for the Hydronix telemetry network.</p>
+</div>
+<button class="btn-premium bg-primary text-on-primary font-title-md text-title-md px-6 py-3 rounded flex items-center gap-2 transition-all shadow-sm active:scale-95">
+<span class="material-symbols-outlined">person_add</span>
+                Provision New User
+            </button>
+</div>
+<!-- Bento Grid Statistics Section -->
+<div class="bento-grid mb-gutter">
+<div class="col-span-12 lg:col-span-3 bg-surface border border-border-subtle p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow group cursor-default">
+<div class="flex justify-between items-start mb-4">
+<span class="text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Active Sessions</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">group</span>
+</div>
+<div class="text-headline-md font-extrabold">24</div>
+<div class="text-label-sm text-status-nominal mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +3 from yesterday
+                </div>
+</div>
+<div class="col-span-12 lg:col-span-3 bg-surface border border-border-subtle p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow group cursor-default">
+<div class="flex justify-between items-start mb-4">
+<span class="text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Privileged Roles</span>
+<span class="material-symbols-outlined text-tertiary group-hover:rotate-12 transition-transform">security</span>
+</div>
+<div class="text-headline-md font-extrabold">8</div>
+<div class="text-label-sm text-on-surface-variant mt-2">Superadmins &amp; Core Security</div>
+</div>
+<div class="col-span-12 lg:col-span-6 bg-surface border border-border-subtle p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-default">
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-4">
+<span class="text-label-sm uppercase tracking-widest text-on-surface-variant opacity-70">Authentication Integrity</span>
+<span class="material-symbols-outlined text-status-nominal">verified_user</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-headline-md font-extrabold">99.9%</div>
+<div class="flex-1 h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-status-nominal w-[99.9%]"></div>
+</div>
+</div>
+<p class="text-label-sm text-on-surface-variant mt-4">Zero unauthorized access attempts flagged in the last 72 hours.</p>
+</div>
+<!-- Subtle pattern -->
+<div class="absolute right-0 bottom-0 opacity-5 group-hover:opacity-10 group-hover:scale-110 transition-all duration-700">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+</div>
+</div>
+<!-- Main Data Table Container -->
+<div class="bg-surface border border-border-subtle rounded-xl shadow-sm overflow-hidden">
+<div class="p-gutter border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4">
+<h3 class="font-title-md text-title-md text-on-background">Access Registry</h3>
+<div class="flex items-center gap-3">
+<button class="btn-premium flex items-center gap-2 px-3 py-1.5 border border-border-subtle rounded text-label-sm hover:bg-surface-container-low transition-all bg-surface">
+<span class="material-symbols-outlined text-[18px]">filter_list</span> Filter
+                    </button>
+<button class="btn-premium flex items-center gap-2 px-3 py-1.5 border border-border-subtle rounded text-label-sm hover:bg-surface-container-low transition-all bg-surface">
+<span class="material-symbols-outlined text-[18px]">download</span> Export
+                    </button>
+</div>
+</div>
+<!-- Scrollable Table -->
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant text-label-sm uppercase tracking-widest border-b border-border-subtle">
+<th class="px-6 py-4 font-bold">User Identity</th>
+<th class="px-6 py-4 font-bold">System Role</th>
+<th class="px-6 py-4 font-bold">Permissions Scope</th>
+<th class="px-6 py-4 font-bold">Last Auth</th>
+<th class="px-6 py-4 font-bold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle">
+<!-- Table Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary text-on-primary flex items-center justify-center font-bold border border-border-subtle">
+                                        JD
+                                    </div>
+<div>
+<div class="font-bold text-on-surface">Julian Drayton</div>
+<div class="text-label-sm text-on-surface-variant opacity-70">j.drayton@hydronix.com</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded bg-on-primary-fixed text-primary-fixed text-[11px] font-bold uppercase tracking-wider">Superadmin</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex gap-1 flex-wrap">
+<span class="text-[10px] px-2 py-0.5 bg-surface-container-high rounded border border-border-subtle">All Nodes</span>
+<span class="text-[10px] px-2 py-0.5 bg-surface-container-high rounded border border-border-subtle">API Mgmt</span>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-nominal"></span>
+<span class="text-status-nominal font-semibold text-label-sm">ACTIVE</span>
+<span class="text-on-surface-variant opacity-60 text-xs ml-1">2 mins ago</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="Reset Credentials">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-status-critical transition-all hover:bg-status-critical/10 rounded" title="Revoke Access">
+<span class="material-symbols-outlined text-[20px]">person_off</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="More Options">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Table Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary text-on-primary flex items-center justify-center font-bold border border-border-subtle">
+                                        SC
+                                    </div>
+<div>
+<div class="font-bold text-on-surface">Sarah Chen</div>
+<div class="text-label-sm text-on-surface-variant opacity-70">s.chen@hydronix.com</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-[11px] font-bold uppercase tracking-wider border border-border-subtle">Admin</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex gap-1 flex-wrap">
+<span class="text-[10px] px-2 py-0.5 bg-surface-container-high rounded border border-border-subtle">Region: SE</span>
+<span class="text-[10px] px-2 py-0.5 bg-surface-container-high rounded border border-border-subtle">Telemetry</span>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-warning"></span>
+<span class="text-status-warning font-semibold text-label-sm">AWAY</span>
+<span class="text-on-surface-variant opacity-60 text-xs ml-1">14 Oct 2023 09:42</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="Reset Credentials">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-status-critical transition-all hover:bg-status-critical/10 rounded" title="Revoke Access">
+<span class="material-symbols-outlined text-[20px]">person_off</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="More Options">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Table Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary text-on-primary flex items-center justify-center font-bold border border-border-subtle">
+                                        MK
+                                    </div>
+<div>
+<div class="font-bold text-on-surface">Marcus Keller</div>
+<div class="text-label-sm text-on-surface-variant opacity-70">m.keller@hydronix.com</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-[11px] font-bold uppercase tracking-wider border border-border-subtle">Admin</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex gap-1 flex-wrap">
+<span class="text-[10px] px-2 py-0.5 bg-surface-container-high rounded border border-border-subtle">Fleet Mgmt</span>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-warning"></span>
+<span class="text-status-warning font-semibold text-label-sm">AWAY</span>
+<span class="text-on-surface-variant opacity-60 text-xs ml-1">Away for 5 days</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="Reset Credentials">
+<span class="material-symbols-outlined text-[20px]">lock_reset</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-status-critical transition-all hover:bg-status-critical/10 rounded" title="Revoke Access">
+<span class="material-symbols-outlined text-[20px]">person_off</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="More Options">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Table Row 4 (Warning State) -->
+<tr class="hover:bg-surface-container-low transition-colors group bg-status-critical/[0.02]">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-status-critical/10 flex items-center justify-center text-status-critical font-bold border border-status-critical/20">
+                                        AL
+                                    </div>
+<div>
+<div class="font-bold text-on-surface">Aria Lopez</div>
+<div class="text-label-sm text-on-surface-variant opacity-70">a.lopez@hydronix.com</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-[11px] font-bold uppercase tracking-wider border border-border-subtle opacity-50">Admin</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex gap-1 flex-wrap">
+<span class="text-[10px] px-2 py-0.5 bg-status-critical/10 text-status-critical rounded border border-status-critical/20">Suspended</span>
+</div>
+</td>
+<td class="px-6 py-5 text-body-md">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-critical"></span>
+<span class="text-status-critical font-bold text-label-sm uppercase">Account Locked</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-status-nominal hover:scale-110 transition-transform hover:bg-status-nominal/10 rounded" title="Restore Access">
+<span class="material-symbols-outlined text-[20px]">person_check</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all hover:bg-primary/10 rounded" title="More Options">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer/Pagination -->
+<div class="px-gutter py-4 bg-surface-container-low border-t border-border-subtle flex items-center justify-between">
+<span class="text-label-sm text-on-surface-variant">Showing 1-4 of 18 administrators</span>
+<div class="flex gap-1">
+<button class="p-2 border border-border-subtle rounded hover:bg-surface disabled:opacity-50 transition-colors" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="p-2 border border-border-subtle rounded hover:bg-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- System Alerts / Activity Feed -->
+<div class="mt-stack-gap">
+<h4 class="font-title-md text-title-md mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span> 
+                Recent Security events
+            </h4>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="border-l-4 border-status-nominal bg-surface p-4 rounded shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="text-label-sm font-bold text-status-nominal uppercase mb-1">Successful Login</div>
+<p class="text-body-md text-on-surface">Superadmin Julian Drayton authenticated via 2FA (Mobile).</p>
+<p class="text-label-sm text-on-surface-variant mt-2 opacity-60">Just now • 192.168.1.45</p>
+</div>
+<div class="border-l-4 border-status-warning bg-surface p-4 rounded shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="text-label-sm font-bold text-status-warning uppercase mb-1">Credential Rotation</div>
+<p class="text-body-md text-on-surface">Password reset request initiated for Sarah Chen.</p>
+<p class="text-label-sm text-on-surface-variant mt-2 opacity-60">1 hour ago • System Core</p>
+</div>
+<div class="border-l-4 border-status-critical bg-surface p-4 rounded shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="text-label-sm font-bold text-status-critical uppercase mb-1">Access Revoked</div>
+<p class="text-body-md text-on-surface">Account for Aria Lopez suspended due to inactive policy.</p>
+<p class="text-label-sm text-on-surface-variant mt-2 opacity-60">5 hours ago • Admin Override</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation Shell -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-lowest border-t border-border-subtle flex justify-around items-center h-16 z-50">
+<a class="nav-link-top flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold">Home</span>
+</a>
+<a class="nav-link-top flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="text-[10px] font-bold">Access</span>
+</a>
+<a class="nav-link-top flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">sensors</span>
+<span class="text-[10px] font-bold">Nodes</span>
+</a>
+<a class="nav-link-top flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for table actions and general buttons
+        document.querySelectorAll('button[title], .btn-premium').forEach(btn => {
+            btn.addEventListener('mousedown', function() {
+                this.style.transform = 'translateY(1px) scale(0.98)';
+            });
+            btn.addEventListener('mouseup', function() {
+                this.style.transform = '';
+            });
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+
+        // Search bar focus interaction
+        const searchInput = document.querySelector('input[type="text"]');
+        if (searchInput) {
+            searchInput.addEventListener('focus', () => {
+                searchInput.parentElement.classList.add('w-80');
+            });
+            searchInput.addEventListener('blur', () => {
+                searchInput.parentElement.classList.remove('w-80');
+            });
+        }
+    </script>
+</body></html>

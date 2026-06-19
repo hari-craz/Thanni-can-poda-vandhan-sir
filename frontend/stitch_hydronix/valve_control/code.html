@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Valve Control &amp; Actuation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .status-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+        body {
+            background-color: #f5fafd;
+            color: #171c1f;
+            font-family: 'Hanken Grotesk', sans-serif;
+        }
+
+        /* Premium Micro-interactions */
+        @media (prefers-reduced-motion: no-preference) {
+            .sidebar-link {
+                position: relative;
+                transition: all 150ms ease-in-out;
+            }
+            .sidebar-link::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 0;
+                background-color: #bbeaff; /* primary-fixed */
+                transition: width 150ms ease-in-out;
+                border-top-left-radius: inherit;
+                border-bottom-left-radius: inherit;
+            }
+            .sidebar-link:hover::before {
+                width: 4px;
+            }
+
+            .topbar-link {
+                position: relative;
+                transition: color 200ms ease-in-out;
+            }
+            .topbar-link::after {
+                content: '';
+                position: absolute;
+                bottom: -2px;
+                left: 50%;
+                width: 0;
+                height: 2px;
+                background-color: #006782; /* primary */
+                transition: all 200ms ease-in-out;
+                transform: translateX(-50%);
+            }
+            .topbar-link:hover::after {
+                width: 100%;
+            }
+
+            .btn-premium {
+                transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+            .btn-premium:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .btn-premium::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.1),
+                    transparent
+                );
+                transition: left 0.6s ease-in-out;
+            }
+            .btn-premium:hover::before {
+                left: 100%;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "status-nominal": "#22c55e",
+                      "on-primary-fixed": "#001f29",
+                      "background": "#f5fafd",
+                      "border-subtle": "#e2e8f0",
+                      "on-primary": "#ffffff",
+                      "on-surface-variant": "#3d484e",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "surface-container-highest": "#dee3e7",
+                      "primary-fixed": "#bbeaff",
+                      "surface-container-low": "#eff4f8",
+                      "on-error": "#ffffff",
+                      "primary-container": "#11aad4",
+                      "status-warning": "#f59e0b",
+                      "surface-container": "#eaeef2",
+                      "primary-fixed-dim": "#5dd4ff",
+                      "on-tertiary-fixed-variant": "#693c00",
+                      "on-status-nominal": "#dcfce7",
+                      "on-surface": "#171c1f",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#f5fafd",
+                      "error-container": "#ffdad6",
+                      "primary": "#006782",
+                      "tertiary-container": "#db8b2b",
+                      "outline-variant": "#bdc8cf",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-container": "#4f2c00",
+                      "surface": "#f6f8f8",
+                      "on-background": "#171c1f",
+                      "on-status-critical": "#fee2e2",
+                      "inverse-surface": "#2c3134",
+                      "on-primary-container": "#003a4a",
+                      "outline": "#6d797f",
+                      "surface-tint": "#006782",
+                      "tertiary": "#8a5100",
+                      "on-primary-fixed-variant": "#004d62",
+                      "surface-dim": "#d6dbde",
+                      "error": "#ba1a1a",
+                      "secondary-fixed": "#d5e3fd",
+                      "on-secondary": "#ffffff",
+                      "status-critical": "#ef4444",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-container": "#d5e3fd",
+                      "surface-variant": "#dee3e7",
+                      "tertiary-fixed": "#ffdcbd",
+                      "on-tertiary-fixed": "#2c1600",
+                      "secondary": "#515f74",
+                      "inverse-on-surface": "#edf1f5",
+                      "surface-container-high": "#e4e9ec",
+                      "inverse-primary": "#5dd4ff",
+                      "tertiary-fixed-dim": "#ffb86e",
+                      "on-secondary-container": "#57657b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "1.5rem",
+                      "container-padding": "2rem",
+                      "stack-gap": "1.5rem",
+                      "sidebar-width": "15rem"
+              },
+              "fontFamily": {
+                      "title-md": ["Hanken Grotesk"],
+                      "headline-md": ["Hanken Grotesk"],
+                      "display-lg": ["Hanken Grotesk"],
+                      "body-md": ["Hanken Grotesk"],
+                      "label-sm": ["Hanken Grotesk"]
+              },
+              "fontSize": {
+                      "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="flex min-h-screen overflow-x-hidden bg-background">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full w-[15rem] bg-on-primary-fixed flex flex-col py-gutter z-50 shadow-sm overflow-y-auto">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold tracking-tight">Hydronix</h1>
+<p class="text-primary-fixed-dim opacity-70 font-label-sm text-[10px] uppercase tracking-widest">Mission Control</p>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<!-- Dashboard (Inactive) -->
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<!-- Fleet Management (Active) -->
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping" style="font-variation-settings: 'FILL' 1;">local_shipping</span>
+                Fleet Management
+            </a>
+<!-- System Tools -->
+<div class="pt-4 pb-2 px-3 text-[10px] font-bold text-on-primary-fixed-variant uppercase tracking-widest opacity-40">System Tools</div>
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+                Live Telemetry
+            </a>
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="monitor_heart">monitor_heart</span>
+                System Health
+            </a>
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Global Settings
+            </a>
+</nav>
+<div class="mt-auto px-4 space-y-1">
+<a class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-white/5 hover:text-primary-fixed transition-colors duration-150 ease-in-out font-title-md text-body-md" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+</div>
+</aside>
+<!-- Top Navigation -->
+<header class="fixed top-0 right-0 h-16 w-[calc(100%-15rem)] ml-[15rem] bg-surface-container-lowest border-b border-border-subtle flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md text-on-surface font-black uppercase tracking-tighter">Hydronix</span>
+<nav class="hidden md:flex gap-6">
+<a class="topbar-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Infrastructure</a>
+<a class="topbar-link text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md" href="#">Analytics</a>
+<a class="topbar-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Security</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center gap-2 px-3 py-1 bg-status-nominal/10 rounded-full border border-status-nominal/20">
+<span class="w-2 h-2 rounded-full bg-status-nominal animate-pulse"></span>
+<span class="text-[11px] font-bold text-status-nominal uppercase tracking-wider">System Status: Nominal</span>
+</div>
+<div class="flex items-center gap-3 border-l border-border-subtle pl-4 ml-2">
+<button class="text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container overflow-hidden border border-border-subtle">
+<img class="w-full h-full object-cover" data-alt="Professional portrait of a male corporate systems engineer in a clean white environment, soft high-key lighting, industrial tech aesthetic with a focus on authority and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8va34EU1mr-1aABcvc3TdZDexMPTHpVzTlRIs88sjTHQvEzPRH5ZW5OhqIiZiUOdc7rsYVAlg0sTEI5Ov_zRcBkvQKGLTRa1w_ncB1e7-RzRo0gPiHLW0IS8eLaZ4zyTp0FwaZmYICKRq3OZcQpAlL6h1TWNP3lUUIfH0fyrm6ioVYa0E7RDo4xQIAYc0_K8b2o8kTpqRvhrsuOKxtoPiRhZEEbrougRcvYv0OgWt4Xta0WFsHGH77dhdvUnEfgVsN3GLjZnkC8U"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-[15rem] mt-16 flex-1 min-h-[calc(100vh-4rem)] p-gutter relative overflow-hidden">
+<div class="max-w-5xl mx-auto relative z-10 py-8">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 text-on-surface-variant opacity-60 mb-6 font-label-sm text-label-sm">
+<span>DEVICES</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span>VX-909 INDUSTRIAL ACTUATOR</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary font-bold">ACTUATION CONTROL</span>
+</nav>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+<!-- Center Control Card (Editorial Layout) -->
+<div class="lg:col-span-8">
+<div class="bg-surface-container-lowest border border-border-subtle shadow-sm rounded-xl overflow-hidden relative">
+<!-- Semantic Top Accent Bar -->
+<div class="h-1 bg-status-nominal w-full"></div>
+<div class="p-12 text-center">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant mb-10">
+<span class="material-symbols-outlined text-[18px]" data-icon="id_card">id_card</span>
+<span class="font-label-sm text-label-sm tracking-widest">DEVICE ID: 8842-ACT-PRM</span>
+</div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-4">Valve Actuation Interface</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xl mx-auto mb-16 opacity-70">
+                                Manual override and diagnostic control for the primary flow regulator. Operations performed on this console bypass standard logic loops and require high-level authorization.
+                            </p>
+<!-- Status Indicator -->
+<div class="relative inline-block mb-16">
+<div class="absolute inset-0 bg-status-nominal/10 rounded-full blur-3xl scale-150"></div>
+<div class="relative z-10 flex flex-col items-center justify-center border-4 border-status-nominal/20 rounded-full w-64 h-64 mx-auto bg-surface-container-lowest">
+<span class="material-symbols-outlined text-[64px] text-status-nominal mb-2 status-pulse" data-icon="water_drop" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+<div class="font-display-lg text-display-lg text-status-nominal leading-none">OPEN</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant tracking-[0.2em] mt-2 opacity-50 uppercase">Current State</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+<button class="btn-premium group relative w-full sm:w-64 h-16 flex items-center justify-center gap-3 bg-status-critical text-on-primary font-bold rounded-xl shadow-lg active:scale-95 overflow-hidden" onclick="openModal('close')">
+<div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined" data-icon="block">block</span>
+<span class="uppercase tracking-widest text-sm">Force Close Valve</span>
+</button>
+<button class="btn-premium group relative w-full sm:w-64 h-16 flex items-center justify-center gap-3 bg-primary text-on-primary font-bold rounded-xl shadow-lg active:scale-95 overflow-hidden" onclick="openModal('open')">
+<div class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined" data-icon="settings_remote">settings_remote</span>
+<span class="uppercase tracking-widest text-sm">Force Open Valve</span>
+</button>
+</div>
+</div>
+<!-- Card Footer Meta -->
+<div class="bg-surface-container-low/50 px-12 py-6 border-t border-border-subtle flex flex-wrap justify-between gap-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant opacity-50" data-icon="history">history</span>
+<div class="text-left">
+<p class="font-label-sm text-[10px] text-on-surface-variant opacity-60 uppercase tracking-wider">Last Actuation</p>
+<p class="font-body-md text-sm text-on-surface font-semibold">14:22:08 UTC · Remote Command</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant opacity-50" data-icon="precision_manufacturing">precision_manufacturing</span>
+<div class="text-left">
+<p class="font-label-sm text-[10px] text-on-surface-variant opacity-60 uppercase tracking-wider">Actuator Torque</p>
+<p class="font-body-md text-sm text-on-surface font-semibold">412 Nm · Operating Range</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar Details -->
+<div class="lg:col-span-4 space-y-gutter">
+<!-- Analytics Card -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-gutter shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-title-md text-title-md text-on-surface">Flow Dynamics</h3>
+<span class="material-symbols-outlined text-primary" data-icon="insights">insights</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-end gap-2">
+<span class="font-display-lg text-display-lg leading-none">84.2</span>
+<span class="font-title-md text-on-surface-variant opacity-60 pb-1">L/s</span>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[84%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="font-label-sm text-[10px] text-on-surface-variant uppercase opacity-50 mb-1">Inlet PSI</p>
+<p class="font-title-md text-on-surface">142.5</p>
+</div>
+<div>
+<p class="font-label-sm text-[10px] text-on-surface-variant uppercase opacity-50 mb-1">Outlet PSI</p>
+<p class="font-title-md text-on-surface">138.1</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Alert Feed -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-gutter shadow-sm">
+<h3 class="font-title-md text-title-md text-on-surface mb-6">Activity Log</h3>
+<div class="space-y-4">
+<div class="flex gap-4 border-l-4 border-status-nominal pl-4 py-1">
+<div>
+<p class="font-body-md text-sm font-bold text-on-surface">State Synchronized</p>
+<p class="text-[12px] text-on-surface-variant opacity-70">Cloud state matching local actuator.</p>
+<p class="text-[10px] font-bold text-primary mt-1">2 MIN AGO</p>
+</div>
+</div>
+<div class="flex gap-4 border-l-4 border-status-warning pl-4 py-1">
+<div>
+<p class="font-body-md text-sm font-bold text-on-surface">High Pressure Warning</p>
+<p class="text-[12px] text-on-surface-variant opacity-70">Node 882 reporting fluctuation.</p>
+<p class="text-[10px] font-bold text-status-warning mt-1">15 MIN AGO</p>
+</div>
+</div>
+<div class="flex gap-4 border-l-4 border-on-surface-variant opacity-20 pl-4 py-1">
+<div>
+<p class="font-body-md text-sm font-bold text-on-surface opacity-60">Routine Ping</p>
+<p class="text-[12px] text-on-surface-variant opacity-50">Standard heartbeat successful.</p>
+<p class="text-[10px] font-bold text-on-surface-variant opacity-40 mt-1">45 MIN AGO</p>
+</div>
+</div>
+</div>
+<button class="btn-premium w-full mt-6 py-2 text-primary font-bold text-sm border border-primary/20 rounded-lg bg-surface-container-low hover:bg-primary/5">View Full History</button>
+</div>
+<!-- Technical Illustration -->
+<div class="rounded-xl overflow-hidden aspect-video border border-border-subtle relative group cursor-crosshair">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Technical industrial valve schematic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4Z1OLjEFcGdSa3LnH1A1343SxJ_jBTnWjMnS0H-DrYx7TCaYJHthAbR9xWrK1madYEVT7mDY3e5_tWoQtMWYtAiH-qxZlYS-rGpOjHTyW5tLnL-N8gSmeSDTylYZ2ehYI2-FSYiU6Z0oH7K48_zG7qBvx4BPaKKVXyqzOi8n03DS9tq718vMtRu6sRQzAAqQhUvIVmTE3BJnFol8zRDAl-U7Mw9p1QpUo1UvLHUq5el73H2Sj8OtP1efahU__OeVwcPfbj62kQBo"/>
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="bg-surface-container-lowest text-on-surface px-4 py-2 rounded-full font-bold text-xs shadow-lg">ENLARGE TECHNICAL SCHEMATIC</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Confirmation Modal -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300" id="confirmationModal">
+<div class="absolute inset-0 bg-on-primary-fixed/60 backdrop-blur-sm" onclick="closeModal()"></div>
+<div class="relative bg-surface-container-lowest w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-border-subtle transform scale-95 transition-transform duration-300">
+<div class="p-8 text-center">
+<div class="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6" id="modalIconContainer">
+<span class="material-symbols-outlined text-4xl" data-icon="warning" id="modalIcon">warning</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2" id="modalTitle">Confirm Action</h3>
+<p class="font-body-md text-body-md text-on-surface-variant opacity-70 mb-8" id="modalDescription">
+                    You are about to execute a manual override on a critical system component. This action will be logged with your operator ID.
+                </p>
+<div class="flex flex-col gap-3">
+<button class="btn-premium w-full h-14 bg-on-surface text-on-primary font-bold rounded-xl shadow-lg uppercase tracking-widest text-sm" id="modalConfirmBtn">
+                        Acknowledge &amp; Execute
+                    </button>
+<button class="btn-premium w-full h-14 bg-surface-container text-on-surface-variant font-bold rounded-xl uppercase tracking-widest text-sm" onclick="closeModal()">
+                        Cancel Request
+                    </button>
+</div>
+</div>
+<div class="px-8 py-4 bg-error-container/20 border-t border-error-container/30 flex items-center gap-3">
+<span class="material-symbols-outlined text-error text-sm" data-icon="lock">lock</span>
+<span class="text-[10px] font-bold text-on-error-container uppercase tracking-tighter">SECURE MULTI-FACTOR LOGGING ACTIVE</span>
+</div>
+</div>
+</div>
+<script>
+        function openModal(type) {
+            const modal = document.getElementById('confirmationModal');
+            const modalInner = modal.querySelector('.relative');
+            const iconContainer = document.getElementById('modalIconContainer');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+
+            if(type === 'close') {
+                iconContainer.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 bg-status-critical/10 text-status-critical";
+                icon.innerText = "block";
+                title.innerText = "Confirm Force Close";
+                confirmBtn.className = "btn-premium w-full h-14 bg-status-critical text-on-primary font-bold rounded-xl shadow-lg uppercase tracking-widest text-sm";
+            } else {
+                iconContainer.className = "w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-6 bg-primary/10 text-primary";
+                icon.innerText = "settings_remote";
+                title.innerText = "Confirm Force Open";
+                confirmBtn.className = "btn-premium w-full h-14 bg-primary text-on-primary font-bold rounded-xl shadow-lg uppercase tracking-widest text-sm";
+            }
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalInner.classList.remove('scale-95');
+            modalInner.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('confirmationModal');
+            const modalInner = modal.querySelector('.relative');
+            
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modalInner.classList.add('scale-95');
+            modalInner.classList.remove('scale-100');
+        }
+    </script>
+</body></html>

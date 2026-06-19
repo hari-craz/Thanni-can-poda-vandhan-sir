@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix Mission Control | Infrastructure Overview</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#57657b",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "secondary": "#515f74",
+                    "inverse-primary": "#5dd4ff",
+                    "on-primary-fixed": "#001f29",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "on-surface-variant": "#3d484e",
+                    "secondary-container": "#d5e3fd",
+                    "primary-fixed-dim": "#5dd4ff",
+                    "on-tertiary-container": "#4f2c00",
+                    "error-container": "#ffdad6",
+                    "primary": "#006782",
+                    "surface-container-highest": "#dee3e7",
+                    "status-warning": "#f59e0b",
+                    "surface-dim": "#d6dbde",
+                    "surface-variant": "#dee3e7",
+                    "surface-container-high": "#e4e9ec",
+                    "surface-container": "#eaeef2",
+                    "primary-container": "#11aad4",
+                    "on-primary-container": "#003a4a",
+                    "outline-variant": "#bdc8cf",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#bbeaff",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "status-nominal": "#22c55e",
+                    "tertiary-fixed": "#ffdcbd",
+                    "surface-tint": "#006782",
+                    "border-subtle": "#e2e8f0",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "on-background": "#171c1f",
+                    "outline": "#6d797f",
+                    "background": "#f5fafd",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#d5e3fd",
+                    "on-tertiary-fixed": "#2c1600",
+                    "on-status-nominal": "#dcfce7",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#004d62",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#8a5100",
+                    "status-critical": "#ef4444",
+                    "surface-container-low": "#eff4f8",
+                    "surface-bright": "#f5fafd",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#db8b2b",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "surface": "#f6f8f8",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#edf1f5",
+                    "inverse-surface": "#2c3134",
+                    "on-surface": "#171c1f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-gap": "1.5rem",
+                    "container-padding": "2rem",
+                    "sidebar-width": "15rem",
+                    "gutter": "1.5rem"
+            },
+            "fontFamily": {
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-sm": ["Hanken Grotesk"],
+                    "title-md": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .w-sidebar { width: 15rem; }
+        .ml-sidebar { margin-left: 15rem; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Premium Micro-interactions */
+        .sidebar-link {
+            position: relative;
+            transition: all 150ms ease-in-out;
+            border-left: 0px solid transparent;
+        }
+        .sidebar-link:hover {
+            background-color: rgba(187, 234, 255, 0.08);
+            border-left: 4px solid #bbeaff;
+            padding-left: calc(0.75rem - 4px); /* Compensate for border width to prevent jump */
+        }
+        .sidebar-link.active {
+            border-left-width: 4px;
+        }
+
+        .top-nav-link {
+            position: relative;
+            padding-bottom: 4px;
+        }
+        .top-nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: #006782;
+            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-50%);
+        }
+        .top-nav-link:hover::after {
+            width: 100%;
+        }
+        .top-nav-link.active::after {
+            width: 100%;
+        }
+
+        .primary-action-btn {
+            transition: all 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .primary-action-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .primary-action-btn:active {
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar-link, .top-nav-link::after, .primary-action-btn {
+                transition: none !important;
+                transform: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full w-sidebar bg-on-primary-fixed flex flex-col py-gutter shadow-sm z-50 overflow-y-auto hide-scrollbar">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold">Hydronix</h1>
+<p class="font-label-sm text-label-sm text-primary-fixed-dim opacity-70">Mission Control</p>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-title-md text-title-md">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+<span class="font-title-md text-title-md">Live Telemetry</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-title-md text-title-md">Node Network</span>
+</a>
+<a class="sidebar-link active flex items-center px-3 py-2 space-x-3 bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed" href="#">
+<span class="material-symbols-outlined" data-icon="dns">dns</span>
+<span class="font-title-md text-title-md">Infrastructure</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="water_drop">water_drop</span>
+<span class="font-title-md text-title-md">Water Quality</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="waves">waves</span>
+<span class="font-title-md text-title-md">Flow Analysis</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="compress">compress</span>
+<span class="font-title-md text-title-md">Pressure Map</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="notifications_active">notifications_active</span>
+<span class="font-title-md text-title-md">Alert History</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="monitor_heart">monitor_heart</span>
+<span class="font-title-md text-title-md">System Health</span>
+</a>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="primary-action-btn w-full py-3 px-4 bg-primary-container text-on-primary-container font-bold rounded-lg flex items-center justify-center space-x-2 shadow-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="font-label-sm text-label-sm">Add New Node</span>
+</button>
+<div class="pt-4 border-t border-primary-fixed/10">
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2 space-x-3 text-on-primary-fixed-variant opacity-80 hover:text-primary-fixed hover:opacity-100" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Global Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 h-16 bg-surface-container-lowest border-b border-border-subtle flex justify-between items-center px-gutter w-[calc(100%-15rem)] ml-sidebar z-40">
+<div class="flex items-center space-x-8">
+<div class="flex items-center space-x-3 bg-surface-container rounded-full px-4 py-1.5 border border-border-subtle">
+<span class="material-symbols-outlined text-primary scale-75" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md font-body-md w-64 p-0" placeholder="Search architecture..." type="text"/>
+</div>
+<nav class="hidden lg:flex space-x-6">
+<a class="top-nav-link active text-primary font-bold font-body-md text-body-md" href="#">Infrastructure</a>
+<a class="top-nav-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Analytics</a>
+<a class="top-nav-link text-on-surface-variant hover:text-primary transition-all font-body-md text-body-md" href="#">Security</a>
+</nav>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-2 text-status-nominal">
+<span class="w-2 h-2 rounded-full bg-status-nominal animate-pulse"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">System Status: Nominal</span>
+</div>
+<div class="h-8 w-px bg-border-subtle"></div>
+<div class="flex items-center space-x-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-full bg-primary overflow-hidden border border-border-subtle">
+<img class="w-full h-full object-cover" data-alt="A professional corporate headshot of a male IT administrator in a crisp white shirt, clean-shaven with short dark hair, set against a blurred high-tech data center background with soft blue lighting. The style is modern, sharp, and authoritative, matching a high-end light-mode operational interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsgPKik0RNUGPPwCtvMsk7Gahd_ZXTM_MYkegvNVveSQyT9xYV6qeodrmDKEz_7nOW1nVlvaCK5E42BFQlrNAKvIWVKoOSC0QqDi5D10c9hpHGbQKxtatcKaipWuac6zutlalxnbyXOpFiunnhpKXsEMLcOMUfPUIEp7kD7WTWlS-7tpyD7YjghsZns-J6G3HwStY3WMHCRgXHTOPUbD3GYbg9T1T5mF0UvH37MiqsXhIWDAJzhYZZ7q0ETVYuhapDjXcV7TVuZbw"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-sidebar pt-16 min-h-screen">
+<div class="p-container-padding max-w-[1600px] mx-auto">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-background mb-1">Infrastructure Overview</h2>
+<p class="text-on-surface-variant font-body-md text-body-md max-w-2xl">IT-level architectural health metrics. Real-time monitoring of database clusters, secure tunnels, and administrative access protocols.</p>
+</div>
+<div class="flex space-x-3">
+<button class="primary-action-btn px-4 py-2 border border-border-subtle text-secondary font-bold rounded-lg flex items-center space-x-2 hover:bg-surface-container">
+<span class="material-symbols-outlined text-body-md" data-icon="refresh">refresh</span>
+<span class="font-label-sm text-label-sm">Force Sync</span>
+</button>
+<button class="primary-action-btn px-4 py-2 bg-primary text-on-primary font-bold rounded-lg flex items-center space-x-2 shadow-sm">
+<span class="material-symbols-outlined text-body-md" data-icon="download">download</span>
+<span class="font-label-sm text-label-sm">Export Report</span>
+</button>
+</div>
+</div>
+<!-- Global Architecture Health (Bento Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-gutter mb-gutter">
+<!-- Main Architecture Visualization -->
+<div class="md:col-span-3 lg:col-span-2 row-span-2 bg-on-primary-fixed rounded-xl overflow-hidden shadow-sm border border-border-subtle relative min-h-[400px]">
+<div class="absolute inset-0 opacity-40"></div>
+<div class="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none">
+<div>
+<span class="bg-primary-container/20 text-primary-fixed px-3 py-1 rounded-full text-label-sm font-label-sm inline-block mb-4">GLOBAL NETWORK MESH</span>
+<h3 class="text-white font-display-lg text-display-lg">Architecture Integrity</h3>
+<p class="text-white/60 font-body-md text-body-md">99.98% System Uptime across 14 Regions</p>
+</div>
+<div class="flex items-center space-x-12">
+<div>
+<div class="text-primary-fixed font-headline-md text-headline-md">1.2ms</div>
+<div class="text-white/40 text-label-sm font-label-sm">AVG LATENCY</div>
+</div>
+<div>
+<div class="text-primary-fixed font-headline-md text-headline-md">452MB/s</div>
+<div class="text-white/40 text-label-sm font-label-sm">THROUGHPUT</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Database Size Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-border-subtle shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary-container p-2 bg-primary-container/10 rounded-lg" data-icon="database">database</span>
+<span class="text-status-nominal flex items-center text-label-sm font-label-sm">
+<span class="material-symbols-outlined text-[14px] mr-1" data-icon="trending_up">trending_up</span> 
+                            +0.4 GB
+                        </span>
+</div>
+<div class="mt-8">
+<div class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest">Database Size</div>
+<div class="font-display-lg text-display-lg mt-1">24 <span class="text-headline-md font-bold">GB</span></div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-subtle">
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 48%"></div>
+</div>
+<div class="flex justify-between mt-2 font-label-sm text-label-sm text-on-surface-variant">
+<span>Usage</span>
+<span>48% of 50GB cap</span>
+</div>
+</div>
+</div>
+<!-- Active Tunnels Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-border-subtle shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-warning"></div>
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-status-warning p-2 bg-status-warning/10 rounded-lg" data-icon="vpn_lock">vpn_lock</span>
+<span class="bg-status-warning/10 text-status-warning px-2 py-0.5 rounded text-[10px] font-bold">STABLE</span>
+</div>
+<div class="mt-8">
+<div class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest">Active Tunnels</div>
+<div class="font-display-lg text-display-lg mt-1">1 <span class="text-headline-md font-bold text-on-surface-variant/40">/ 1</span></div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-subtle">
+<div class="flex items-center space-x-2 text-label-sm font-label-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-body-md text-status-warning" data-icon="bolt">bolt</span>
+<span>Latency: 42ms Spike Detected</span>
+</div>
+</div>
+</div>
+<!-- Total Admins Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-border-subtle shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary"></div>
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-secondary p-2 bg-secondary-container/30 rounded-lg" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="text-on-surface-variant text-label-sm font-label-sm">Active Now: 2</span>
+</div>
+<div class="mt-8">
+<div class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest">Total Admins</div>
+<div class="font-display-lg text-display-lg mt-1">5</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-subtle flex -space-x-2 overflow-hidden">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-container flex items-center justify-center font-label-sm text-[10px]">JD</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-primary-container text-white flex items-center justify-center font-label-sm text-[10px]">ML</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-secondary-container flex items-center justify-center font-label-sm text-[10px]">RT</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-variant text-on-surface-variant flex items-center justify-center font-label-sm text-[10px]">+2</div>
+</div>
+</div>
+<!-- Security Insights Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-border-subtle shadow-sm flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-full h-1 bg-status-critical"></div>
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-status-critical p-2 bg-status-critical/10 rounded-lg" data-icon="security">security</span>
+</div>
+<div class="mt-8">
+<div class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest">Security Score</div>
+<div class="font-display-lg text-display-lg mt-1">94%</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-subtle">
+<p class="text-label-sm font-label-sm text-status-critical flex items-center">
+<span class="material-symbols-outlined text-body-md mr-1" data-icon="error">error</span>
+                            2 Expiring SSH Keys
+                        </p>
+</div>
+</div>
+</div>
+<!-- Lower Layout Grid: Security Feed & Detailed Latency -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+<div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-primary" data-icon="history">history</span>
+<h3 class="font-title-md text-title-md">Security &amp; Access Feed</h3>
+</div>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Live Updates</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="px-6 py-3 font-semibold">Event Type</th>
+<th class="px-6 py-3 font-semibold">Origin / User</th>
+<th class="px-6 py-3 font-semibold">Status</th>
+<th class="px-6 py-3 font-semibold">Time</th>
+<th class="px-6 py-3 font-semibold">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle">
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-3">
+<span class="w-1 h-8 bg-status-warning rounded-full"></span>
+<div>
+<div class="font-bold text-body-md">Tunnel Latency Spike</div>
+<div class="text-label-sm text-on-surface-variant">VPN-001 (London Hub)</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-md">Node_ID: 182-X</td>
+<td class="px-6 py-4">
+<span class="bg-status-warning/10 text-status-warning px-3 py-1 rounded-full text-label-sm font-bold">422ms</span>
+</td>
+<td class="px-6 py-4 text-on-surface-variant font-label-sm">2 mins ago</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline font-label-sm text-label-sm">Inspect</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-3">
+<span class="w-1 h-8 bg-status-nominal rounded-full"></span>
+<div>
+<div class="font-bold text-body-md">SSH Terminal Access</div>
+<div class="text-label-sm text-on-surface-variant">Core Database Cluster</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-md">admin_ml@hydronix.io</td>
+<td class="px-6 py-4">
+<span class="bg-status-nominal/10 text-status-nominal px-3 py-1 rounded-full text-label-sm font-bold">AUTHORIZED</span>
+</td>
+<td class="px-6 py-4 text-on-surface-variant font-label-sm">14 mins ago</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline font-label-sm text-label-sm">Logs</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-3">
+<span class="w-1 h-8 bg-status-critical rounded-full"></span>
+<div>
+<div class="font-bold text-body-md">Denied Access Attempt</div>
+<div class="text-label-sm text-on-surface-variant">Unrecognized IP Source</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-md">192.168.4.12</td>
+<td class="px-6 py-4">
+<span class="bg-status-critical/10 text-status-critical px-3 py-1 rounded-full text-label-sm font-bold">BLOCKED</span>
+</td>
+<td class="px-6 py-4 text-on-surface-variant font-label-sm">38 mins ago</td>
+<td class="px-6 py-4">
+<button class="text-status-critical hover:underline font-label-sm text-label-sm">Blacklist</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center space-x-3">
+<span class="w-1 h-8 bg-primary rounded-full"></span>
+<div>
+<div class="font-bold text-body-md">Config Version Rollback</div>
+<div class="text-label-sm text-on-surface-variant">Secondary API Node</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 font-body-md">system_autobot</td>
+<td class="px-6 py-4">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full text-label-sm font-bold">VERSION 4.2.1</span>
+</td>
+<td class="px-6 py-4 text-on-surface-variant font-label-sm">1 hour ago</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline font-label-sm text-label-sm">Diff</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container-lowest mt-auto border-t border-border-subtle text-center">
+<button class="text-primary font-bold text-label-sm font-label-sm hover:opacity-80 transition-opacity">VIEW ALL SYSTEM EVENTS</button>
+</div>
+</div>
+<div class="space-y-gutter">
+<div class="bg-on-primary-fixed text-white rounded-xl p-6 shadow-sm border border-border-subtle h-full">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-title-md text-title-md">Tunnel Latency Map</h3>
+<span class="material-symbols-outlined text-primary-fixed" data-icon="timeline">timeline</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm font-label-sm uppercase tracking-wider text-white/60">
+<span>North America</span>
+<span class="text-status-nominal font-bold">12ms</span>
+</div>
+<div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+<div class="bg-status-nominal h-full" style="width: 15%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm font-label-sm uppercase tracking-wider text-white/60">
+<span>Western Europe</span>
+<span class="text-status-warning font-bold">48ms</span>
+</div>
+<div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+<div class="bg-status-warning h-full" style="width: 60%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm font-label-sm uppercase tracking-wider text-white/60">
+<span>Asia Pacific</span>
+<span class="text-status-critical font-bold">152ms</span>
+</div>
+<div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+<div class="bg-status-critical h-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm font-label-sm uppercase tracking-wider text-white/60">
+<span>South America</span>
+<span class="text-status-nominal font-bold">34ms</span>
+</div>
+<div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+<div class="bg-status-nominal h-full" style="width: 40%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 rounded-lg bg-white/5 border border-white/10">
+<div class="flex items-center space-x-3 mb-2">
+<span class="material-symbols-outlined text-status-warning" data-icon="info">info</span>
+<span class="text-label-sm font-label-sm font-bold text-white">Optimization Suggestion</span>
+</div>
+<p class="text-label-sm font-body-md text-white/70 leading-relaxed">Latency in Asia Pacific is exceeding threshold. Recommend spinning up a regional relay in Tokyo hub.</p>
+<button class="primary-action-btn mt-3 w-full py-2 bg-primary-container text-on-primary-container font-bold rounded text-label-sm">DEPLOY RELAY</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Interactive Layer: Status Notification Toast -->
+<div class="fixed bottom-8 right-8 bg-on-surface text-surface rounded-lg px-6 py-4 shadow-xl border border-white/10 flex items-center space-x-4 transform translate-y-24 opacity-0 transition-all duration-300 z-[100]" id="statusToast">
+<span class="material-symbols-outlined text-status-nominal" data-icon="check_circle">check_circle</span>
+<div>
+<div class="font-bold text-label-sm">Database Sync Successful</div>
+<div class="text-[11px] opacity-70">Infrastructure metrics refreshed for all regions.</div>
+</div>
+<button class="material-symbols-outlined opacity-50 hover:opacity-100" data-icon="close" onclick="hideToast()">close</button>
+</div>
+<script>
+        function showToast() {
+            const toast = document.getElementById('statusToast');
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(hideToast, 5000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('statusToast');
+            toast.classList.add('translate-y-24', 'opacity-0');
+            toast.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        // Trigger toast on refresh button click
+        document.querySelectorAll('button').forEach(btn => {
+            if(btn.innerText.includes('Sync')) {
+                btn.addEventListener('click', () => {
+                    const icon = btn.querySelector('.material-symbols-outlined');
+                    if(icon) icon.classList.add('animate-spin');
+                    setTimeout(() => {
+                        if(icon) icon.classList.remove('animate-spin');
+                        showToast();
+                    }, 800);
+                });
+            }
+        });
+    </script>
+</body></html>

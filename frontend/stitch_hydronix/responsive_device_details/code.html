@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Device Details</title>
+<!-- Google Fonts: Hanken Grotesk -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#57657b",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "secondary": "#515f74",
+                    "inverse-primary": "#5dd4ff",
+                    "on-primary-fixed": "#001f29",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "on-surface-variant": "#3d484e",
+                    "secondary-container": "#d5e3fd",
+                    "primary-fixed-dim": "#5dd4ff",
+                    "on-tertiary-container": "#4f2c00",
+                    "error-container": "#ffdad6",
+                    "primary": "#006782",
+                    "surface-container-highest": "#dee3e7",
+                    "status-warning": "#f59e0b",
+                    "surface-dim": "#d6dbde",
+                    "surface-variant": "#dee3e7",
+                    "surface-container-high": "#e4e9ec",
+                    "surface-container": "#eaeef2",
+                    "primary-container": "#11aad4",
+                    "on-primary-container": "#003a4a",
+                    "outline-variant": "#bdc8cf",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#bbeaff",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "status-nominal": "#22c55e",
+                    "on-status-critical": "#fee2e2",
+                    "tertiary-fixed": "#ffdcbd",
+                    "surface-tint": "#006782",
+                    "border-subtle": "#e2e8f0",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "on-background": "#171c1f",
+                    "outline": "#6d797f",
+                    "background": "#f5fafd",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#d5e3fd",
+                    "on-tertiary-fixed": "#2c1600",
+                    "on-status-nominal": "#dcfce7",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#004d62",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#8a5100",
+                    "status-critical": "#ef4444",
+                    "surface-container-low": "#eff4f8",
+                    "surface-bright": "#f5fafd",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#db8b2b",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "surface": "#f6f8f8",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#edf1f5",
+                    "inverse-surface": "#2c3134",
+                    "on-surface": "#171c1f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-gap": "1.5rem",
+                    "sidebar-width": "15rem",
+                    "container-padding": "2rem",
+                    "gutter": "1.5rem"
+            },
+            "fontFamily": {
+                    "label-sm": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "title-md": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; background-color: #f5fafd; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .gauge-svg { transform: rotate(-90deg); }
+        .gauge-track { stroke: #eff4f8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .bento-card { transition: all 0.2s ease; }
+        .bento-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .nav-link-underline {
+                position: relative;
+            }
+            .nav-link-underline::after {
+                content: '';
+                position: absolute;
+                width: 100%;
+                height: 2px;
+                bottom: -4px;
+                left: 0;
+                background-color: currentColor;
+                transform: scaleX(0);
+                transform-origin: center;
+                transition: transform 150ms ease-in-out;
+            }
+            .nav-link-underline:hover::after {
+                transform: scaleX(1);
+            }
+
+            .sidebar-link {
+                position: relative;
+                transition: all 150ms ease-in-out;
+            }
+            .sidebar-link::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 0;
+                background-color: #5dd4ff;
+                transition: width 150ms ease-in-out;
+            }
+            .sidebar-link:hover::before {
+                width: 4px;
+            }
+            .sidebar-link:hover {
+                background-color: rgba(93, 212, 255, 0.05);
+                color: #bbeaff;
+            }
+
+            .btn-primary-action {
+                transition: all 150ms ease-in-out;
+                position: relative;
+                overflow: hidden;
+            }
+            .btn-primary-action:hover {
+                transform: translateY(-1px);
+                filter: brightness(1.1);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            .btn-primary-action:active {
+                transform: translateY(0);
+            }
+            .btn-primary-action::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 50%;
+                height: 100%;
+                background: linear-gradient(
+                    to right,
+                    transparent,
+                    rgba(255, 255, 255, 0.1),
+                    transparent
+                );
+                transform: skewX(-25deg);
+                transition: 0.5s;
+            }
+            .btn-primary-action:hover::after {
+                left: 150%;
+                transition: 0.5s;
+            }
+        }
+    </style>
+</head>
+<body class="text-on-surface bg-background">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 h-16 bg-surface-container-lowest flex justify-between items-center px-gutter md:w-[calc(100%-15rem)] z-40 border-b border-border-subtle">
+<div class="flex items-center gap-6">
+<span class="font-headline-md text-headline-md text-on-surface font-black uppercase tracking-tighter">HYDRONIX</span>
+<div class="hidden md:flex gap-6">
+<a class="font-body-md text-body-md text-primary font-bold border-b-2 border-primary pb-1" href="#">Infrastructure</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all nav-link-underline" href="#">Analytics</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-all nav-link-underline" href="#">Security</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex flex-col items-end mr-4">
+<span class="text-label-sm font-label-sm text-status-nominal flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-status-nominal"></span>
+                    System Status: Nominal
+                </span>
+<span class="text-label-sm font-label-sm text-outline">Regional View: North-West</span>
+</div>
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-2">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a female water management engineer with glasses, looking forward with a confident expression. High-key clinical lighting against a soft grey corporate background. Industrial IoT specialist aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBq1HUzxI1KMOJOlEpHl4x7TdSGzLWjoOavswgPFcJ1aV16ZHfBcHmbE-0DP71RDS68ZL8RIcqJd-xRlyu76Dkrbiz8QeyyXu3fFk3M2VY695MlJ9A878RXT55w5-2vLXyXHE3jjakhqDTpmYpd7lvG0lFa90lr1xSTFyyYHN0ZqpNYwNWieWTP8zZmAu6nBVCiG-mf5eslNavneDxQZUk04c0bAMN-E4eM9UiM1mXJvQpYSZLybRX8L-R7d958OxwWkgsdU9hHxXs"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Side Navigation Bar -->
+<aside class="hidden md:flex flex-col fixed left-0 top-0 h-screen w-[15rem] bg-on-primary-fixed py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold">Hydronix</h1>
+<p class="text-label-sm font-label-sm text-primary-fixed-dim opacity-70">Mission Control</p>
+</div>
+<nav class="flex-1 overflow-y-auto no-scrollbar space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">sensors</span>
+                Live Telemetry
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed font-body-md" href="#">
+<span class="material-symbols-outlined">hub</span>
+                Node Network
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">water_drop</span>
+                Water Quality
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">waves</span>
+                Flow Analysis
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">compress</span>
+                Pressure Map
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+                Alert History
+            </a>
+<div class="px-6 py-4">
+<button class="w-full bg-primary text-on-primary font-bold py-2 rounded-lg text-body-md hover:opacity-90 btn-primary-action">
+                    Add New Node
+                </button>
+</div>
+</nav>
+<div class="mt-auto border-t border-primary-fixed-variant/20 pt-4 space-y-1">
+<a class="flex items-center gap-3 px-6 py-2 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-6 py-2 text-on-primary-fixed-variant opacity-80 font-body-md sidebar-link" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+                Documentation
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="pt-20 pb-8 md:ml-[15rem] px-gutter">
+<div class="max-w-[1400px] mx-auto space-y-gutter">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-widest">Device Node ID: #NX-9422</span>
+<span class="px-2 py-0.5 rounded-full bg-on-status-nominal text-status-nominal text-[10px] font-bold uppercase">Active</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Reservoir Outlet Alpha</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Primary sensor array for North-West distribution hub. Last sync: 12 seconds ago.</p>
+</div>
+<div class="flex gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-none px-4 py-2 border border-border-subtle bg-surface-container-lowest font-label-sm text-label-sm text-secondary hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2 btn-primary-action">
+<span class="material-symbols-outlined text-[18px]">download</span> Export Logs
+                    </button>
+<button class="flex-1 md:flex-none px-4 py-2 bg-primary text-on-primary font-label-sm text-label-sm flex items-center justify-center gap-2 btn-primary-action">
+<span class="material-symbols-outlined text-[18px]">refresh</span> Force Calibration
+                    </button>
+</div>
+</div>
+<!-- Telemetry Gauges Bento -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Gauge 1: pH -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-border-subtle flex flex-col items-center">
+<div class="relative w-24 h-24 mb-4">
+<svg class="gauge-svg w-24 h-24" viewbox="0 0 100 100">
+<circle class="gauge-track" cx="50" cy="50" fill="none" r="40" stroke-width="8"></circle>
+<circle class="gauge-value stroke-primary" cx="50" cy="50" fill="none" r="40" stroke-dasharray="175 251" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-title-md text-title-md leading-none">7.2</span>
+<span class="text-[10px] text-outline font-bold uppercase">pH</span>
+</div>
+</div>
+<div class="w-full h-[4px] bg-status-nominal rounded-full mb-2"></div>
+<div class="flex justify-between w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant">pH Level</span>
+<span class="font-label-sm text-label-sm text-status-nominal">NOMINAL</span>
+</div>
+</div>
+<!-- Gauge 2: Turbidity -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-border-subtle flex flex-col items-center">
+<div class="relative w-24 h-24 mb-4">
+<svg class="gauge-svg w-24 h-24" viewbox="0 0 100 100">
+<circle class="gauge-track" cx="50" cy="50" fill="none" r="40" stroke-width="8"></circle>
+<circle class="gauge-value stroke-status-warning" cx="50" cy="50" fill="none" r="40" stroke-dasharray="45 251" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-title-md text-title-md leading-none">1.4</span>
+<span class="text-[10px] text-outline font-bold uppercase">NTU</span>
+</div>
+</div>
+<div class="w-full h-[4px] bg-status-warning rounded-full mb-2"></div>
+<div class="flex justify-between w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Turbidity</span>
+<span class="font-label-sm text-label-sm text-status-warning">CAUTION</span>
+</div>
+</div>
+<!-- Gauge 3: ORP -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-border-subtle flex flex-col items-center">
+<div class="relative w-24 h-24 mb-4">
+<svg class="gauge-svg w-24 h-24" viewbox="0 0 100 100">
+<circle class="gauge-track" cx="50" cy="50" fill="none" r="40" stroke-width="8"></circle>
+<circle class="gauge-value stroke-primary" cx="50" cy="50" fill="none" r="40" stroke-dasharray="210 251" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-title-md text-title-md leading-none">650</span>
+<span class="text-[10px] text-outline font-bold uppercase">mV</span>
+</div>
+</div>
+<div class="w-full h-[4px] bg-status-nominal rounded-full mb-2"></div>
+<div class="flex justify-between w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant">ORP</span>
+<span class="font-label-sm text-label-sm text-status-nominal">IDEAL</span>
+</div>
+</div>
+<!-- Gauge 4: Temp -->
+<div class="bento-card bg-surface-container-lowest p-6 rounded-xl border border-border-subtle flex flex-col items-center">
+<div class="relative w-24 h-24 mb-4">
+<svg class="gauge-svg w-24 h-24" viewbox="0 0 100 100">
+<circle class="gauge-track" cx="50" cy="50" fill="none" r="40" stroke-width="8"></circle>
+<circle class="gauge-value stroke-primary" cx="50" cy="50" fill="none" r="40" stroke-dasharray="80 251" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-title-md text-title-md leading-none">18.5</span>
+<span class="text-[10px] text-outline font-bold uppercase">°C</span>
+</div>
+</div>
+<div class="w-full h-[4px] bg-status-nominal rounded-full mb-2"></div>
+<div class="flex justify-between w-full">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Temperature</span>
+<span class="font-label-sm text-label-sm text-status-nominal">STABLE</span>
+</div>
+</div>
+</div>
+<!-- Analysis & Controls Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Main Chart -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-border-subtle p-6 flex flex-col min-h-[400px]">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-title-md text-title-md text-on-surface">Telemetry History</h3>
+<p class="font-body-md text-[13px] text-on-surface-variant">Last 24 hours trend analysis</p>
+</div>
+<div class="flex bg-surface-container-low p-1 rounded-lg">
+<button class="px-3 py-1 bg-surface-container-lowest rounded shadow-sm text-label-sm font-label-sm text-primary btn-primary-action">Live</button>
+<button class="px-3 py-1 text-label-sm font-label-sm text-outline hover:text-on-surface nav-link-underline">1D</button>
+<button class="px-3 py-1 text-label-sm font-label-sm text-outline hover:text-on-surface nav-link-underline">1W</button>
+</div>
+</div>
+<div class="flex-1 relative w-full overflow-hidden rounded-lg bg-surface-container-low/30 border border-border-subtle/50">
+<!-- Chart Legend -->
+<div class="absolute top-4 right-4 flex gap-4 p-2 bg-surface-container-lowest/80 backdrop-blur-sm rounded border border-border-subtle">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold uppercase text-outline">pH Value</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-warning"></span>
+<span class="text-[10px] font-bold uppercase text-outline">Turbidity</span>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-10">
+<span class="material-symbols-outlined text-[120px]">show_chart</span>
+</div>
+</div>
+</div>
+<!-- Controls & Config -->
+<div class="space-y-gutter">
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle overflow-hidden">
+<div class="h-1 bg-primary w-full"></div>
+<div class="p-6">
+<h3 class="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                                Quick Controls
+                            </h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center p-3 bg-surface-container-low rounded-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface">Main Solenoid Valve</span>
+<span class="text-[11px] text-status-nominal font-bold uppercase">Status: Open</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex justify-between items-center p-3 bg-surface-container-low rounded-lg opacity-80">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface">Chlorine Injector</span>
+<span class="text-[11px] text-outline font-bold uppercase">Status: Idle</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<button class="w-full py-2 bg-on-status-critical text-status-critical font-bold text-label-sm rounded-lg flex items-center justify-center gap-2 hover:bg-error-container transition-colors btn-primary-action">
+<span class="material-symbols-outlined text-[18px]">gpp_maybe</span> Emergency System Kill
+                                </button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6">
+<h3 class="font-title-md text-title-md text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">settings_remote</span>
+                            Remote Config
+                        </h3>
+<form class="space-y-4">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 uppercase tracking-wide">Polling Interval (ms)</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-primary text-body-md" type="number" value="1000"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1.5 uppercase tracking-wide">Alarm Threshold (pH)</label>
+<div class="grid grid-cols-2 gap-2">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-outline">MIN</span>
+<input class="w-full pl-10 bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-primary text-body-md" type="text" value="6.5"/>
+</div>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-outline">MAX</span>
+<input class="w-full pl-10 bg-surface-container-low border-none rounded-lg focus:ring-1 focus:ring-primary text-body-md" type="text" value="8.5"/>
+</div>
+</div>
+</div>
+<button class="w-full py-2 bg-primary text-on-primary font-bold text-label-sm rounded-lg hover:opacity-90 transition-opacity btn-primary-action" type="submit">
+                                Push Configuration
+                            </button>
+</form>
+</div>
+</div>
+</div>
+<!-- Alert Feed / Maintenance Log -->
+<div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-title-md text-title-md text-on-surface">Maintenance Log</h3>
+<button class="text-label-sm font-label-sm text-primary nav-link-underline">View All History</button>
+</div>
+<div class="space-y-4">
+<div class="flex gap-4 items-start border-l-4 border-status-nominal pl-4 py-1">
+<div class="min-w-[80px] pt-1">
+<span class="text-label-sm font-label-sm text-outline">10:42 AM</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface"><span class="font-bold">Automated Calibration</span> completed successfully for all sensors.</p>
+<p class="text-[12px] text-on-surface-variant">System-wide health check returning status 200 OK.</p>
+</div>
+<div class="bg-on-status-nominal px-2 py-0.5 rounded text-[10px] font-bold text-status-nominal uppercase">Success</div>
+</div>
+<div class="flex gap-4 items-start border-l-4 border-status-warning pl-4 py-1">
+<div class="min-w-[80px] pt-1">
+<span class="text-label-sm font-label-sm text-outline">08:15 AM</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface"><span class="font-bold">Turbidity Spike</span> detected (1.8 NTU). Upstream sediment shift suspected.</p>
+<p class="text-[12px] text-on-surface-variant">Auto-purge protocol initiated by System Control.</p>
+</div>
+<div class="bg-on-status-warning/10 px-2 py-0.5 rounded text-[10px] font-bold text-status-warning uppercase">Warning</div>
+</div>
+<div class="flex gap-4 items-start border-l-4 border-outline pl-4 py-1">
+<div class="min-w-[80px] pt-1">
+<span class="text-label-sm font-label-sm text-outline">Yesterday</span>
+</div>
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface"><span class="font-bold">Manual Inspection</span> by Engineer Sarah Jenkins.</p>
+<p class="text-[12px] text-on-surface-variant">Physical seal replaced on Solenoid NX-A1. Unit cleared for operation.</p>
+</div>
+<div class="bg-surface-container-high px-2 py-0.5 rounded text-[10px] font-bold text-outline uppercase">Logged</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual Micro-interactions Script -->
+<script>
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const statusText = this.closest('div').querySelector('.font-bold');
+                if (this.checked) {
+                    statusText.textContent = 'Status: Open';
+                    statusText.className = 'text-[11px] text-status-nominal font-bold uppercase';
+                } else {
+                    statusText.textContent = 'Status: Closed';
+                    statusText.className = 'text-[11px] text-status-critical font-bold uppercase';
+                }
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Security Audit Log | Hydronix</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .w-sidebar { width: 15rem; }
+        .px-gutter { padding-left: 1.5rem; padding-right: 1.5rem; }
+        .py-gutter { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+        
+        /* Custom scrollbar for high-density data */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* Top Bar Underline Animation */
+        .nav-underline {
+            position: relative;
+        }
+        .nav-underline::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: currentColor;
+            transition: width 0.2s ease-in-out, left 0.2s ease-in-out;
+            transform: translateX(-50%);
+        }
+        .nav-underline:hover::after {
+            width: 100%;
+        }
+
+        /* Sidebar Link Slide-in Border */
+        .sidebar-link {
+            position: relative;
+            overflow: hidden;
+            transition: background-color 150ms ease-in-out, color 150ms ease-in-out;
+        }
+        .sidebar-link::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #006782; 
+            transition: transform 150ms ease-in-out;
+            transform: translateX(0);
+        }
+        .sidebar-link:hover::before {
+            transform: translateX(4px);
+        }
+
+        /* Primary Button Shimmer & Lift */
+        .btn-primary-action {
+            transition: transform 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .btn-primary-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            filter: brightness(1.05);
+        }
+        .btn-primary-action:active {
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-delay: -1ms !important;
+                animation-duration: 1ms !important;
+                animation-iteration-count: 1 !important;
+                background-attachment: initial !important;
+                scroll-behavior: auto !important;
+                transition-duration: 0s !important;
+                transition-delay: 0s !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .w-sidebar { width: 0; display: none; }
+            .ml-sidebar { margin-left: 0 !important; }
+            .w-content { width: 100% !important; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "border-subtle": "#e2e8f0",
+                        "tertiary-container": "#db8b2b",
+                        "surface": "#f6f8f8",
+                        "primary-fixed": "#bbeaff",
+                        "surface-tint": "#006782",
+                        "primary-container": "#11aad4",
+                        "outline-variant": "#bdc8cf",
+                        "on-background": "#171c1f",
+                        "surface-dim": "#d6dbde",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "status-critical": "#ef4444",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#dee3e7",
+                        "on-status-critical": "#ffffff",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-primary-fixed": "#001f29",
+                        "on-status-nominal": "#ffffff",
+                        "secondary-fixed": "#d5e3fd",
+                        "inverse-on-surface": "#edf1f5",
+                        "error": "#ba1a1a",
+                        "outline": "#6d797f",
+                        "secondary-container": "#d5e3fd",
+                        "secondary": "#515f74",
+                        "surface-container-high": "#e4e9ec",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#5dd4ff",
+                        "inverse-surface": "#2c3134",
+                        "on-surface": "#171c1f",
+                        "status-warning": "#f59e0b",
+                        "surface-container": "#eaeef2",
+                        "surface-bright": "#f5fafd",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#3d484e",
+                        "surface-container-highest": "#dee3e7",
+                        "on-primary-container": "#003a4a",
+                        "on-error-container": "#93000a",
+                        "primary": "#006782",
+                        "on-secondary-container": "#57657b",
+                        "background": "#f5fafd",
+                        "on-primary-fixed-variant": "#004d62",
+                        "primary-fixed-dim": "#5dd4ff",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#eff4f8",
+                        "tertiary": "#8a5100",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "status-nominal": "#22c55e",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "on-tertiary-fixed": "#2c1600",
+                        "on-tertiary-container": "#4f2c00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-gap": "1.5rem",
+                        "gutter": "1.5rem",
+                        "container-padding": "2rem",
+                        "sidebar-width": "15rem"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "title-md": ["Hanken Grotesk"],
+                        "display-lg": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-fixed-dim selection:text-on-primary-fixed overflow-hidden">
+<!-- SIDEBAR NAVIGATION -->
+<aside class="fixed left-0 top-0 h-full w-sidebar bg-on-primary-fixed dark:bg-on-primary-fixed flex flex-col py-gutter z-50 shadow-sm transition-colors duration-150 ease-in-out md:flex hidden">
+<div class="px-6 mb-8">
+<h1 class="font-headline-md text-headline-md text-primary-fixed font-bold">Hydronix</h1>
+<p class="text-on-primary-fixed-variant opacity-80 font-label-sm text-label-sm uppercase tracking-widest">Mission Control</p>
+</div>
+<nav class="flex-1 overflow-y-auto px-3 space-y-1 custom-scrollbar">
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-primary-fixed-variant/10 hover:text-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-title-md text-title-md">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-primary-fixed-variant/10 hover:text-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">sensors</span>
+<span class="font-title-md text-title-md">Live Telemetry</span>
+</a>
+<!-- Security / Audit is Active -->
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg bg-primary-fixed-variant/10 text-primary-fixed font-bold border-l-4 border-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">security</span>
+<span class="font-title-md text-title-md">Security Audit</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-primary-fixed-variant/10 hover:text-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">water_drop</span>
+<span class="font-title-md text-title-md">Water Quality</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-primary-fixed-variant/10 hover:text-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">notifications_active</span>
+<span class="font-title-md text-title-md">Alert History</span>
+</a>
+<a class="sidebar-link flex items-center px-3 py-2.5 rounded-lg text-on-primary-fixed-variant opacity-80 hover:bg-primary-fixed-variant/10 hover:text-primary-fixed transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-title-md text-title-md">Global Settings</span>
+</a>
+</nav>
+<div class="px-6 mt-auto pt-6 border-t border-on-primary-fixed-variant/20">
+<button class="btn-primary-action w-full py-3 bg-primary-container text-on-primary-container font-bold rounded-lg flex items-center justify-center transition-all">
+<span class="material-symbols-outlined mr-2">add</span>
+                Add New Node
+            </button>
+</div>
+</aside>
+<!-- MAIN CONTENT AREA -->
+<main class="ml-0 md:ml-[15rem] flex flex-col h-screen overflow-hidden">
+<!-- TOP APP BAR -->
+<header class="h-16 flex justify-between items-center px-gutter bg-surface-container-lowest border-b border-border-subtle z-40">
+<div class="flex items-center space-x-6">
+<button class="md:hidden text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant scale-75">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-1.5 text-body-md focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search logs..." type="text"/>
+</div>
+<div class="hidden lg:flex space-x-6">
+<a class="nav-underline text-on-surface-variant font-body-md hover:text-primary transition-all" href="#">Infrastructure</a>
+<a class="nav-underline text-on-surface-variant font-body-md hover:text-primary transition-all" href="#">Analytics</a>
+<a class="nav-underline text-primary font-bold border-b-2 border-primary pb-1 font-body-md" href="#">Security</a>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<div class="hidden md:flex items-center space-x-2 px-3 py-1 bg-status-nominal/10 rounded-full">
+<span class="w-2 h-2 rounded-full bg-status-nominal"></span>
+<span class="text-label-sm font-label-sm text-on-surface">System Status: Nominal</span>
+</div>
+<div class="flex items-center space-x-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all scale-95 active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden border border-border-subtle">
+<img class="w-full h-full object-cover" data-alt="A professional corporate headshot of a female systems security officer in a light-filled modern office with high-key lighting. She is wearing a dark navy professional blazer and has a confident, focused expression suitable for a mission-critical operations center. The aesthetic is clean, sharp, and authoritative, matching the Hydronix brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoB0bENJC8SWeRsWOV3UMIMEjfHK5h4eYt8F7gK4w--0o7f6S_wE-P4fZ-tBKGfc2GoqxrcZ5bV42MYTymoaap0vY7TVuuq-ChAHaXh83YB4LLy_Aym5EWSkXliVRSCRyHC1qinDtkmyQ7l8SZmgqNRDpbcWEHatfkmlAaBxTdGEPB8v5YMp5x2rtjbYng9dBue2wT2JCEIn29xGkIwe-9IovZoutbY1rpGK3mcSDuAeOCEDbzfb0xJbiV4R3ON4J5if47Qu5PM_U"/>
+</div>
+</div>
+</div>
+</header>
+<!-- CONTENT SCROLL AREA -->
+<section class="flex-1 overflow-hidden p-6 bg-background flex flex-col space-y-6">
+<!-- HEADER SECTION -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<nav class="flex text-label-sm font-label-sm text-on-surface-variant mb-2">
+<span>System</span>
+<span class="mx-2">/</span>
+<span>Security</span>
+<span class="mx-2">/</span>
+<span class="text-primary">Audit Log</span>
+</nav>
+<h2 class="font-display-lg text-display-lg text-on-surface tracking-tight">Security Audit Log</h2>
+<p class="text-on-surface-variant mt-1">Immutable read-only record of all system operations and authentication events.</p>
+</div>
+<div class="flex space-x-3">
+<button class="flex items-center px-4 py-2 border border-border-subtle rounded-lg text-on-surface font-label-sm bg-white hover:bg-surface-container transition-all active:scale-95">
+<span class="material-symbols-outlined mr-2 text-[18px]">download</span>
+                        Export PDF
+                    </button>
+<button class="flex items-center px-4 py-2 border border-border-subtle rounded-lg text-on-surface font-label-sm bg-white hover:bg-surface-container transition-all active:scale-95">
+<span class="material-symbols-outlined mr-2 text-[18px]">ios_share</span>
+                        Full CSV
+                    </button>
+</div>
+</div>
+<!-- AUDIT TABLE CONTAINER -->
+<div class="flex-1 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+<!-- Table Controls/Filters -->
+<div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4 bg-surface-container-low/30">
+<div class="flex items-center space-x-4">
+<div class="flex items-center bg-white border border-border-subtle rounded px-3 py-1">
+<span class="text-label-sm text-on-surface-variant mr-2">Severity:</span>
+<select class="border-none bg-transparent p-0 text-label-sm font-bold focus:ring-0 cursor-pointer">
+<option>All Levels</option>
+<option>Critical</option>
+<option>Warning</option>
+<option>Info</option>
+</select>
+</div>
+<div class="flex items-center bg-white border border-border-subtle rounded px-3 py-1">
+<span class="text-label-sm text-on-surface-variant mr-2">Timeframe:</span>
+<select class="border-none bg-transparent p-0 text-label-sm font-bold focus:ring-0 cursor-pointer">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range</option>
+</select>
+</div>
+</div>
+<div class="text-label-sm text-on-surface-variant italic">
+                        Viewing <span class="text-on-surface font-bold">1,248</span> immutable entries
+                    </div>
+</div>
+<!-- TABLE HEADER -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] bg-surface-container-low border-b border-border-subtle px-6 py-3">
+<div class="text-label-sm text-on-secondary-fixed-variant uppercase tracking-wider">Timestamp</div>
+<div class="text-label-sm text-on-secondary-fixed-variant uppercase tracking-wider">Actor</div>
+<div class="text-label-sm text-on-secondary-fixed-variant uppercase tracking-wider">Action Code</div>
+<div class="text-label-sm text-on-secondary-fixed-variant uppercase tracking-wider">Resource / Target</div>
+<div class="text-label-sm text-on-secondary-fixed-variant uppercase tracking-wider text-right">Status</div>
+</div>
+<!-- TABLE BODY -->
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
+<!-- Row 1 (Critical) -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors group relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-status-critical"></div>
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:22:01.042</div>
+<div class="flex items-center space-x-2">
+<div class="w-5 h-5 rounded-full bg-surface-variant text-[10px] flex items-center justify-center font-bold">JD</div>
+<span class="text-body-md font-bold">j_dawson</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-status-critical/10 text-status-critical text-[11px] font-black rounded border border-status-critical/20">VALVE_FORCE_OPEN</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">Main Line Valve 04-A / Sector 7 [Overridden]</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-on-status-critical bg-status-critical px-2 py-0.5 rounded">FAILED</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors">
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:19:55.120</div>
+<div class="flex items-center space-x-2">
+<div class="w-5 h-5 rounded-full bg-primary-fixed-variant text-[10px] flex items-center justify-center font-bold text-white">SYS</div>
+<span class="text-body-md font-bold text-on-surface-variant">System_Auto</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-surface-variant text-on-surface-variant text-[11px] font-black rounded border border-outline-variant">TELEMETRY_PULSE</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">Node-442-B "Blue River" - Standard Sync</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-on-status-nominal bg-status-nominal px-2 py-0.5 rounded">SUCCESS</span>
+</div>
+</div>
+<!-- Row 3 (Warning) -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-status-warning"></div>
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:15:02.884</div>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-status-warning scale-75">terminal</span>
+<span class="text-body-md font-bold">API_KEY_330</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-status-warning/10 text-status-warning text-[11px] font-black rounded border border-status-warning/20">AUTH_LIMIT_REACHED</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">v2/nodes/442/telemetry - Endpoint Throttle</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-[#2c1600] bg-status-warning px-2 py-0.5 rounded">DENIED</span>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors">
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:12:44.221</div>
+<div class="flex items-center space-x-2">
+<div class="w-5 h-5 rounded-full bg-secondary text-[10px] flex items-center justify-center font-bold text-white">MK</div>
+<span class="text-body-md font-bold">m_keller</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-surface-variant text-on-surface-variant text-[11px] font-black rounded border border-outline-variant">SETTINGS_UPDATE</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">Global Threshold: pH Min changed 6.8 -&gt; 7.0</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-on-status-nominal bg-status-nominal px-2 py-0.5 rounded">SUCCESS</span>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors">
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:10:01.000</div>
+<div class="flex items-center space-x-2">
+<div class="w-5 h-5 rounded-full bg-primary-fixed-variant text-[10px] flex items-center justify-center font-bold text-white">SYS</div>
+<span class="text-body-md font-bold text-on-surface-variant">System_Cron</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-surface-variant text-on-surface-variant text-[11px] font-black rounded border border-outline-variant">DB_BACKUP_INIT</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">AWS-S3 // Glacier-Archive-01</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-on-status-nominal bg-status-nominal px-2 py-0.5 rounded">SUCCESS</span>
+</div>
+</div>
+<!-- Row 6 -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-status-critical"></div>
+<div class="text-label-sm font-mono text-on-surface">2023-10-24 14:05:33.910</div>
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-status-critical scale-75">report</span>
+<span class="text-body-md font-bold">Unknown_IP</span>
+</div>
+<div class="flex items-center">
+<span class="px-2 py-0.5 bg-status-critical/10 text-status-critical text-[11px] font-black rounded border border-status-critical/20">LOGIN_ATTEMPT_FAIL</span>
+</div>
+<div class="truncate text-body-md text-on-surface-variant">IP: 192.168.1.104 - Brute Force Pattern Detected</div>
+<div class="text-right">
+<span class="text-[10px] font-black uppercase text-on-status-critical bg-status-critical px-2 py-0.5 rounded">BLOCKED</span>
+</div>
+</div>
+<!-- Repeat for data density simulation -->
+<div class="grid grid-cols-[1.5fr_1.5fr_1.5fr_2fr_1fr] md:grid-cols-[180px_150px_180px_1fr_120px] px-6 py-3.5 border-b border-border-subtle hover:bg-surface-container-low/40 transition-colors">
+<div class="text-label-sm font-mono text-on-surface opacity-60 italic">... Continued 1,242 rows remaining</div>
+</div>
+</div>
+<!-- TABLE FOOTER -->
+<div class="px-6 py-3 bg-surface-container-low flex items-center justify-between border-t border-border-subtle">
+<div class="text-label-sm text-on-surface-variant">
+                        SHA-256 Chain Integrity: <span class="font-mono text-status-nominal">VALID</span>
+</div>
+<div class="flex items-center space-x-2">
+<button class="p-1 hover:bg-surface-container transition-colors rounded active:scale-90">
+<span class="material-symbols-outlined scale-75">chevron_left</span>
+</button>
+<span class="text-label-sm font-bold">Page 1 of 50</span>
+<button class="p-1 hover:bg-surface-container transition-colors rounded active:scale-90">
+<span class="material-symbols-outlined scale-75">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- BOTTOMLINE INFO -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white p-4 rounded-lg border border-border-subtle flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-primary-fixed/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">security</span>
+</div>
+<div>
+<div class="text-label-sm text-on-surface-variant">Security Events</div>
+<div class="text-title-md font-black">24 Critical (24h)</div>
+</div>
+</div>
+<div class="bg-white p-4 rounded-lg border border-border-subtle flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-status-warning/10 flex items-center justify-center text-status-warning">
+<span class="material-symbols-outlined">key</span>
+</div>
+<div>
+<div class="text-label-sm text-on-surface-variant">Active Keys</div>
+<div class="text-title-md font-black">15 Valid API Keys</div>
+</div>
+</div>
+<div class="bg-white p-4 rounded-lg border border-border-subtle flex items-center space-x-4">
+<div class="w-10 h-10 rounded bg-status-nominal/10 flex items-center justify-center text-status-nominal">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<div>
+<div class="text-label-sm text-on-surface-variant">Chain Hash</div>
+<div class="text-label-sm font-mono truncate max-w-[120px]">8a3f9e...2c11</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- MOBILE FAB (Hidden on desktop) -->
+<button class="md:hidden btn-primary-action fixed bottom-6 right-6 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center z-50">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<script>
+        // Micro-interaction for table rows (Preserved and enhanced subtly)
+        document.querySelectorAll('.grid.border-b').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                row.style.boxShadow = "inset 4px 0 0 0 #006782";
+                row.style.transition = "box-shadow 150ms ease-in-out";
+            });
+            row.addEventListener('mouseleave', () => {
+                row.style.boxShadow = "none";
+            });
+        });
+
+        // Simple Mobile Menu Toggle Mockup
+        const mobileMenuBtn = document.querySelector('button.md\\:hidden');
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                alert('In a full implementation, this would trigger the sidebar reveal on mobile.');
+            });
+        }
+    </script>
+</body></html>

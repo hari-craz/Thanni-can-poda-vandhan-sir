@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Hardware Provisioning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#57657b",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "secondary": "#515f74",
+                    "inverse-primary": "#5dd4ff",
+                    "on-primary-fixed": "#001f29",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "on-surface-variant": "#3d484e",
+                    "secondary-container": "#d5e3fd",
+                    "primary-fixed-dim": "#5dd4ff",
+                    "on-tertiary-container": "#4f2c00",
+                    "error-container": "#ffdad6",
+                    "primary": "#006782",
+                    "surface-container-highest": "#dee3e7",
+                    "status-warning": "#f59e0b",
+                    "surface-dim": "#d6dbde",
+                    "surface-variant": "#dee3e7",
+                    "surface-container-high": "#e4e9ec",
+                    "surface-container": "#eaeef2",
+                    "primary-container": "#11aad4",
+                    "on-primary-container": "#003a4a",
+                    "outline-variant": "#bdc8cf",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#bbeaff",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "status-nominal": "#22c55e",
+                    "on-status-nominal": "#dcfce7",
+                    "tertiary-fixed": "#ffdcbd",
+                    "surface-tint": "#006782",
+                    "border-subtle": "#e2e8f0",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "on-background": "#171c1f",
+                    "outline": "#6d797f",
+                    "background": "#f5fafd",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#d5e3fd",
+                    "on-tertiary-fixed": "#2c1600",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#004d62",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#8a5100",
+                    "status-critical": "#ef4444",
+                    "surface-container-low": "#eff4f8",
+                    "surface-bright": "#f5fafd",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-container": "#db8b2b",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "surface": "#ffffff",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#edf1f5",
+                    "inverse-surface": "#2c3134",
+                    "on-surface": "#171c1f",
+                    "on-status-critical": "#fee2e2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-gap": "1.5rem",
+                    "gutter": "1.5rem",
+                    "container-padding": "2rem",
+                    "sidebar-width": "15rem"
+            },
+            "fontFamily": {
+                    "label-sm": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "title-md": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .w-sidebar { width: 15rem; }
+        
+        /* Premium Micro-interactions */
+        .premium-button {
+            transition: transform 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out;
+        }
+        .premium-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .premium-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .top-bar-link {
+            position: relative;
+            transition: color 150ms ease-in-out;
+        }
+        .top-bar-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 1px;
+            background-color: currentColor;
+            transition: width 150ms ease-in-out, left 150ms ease-in-out;
+        }
+        .top-bar-link:hover::after {
+            width: 100%;
+            left: 0;
+        }
+
+        .sidebar-item {
+            position: relative;
+            transition: background-color 150ms ease-in-out;
+        }
+        .sidebar-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background-color: #006782;
+            transition: width 150ms ease-in-out;
+        }
+        .sidebar-item:hover::before {
+            width: 4px;
+        }
+        .sidebar-item:hover {
+            background-color: rgba(0, 103, 130, 0.04);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .premium-button, .top-bar-link::after, .sidebar-item::before, .sidebar-item, .success-animation {
+                transition: none !important;
+                animation: none !important;
+                transform: none !important;
+            }
+        }
+
+        .success-animation {
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-fixed-variant selection:text-primary-fixed">
+<!-- Shell Suppression: Navigation excluded due to task-focused flow (Provisioning) -->
+<main class="min-h-screen flex items-center justify-center p-gutter">
+<div class="max-w-xl w-full">
+<!-- Brand Anchor Header -->
+<header class="mb-stack-gap text-center md:text-left flex flex-col md:flex-row items-center md:justify-between gap-4">
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface font-black uppercase tracking-tighter">Hydronix</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mt-1">Industrial IoT Provisioning Portal</p>
+</div>
+<button class="top-bar-link flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" onclick="window.history.back()">
+<span class="material-symbols-outlined text-[18px]">close</span>
+<span>CANCEL PROVISIONING</span>
+</button>
+</header>
+<!-- Main Provisioning Card -->
+<div class="bg-surface border border-border-subtle shadow-sm p-8 transition-all duration-500" id="provisioning-card">
+<div id="form-container">
+<div class="mb-8 border-l-4 border-primary pl-4">
+<h2 class="font-title-md text-title-md text-on-surface">Register New Node</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Initialize hardware credentials and network mapping for a new telemetry sensor.</p>
+</div>
+<form class="space-y-6" id="provision-form">
+<!-- Hardware ID Field -->
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="hw_id">HARDWARE ID (MAC/UUID)</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">id_card</span>
+</span>
+<input class="w-full bg-surface-container-low border-border-subtle border px-10 py-3 font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" id="hw_id" placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000" required="" type="text"/>
+</div>
+</div>
+<!-- Friendly Name Field -->
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="friendly_name">FRIENDLY NAME</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">label</span>
+</span>
+<input class="w-full bg-surface-container-low border-border-subtle border px-10 py-3 font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" id="friendly_name" placeholder="North Reservoir Flow Meter" required="" type="text"/>
+</div>
+</div>
+<!-- Deployment Location Field -->
+<div class="space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="location">DEPLOYMENT LOCATION</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</span>
+<input class="w-full bg-surface-container-low border-border-subtle border px-10 py-3 font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" id="location" placeholder="Sector 7G - Zone Alpha" required="" type="text"/>
+</div>
+</div>
+<!-- Warning/Instructional Text -->
+<div class="flex gap-3 p-4 bg-tertiary-fixed text-on-tertiary-fixed border-l-4 border-tertiary">
+<span class="material-symbols-outlined text-tertiary">warning</span>
+<p class="font-body-md text-[14px] leading-relaxed">
+                            Ensure the device is powered on and connected to the initialization network before submitting. This action will generate unique cryptographic keys.
+                        </p>
+</div>
+<!-- Submit Action -->
+<button class="premium-button w-full bg-primary text-on-primary py-4 px-6 font-title-md text-title-md font-bold hover:brightness-110 active:scale-[0.98] flex justify-center items-center gap-2 shadow-sm" type="submit">
+<span>INITIALIZE HARDWARE</span>
+<span class="material-symbols-outlined">bolt</span>
+</button>
+</form>
+</div>
+<!-- Success State (Hidden by default) -->
+<div class="hidden success-animation" id="success-container">
+<div class="flex flex-col items-center text-center space-y-6">
+<div class="w-16 h-16 bg-status-nominal/10 text-status-nominal flex items-center justify-center rounded-full mb-2">
+<span class="material-symbols-outlined text-[40px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface">Provisioning Complete</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2 max-w-sm mx-auto">
+                            Node <span class="font-bold text-on-surface" id="display-node-name"></span> has been successfully added to the network.
+                        </p>
+</div>
+<div class="w-full space-y-3 mt-4 text-left">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">NODE API KEY (STORE SECURELY)</label>
+<div class="group relative">
+<code class="block bg-on-primary-fixed text-primary-fixed p-6 font-mono text-[14px] break-all border-l-4 border-primary overflow-x-auto whitespace-pre-wrap">hx_live_639_8812_aff2_9029_ec74_9011_f922</code>
+<button class="absolute top-4 right-4 text-on-primary-fixed-variant hover:text-primary-fixed transition-colors" onclick="copyKey()">
+<span class="material-symbols-outlined">content_copy</span>
+</button>
+</div>
+<p class="font-label-sm text-[12px] text-error font-medium italic">
+                            * This key is only shown once. It cannot be recovered if lost.
+                        </p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4 w-full mt-6">
+<button class="premium-button flex-1 bg-surface-container-high text-on-surface-variant border border-border-subtle py-3 font-title-md text-title-md hover:bg-surface-dim" onclick="location.reload()">
+                            REGISTER ANOTHER
+                        </button>
+<button class="premium-button flex-1 bg-primary text-on-primary py-3 font-title-md text-title-md hover:brightness-110">
+                            VIEW DASHBOARD
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Details -->
+<footer class="mt-gutter flex justify-between items-center px-4">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-status-nominal"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">SYSTEM ONLINE</span>
+</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant opacity-50">
+                © HYDRONIX 2024
+            </div>
+</footer>
+</div>
+</main>
+<script>
+    document.getElementById('provision-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('friendly_name').value;
+        const card = document.getElementById('provisioning-card');
+        const formContainer = document.getElementById('form-container');
+        const successContainer = document.getElementById('success-container');
+        const displayName = document.getElementById('display-node-name');
+
+        // Simulate server interaction
+        const submitBtn = e.target.querySelector('button');
+        const originalContent = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> <span>NEGOTIATING HANDSHAKE...</span>';
+
+        setTimeout(() => {
+            displayName.innerText = name;
+            formContainer.classList.add('hidden');
+            successContainer.classList.remove('hidden');
+            card.classList.add('border-status-nominal');
+            submitBtn.disabled = false;
+        }, 1200);
+    });
+
+    function copyKey() {
+        const key = document.querySelector('code').innerText;
+        navigator.clipboard.writeText(key).then(() => {
+            const btn = document.querySelector('button[onclick="copyKey()"]');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-status-nominal">check</span>';
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+            }, 2000);
+        });
+    }
+</script>
+</body></html>

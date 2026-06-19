@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hydronix | Mission Control Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;900&amp;family=Fraunces:opsz,wght@9..144,700;9..144,900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Shared Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#6d797f",
+                    "on-primary-container": "#003a4a",
+                    "surface-bright": "#f5fafd",
+                    "status-nominal": "#22c55e",
+                    "on-background": "#171c1f",
+                    "outline-variant": "#bdc8cf",
+                    "on-secondary-container": "#57657b",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#5dd4ff",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary": "#515f74",
+                    "surface-variant": "#dee3e7",
+                    "surface-container-highest": "#dee3e7",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "surface-container-low": "#eff4f8",
+                    "surface-tint": "#006782",
+                    "tertiary-fixed": "#ffdcbd",
+                    "tertiary-container": "#db8b2b",
+                    "on-status-critical": "#fee2e2",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "secondary-fixed": "#d5e3fd",
+                    "inverse-surface": "#2c3134",
+                    "on-primary-fixed": "#001f29",
+                    "on-error-container": "#93000a",
+                    "surface-container-high": "#e4e9ec",
+                    "border-subtle": "#e2e8f0",
+                    "primary-fixed-dim": "#5dd4ff",
+                    "primary": "#006782",
+                    "surface-dim": "#d6dbde",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-container": "#4f2c00",
+                    "status-warning": "#f59e0b",
+                    "status-critical": "#ef4444",
+                    "secondary-container": "#d5e3fd",
+                    "on-surface-variant": "#3d484e",
+                    "primary-fixed": "#bbeaff",
+                    "background": "#f5fafd",
+                    "surface": "#ffffff",
+                    "inverse-on-surface": "#edf1f5",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "on-tertiary-fixed": "#2c1600",
+                    "on-surface": "#171c1f",
+                    "error": "#ba1a1a",
+                    "primary-container": "#11aad4",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "on-status-nominal": "#dcfce7",
+                    "on-primary-fixed-variant": "#004d62",
+                    "on-error": "#ffffff",
+                    "tertiary": "#8a5100",
+                    "surface-container": "#eaeef2"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-gap": "1.5rem",
+                    "sidebar-width": "15rem",
+                    "container-padding": "2rem",
+                    "gutter": "1.5rem"
+            },
+            "fontFamily": {
+                    "label-sm": ["Hanken Grotesk"],
+                    "display-lg": ["Hanken Grotesk"],
+                    "headline-md": ["Hanken Grotesk"],
+                    "title-md": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "fraunces": ["Fraunces", "serif"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "title-md": ["18px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f5fafd; /* Updated to Background token */
+            font-family: 'Hanken Grotesk', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .input-editorial {
+            border: none;
+            border-bottom: 1.5px solid #bdc8cf;
+            background: transparent;
+            transition: border-color 0.3s ease;
+            padding-left: 0;
+            padding-right: 0;
+        }
+        .input-editorial:focus {
+            outline: none;
+            box-shadow: none;
+            border-color: #006782; /* Primary Teal */
+        }
+        .login-card {
+            border: 1px solid #003a4a; /* On-Primary-Container (Deep Teal) */
+        }
+        .editorial-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        /* --- Editorial Hover Systems --- */
+        
+        /* Primary Button Lift & Color Deepening */
+        .btn-editorial-primary {
+            transition: transform 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-editorial-primary:hover {
+            transform: translateY(-2px);
+            background-color: #004d62; /* on-primary-fixed-variant */
+            box-shadow: 0 4px 12px rgba(0, 103, 130, 0.2);
+        }
+        .btn-editorial-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Underline Reveal Animation (for top bar/nav links) */
+        .nav-link-editorial {
+            position: relative;
+            transition: color 0.15s ease-in-out;
+        }
+        .nav-link-editorial::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 1px;
+            background-color: #006782; /* Primary Teal */
+            transition: width 0.15s ease-in-out, left 0.15s ease-in-out;
+        }
+        .nav-link-editorial:hover::after {
+            width: 100%;
+            left: 0;
+        }
+
+        /* Reduced Motion Respect */
+        @media (prefers-reduced-motion: reduce) {
+            .btn-editorial-primary, .nav-link-editorial::after, .animate-fade-in, .login-card {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
+            }
+        }
+
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-0 bg-background">
+<!-- Login Container -->
+<main class="w-full md:w-[400px] animate-fade-in">
+<!-- Login Card -->
+<div class="login-card bg-surface editorial-shadow rounded-none p-8 md:p-12 flex flex-col">
+<!-- Logo Section -->
+<header class="mb-12 flex flex-col items-center text-center">
+<h1 class="font-fraunces text-[42px] leading-tight text-primary font-black tracking-tight mb-2">
+                    Hydronix
+                </h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
+                    Mission Control
+                </p>
+</header>
+<!-- Login Form -->
+<form action="#" class="space-y-8" onsubmit="event.preventDefault();">
+<!-- Username -->
+<div class="relative group">
+<label class="font-label-sm text-label-sm text-on-surface-variant/70 block mb-1" for="username">
+                        Operator ID
+                    </label>
+<input class="input-editorial w-full font-body-md text-body-md text-on-surface placeholder-outline-variant/50 focus:placeholder-transparent" id="username" name="username" placeholder="e.g. ALPHA-9" type="text"/>
+</div>
+<!-- Password -->
+<div class="relative group">
+<div class="flex justify-between items-end mb-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant/70 block" for="password">
+                            Authorization Key
+                        </label>
+<button class="nav-link-editorial text-[10px] uppercase font-bold text-primary hover:text-on-primary-container" type="button">
+                            Forgot?
+                        </button>
+</div>
+<input class="input-editorial w-full font-body-md text-body-md text-on-surface placeholder-outline-variant/50 focus:placeholder-transparent" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-0 bottom-2 text-outline-variant hover:text-primary transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+<!-- Remember Me -->
+<div class="flex items-center space-x-3 py-2">
+<input class="w-4 h-4 border-outline-variant text-primary focus:ring-primary rounded-none cursor-pointer" id="remember" type="checkbox"/>
+<label class="font-body-md text-[14px] text-on-surface-variant cursor-pointer" for="remember">
+                        Persistent Session
+                    </label>
+</div>
+<!-- Submit Button -->
+<div class="pt-4">
+<button class="btn-editorial-primary w-full bg-primary text-on-primary font-fraunces text-title-md py-4 focus:ring-2 focus:ring-offset-2 focus:ring-primary" onclick="window.location.href='{{DATA:SCREEN:SCREEN_14}}'" type="submit">
+                        Access Dashboard
+                    </button>
+</div>
+</form>
+<!-- Footer Meta -->
+<footer class="mt-12 text-center">
+<div class="flex items-center justify-center space-x-2 mb-6">
+<span class="w-2 h-2 bg-status-nominal rounded-full"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant/60">System Status: Nominal</span>
+</div>
+<p class="font-body-md text-[13px] text-on-surface-variant/50">
+                    Proprietary Environmental Monitoring Network.<br/>
+                    Unauthorized access is strictly monitored.
+                </p>
+</footer>
+</div>
+<!-- External Links -->
+<div class="mt-6 flex justify-between px-2 text-[12px] font-label-sm uppercase tracking-widest text-on-surface-variant/40">
+<a class="nav-link-editorial hover:text-primary" href="{{DATA:SCREEN:SCREEN_5}}">Infrastructure Documentation</a>
+<a class="nav-link-editorial hover:text-primary" href="{{DATA:SCREEN:SCREEN_2}}">Request Access</a>
+</div>
+</main>
+<!-- Micro-interaction Background Script -->
+<script>
+        // Subtle background movement based on mouse
+        document.addEventListener('mousemove', (e) => {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            
+            const moveX = (e.clientX - window.innerWidth / 2) / 150;
+            const moveY = (e.clientY - window.innerHeight / 2) / 150;
+            
+            const card = document.querySelector('.login-card');
+            if (card) {
+                card.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            }
+        });
+
+        // Basic password toggle functionality
+        const toggleBtn = document.querySelector('.material-symbols-outlined');
+        const passInput = document.getElementById('password');
+        
+        toggleBtn?.addEventListener('click', () => {
+            const isPassword = passInput.type === 'password';
+            passInput.type = isPassword ? 'text' : 'password';
+            toggleBtn.textContent = isPassword ? 'visibility_off' : 'visibility';
+        });
+    </script>
+</body></html>
