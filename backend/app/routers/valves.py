@@ -8,16 +8,16 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from .database import get_db, Device, ValveOperation
-from .valve_control import ValveController
-from .schemas import (
+from ..database import get_db, Device, ValveOperation
+from ..valve_control import ValveController
+from ..schemas import (
     ValveCommandRequest,
     ValveStatusResponse,
     ValveHistoryResponse,
     ValveOperationResponse,
     ValveCommandResponse,
 )
-from .auth import validate_api_key
+from ..auth import validate_api_key
 
 logger = logging.getLogger(__name__)
 
