@@ -48,6 +48,8 @@ class Device(Base):
     device_id = Column(String(50), primary_key=True)
     name = Column(String(255))
     location = Column(String(255))
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     status = Column(String(20), default="offline", nullable=False)  # online, offline
     last_seen = Column(DateTime, default=datetime.utcnow)
     last_heartbeat = Column(DateTime)

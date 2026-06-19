@@ -5,7 +5,7 @@ export default function HardwareProvisioning() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({ id: '', name: '', location: '' });
+  const [formData, setFormData] = useState({ id: '', name: '', location: '', latitude: '', longitude: '' });
   const [provData, setProvData] = useState(null);
 
   const handleSubmit = async (e) => {
@@ -13,7 +13,13 @@ export default function HardwareProvisioning() {
     setLoading(true);
     setError('');
     try {
-      const data = await api.provisionDevice(formData.id, formData.name, formData.location);
+      const data = await api.provisionDevice(
+        formData.id, 
+        formData.name, 
+        formData.location,
+        formData.latitude,
+        formData.longitude
+      );
       setProvData(data);
       setSubmitted(true);
     } catch (err) {
@@ -70,6 +76,36 @@ export default function HardwareProvisioning() {
                 required
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-label-sm text-label-sm text-on-surface-variant block mb-2">Latitude</label>
+                <input 
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  className="w-full border border-border-subtle rounded p-3 bg-surface-container-lowest text-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  placeholder="e.g. 13.0827"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData({...formData, latitude: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="font-label-sm text-label-sm text-on-surface-variant block mb-2">Longitude</label>
+                <input 
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  className="w-full border border-border-subtle rounded p-3 bg-surface-container-lowest text-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  placeholder="e.g. 80.2707"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData({...formData, longitude: e.target.value})}
+                  required
+                />
+              </div>
+            </div>
             <button 
               type="submit" 
               className={`w-full text-on-primary py-4 font-title-md primary-action-btn flex items-center justify-center gap-2 ${loading ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary'}`}
@@ -111,7 +147,7 @@ export default function HardwareProvisioning() {
             </div>
             <button 
               className="px-6 py-3 border border-border-subtle text-label-sm font-bold hover:bg-surface-container transition-all" 
-              onClick={() => { setSubmitted(false); setFormData({ id: '', name: '', location: '' }); setProvData(null); }}
+              onClick={() => { setSubmitted(false); setFormData({ id: '', name: '', location: '', latitude: '', longitude: '' }); setProvData(null); }}
             >
               Provision Another Device
             </button>

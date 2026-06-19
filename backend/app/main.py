@@ -381,6 +381,20 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"Failed to migrate database check constraint: {e}")
 
+    # Migrate devices table to add latitude and longitude columns if they don't exist
+    try:
+        db_session = SessionLocal()
+        for col in ["latitude", "longitude"]:
+            try:
+                db_session.execute(text(f"ALTER TABLE devices ADD COLUMN {col} FLOAT;"))
+                db_session.commit()
+            except Exception:
+                db_session.rollback()
+        db_session.close()
+        logger.info("Database latitude/longitude columns migration complete")
+    except Exception as e:
+        logger.warning(f"Failed to migrate database columns: {e}")
+
     # Initialize Cloudflare Tunnel integration (HTTPS-only)
     try:
         from .cloudflare_tunnel import init_cloudflare_tunnel
@@ -909,6 +923,8 @@ async def provision_device(
             device_id=request.device_id,
             name=request.name,
             location=request.location,
+            latitude=request.latitude,
+            longitude=request.longitude,
             status="offline",
             is_active=True,
             firmware_channel="stable",

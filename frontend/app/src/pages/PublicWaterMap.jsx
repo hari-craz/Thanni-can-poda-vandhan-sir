@@ -1,6 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+
+// Helper to dynamically load Google Maps API script
+const loadGoogleMapsScript = (callback) => {
+  if (window.google && window.google.maps) {
+    callback();
+    return;
+  }
+  const existingScript = document.getElementById('googleMapsScript');
+  if (existingScript) {
+    existingScript.addEventListener('load', callback);
+    return;
+  }
+  const script = document.createElement('script');
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+  script.id = 'googleMapsScript';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+  script.onload = () => {
+    if (callback) callback();
+  };
+};
+
+const mapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#1e1e24" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1e1e24" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a93" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#c1c1ca" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a93" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#2d2d34" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1e1e24" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a93" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#3e3e46" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1e1e24" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#0f172a" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#475569" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#0f172a" }],
+  },
+];
 
 export default function PublicWaterMap() {
   const [devices, setDevices] = useState([]);
@@ -8,6 +87,11 @@ export default function PublicWaterMap() {
   const [activeNodeData, setActiveNodeData] = useState(null);
   const [readings, setReadings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
 
   const fetchDevices = async () => {
     try {
@@ -22,6 +106,9 @@ export default function PublicWaterMap() {
 
   useEffect(() => {
     fetchDevices();
+    loadGoogleMapsScript(() => {
+      setMapLoaded(true);
+    });
   }, []);
 
   const handleNodeClick = async (device) => {
@@ -43,50 +130,88 @@ export default function PublicWaterMap() {
     }
   };
 
+  const handleNodeClickRef = useRef(handleNodeClick);
+  useEffect(() => {
+    handleNodeClickRef.current = handleNodeClick;
+  }, [handleNodeClick, activeNode]);
+
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || devices.length === 0) return;
+
+    // Filter devices with valid coordinates
+    const validDevices = devices.filter(
+      (d) => d.latitude !== null && d.longitude !== null
+    );
+
+    let center = { lat: 13.0827, lng: 80.2707 }; // Chennai default
+    if (validDevices.length > 0) {
+      const avgLat = validDevices.reduce((sum, d) => sum + d.latitude, 0) / validDevices.length;
+      const avgLng = validDevices.reduce((sum, d) => sum + d.longitude, 0) / validDevices.length;
+      center = { lat: avgLat, lng: avgLng };
+    }
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center: center,
+        zoom: 10,
+        styles: mapStyles,
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+      });
+    } else {
+      mapInstanceRef.current.setCenter(center);
+    }
+
+    const map = mapInstanceRef.current;
+
+    // Clear previous markers
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers
+    validDevices.forEach((device) => {
+      const isOnline = device.status === 'online';
+      const pinColor = isOnline ? '#10B981' : '#EF4444'; // green or red
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: device.latitude, lng: device.longitude },
+        map: map,
+        title: `${device.device_id} - ${device.name}`,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          fillColor: pinColor,
+          fillOpacity: 0.9,
+          scale: 8,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        },
+      });
+
+      marker.addListener('click', () => {
+        handleNodeClickRef.current(device);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [mapLoaded, devices]);
+
   const latestReading = readings.length > 0 ? readings[0] : null;
 
   return (
     <div className="relative h-screen w-full bg-surface-bright text-on-background font-body-md overflow-hidden">
       {/* Main Map Canvas */}
       <main className="relative h-full w-full">
-        {/* Mock Leaflet Map Container */}
+        {/* Google Map Container */}
         <div className="absolute inset-0 z-0 bg-surface-container overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] opacity-70"></div>
+          <div ref={mapRef} className="w-full h-full" />
           
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center">
+          {(!mapLoaded || loading) && (
+            <div className="absolute inset-0 bg-surface-container/60 backdrop-blur-sm z-10 flex items-center justify-center">
               <span className="material-symbols-outlined animate-spin text-[48px] text-primary">sync</span>
             </div>
           )}
-
-          {/* Map Markers */}
-          {devices.map((device, idx) => {
-            // Plot nodes dynamically
-            const x = 20 + (idx * 23) % 65;
-            const y = 25 + (idx * 17) % 60;
-            
-            const isOnline = device.status === 'online';
-            const pinColor = !isOnline 
-              ? 'bg-status-critical' 
-              : 'bg-status-nominal';
-
-            return (
-              <button 
-                key={device.device_id}
-                className="absolute group z-10 focus:outline-none" 
-                style={{ top: `${y}%`, left: `${x}%` }}
-                onClick={() => handleNodeClick(device)}
-              >
-                <div className="relative flex items-center justify-center">
-                  <div className={`absolute w-8 h-8 ${pinColor}/30 rounded-full pulse-marker`}></div>
-                  <div className={`relative w-4 h-4 ${pinColor} border-2 border-surface-container-lowest rounded-full shadow-lg transition-transform group-hover:scale-125`}></div>
-                  <div className="absolute top-6 whitespace-nowrap bg-on-primary-fixed text-on-primary px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <span className="font-label-sm text-label-sm">{device.device_id}</span>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
         </div>
 
         {/* Top Navigation Overlay */}

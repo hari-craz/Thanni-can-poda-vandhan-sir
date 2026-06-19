@@ -45,6 +45,29 @@ class TestDeviceProvision:
         assert "qr_code" in data
         assert "setup_url" in data
     
+    def test_provision_device_with_coordinates(self, test_client):
+        """Test provisioning a device with latitude and longitude."""
+        payload = {
+            "device_id": "HYDRO_998",
+            "name": "Coordinated Device",
+            "location": "Outdoors",
+            "latitude": 13.0827,
+            "longitude": 80.2707
+        }
+        
+        response = test_client.post("/devices/provision", json=payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["device_id"] == "HYDRO_998"
+        
+        # Verify the device coordinates by calling GET /devices/{device_id}
+        get_response = test_client.get("/devices/HYDRO_998")
+        assert get_response.status_code == 200
+        get_data = get_response.json()
+        assert get_data["latitude"] == 13.0827
+        assert get_data["longitude"] == 80.2707
+
     def test_provision_device_invalid_id(self, test_client):
         """Test provisioning with invalid device ID format."""
         payload = {

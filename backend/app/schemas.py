@@ -101,6 +101,8 @@ class DeviceProvisionRequest(BaseModel):
     device_id: str = Field(..., pattern=r"^HYDRO_\d{3}$")
     name: str = Field(..., min_length=1, max_length=255)
     location: str = Field(..., min_length=1, max_length=255)
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
 
 
 class AlertAcknowledgementRequest(BaseModel):
@@ -309,6 +311,8 @@ class DeviceResponse(BaseModel):
     device_id: str
     name: str
     location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     status: str  # online, offline
     last_seen: datetime
     firmware_version: Optional[str]

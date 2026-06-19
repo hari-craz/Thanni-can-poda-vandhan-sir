@@ -86,11 +86,17 @@ export const api = {
     return handleResponse(res);
   },
 
-  async provisionDevice(deviceId, name, location) {
+  async provisionDevice(deviceId, name, location, latitude = null, longitude = null) {
     const res = await fetch(`${BASE_URL}/devices/provision`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ device_id: deviceId, name, location }),
+      body: JSON.stringify({ 
+        device_id: deviceId, 
+        name, 
+        location,
+        latitude: latitude !== '' && latitude !== null ? parseFloat(latitude) : null,
+        longitude: longitude !== '' && longitude !== null ? parseFloat(longitude) : null
+      }),
     });
     return handleResponse(res);
   },
