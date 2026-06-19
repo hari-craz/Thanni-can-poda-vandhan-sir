@@ -38,6 +38,7 @@ def override_session_local(monkeypatch, engine):
     import app.main
     monkeypatch.setattr(app.database, "SessionLocal", TestingSessionLocal)
     monkeypatch.setattr(app.main, "SessionLocal", TestingSessionLocal)
+    monkeypatch.setattr(app.database, "engine", engine)
 
 
 @pytest.fixture(scope="function")

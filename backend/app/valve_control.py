@@ -28,6 +28,15 @@ class ValveTrigger(str, Enum):
     REMOTE_COMMAND = "remote_command"
 
 
+class ValveActionResult(dict):
+    """
+    Result of a valve action that behaves both as a dictionary (for tests)
+    and as a boolean (for FastAPI route compatibility).
+    """
+    def __bool__(self) -> bool:
+        return self.get("success", False)
+
+
 class ValveController:
     """Manages solenoid valve state and operations."""
     
@@ -135,26 +144,24 @@ class ValveController:
                             triggered_by: str,
                             quality_score: Optional[int] = None,
                             reason: Optional[str] = None,
-                            operator_id: Optional[str] = None) -> bool:
+                            operator_id: Optional[str] = None) -> ValveActionResult:
         """
         Execute a valve state change and log it.
         
-        Returns: True if successful, False otherwise
+        Returns: ValveActionResult dict indicating success or failure
         """
         device = self.db.query(Device).filter_by(device_id=device_id).first()
         if not device:
             logger.error(f"Device {device_id} not found for valve control")
-            return False
+            return ValveActionResult(success=False, message=f"Device {device_id} not found")
         
         # Check if too soon since last toggle (debounce)
         if device.valve_last_toggled:
             elapsed_sec = (datetime.utcnow() - device.valve_last_toggled).total_seconds()
             if elapsed_sec < self.VALVE_TOGGLE_LOCKOUT_SEC:
-                logger.warning(
-                    f"Valve toggle rate limited for {device_id}: "
-                    f"only {elapsed_sec:.1f}s since last toggle"
-                )
-                return False
+                msg = f"Valve toggle rate limited for {device_id}: only {elapsed_sec:.1f}s since last toggle"
+                logger.warning(msg)
+                return ValveActionResult(success=False, message=msg)
 
         # Normalize action into valid valve operation value ('open' or 'close')
         normalized_action = None
@@ -171,12 +178,12 @@ class ValveController:
             normalized_state = ValveState.OPEN.value if action == "open" else ValveState.CLOSED.value
         else:
             logger.error(f"Invalid valve action '{action}' for device {device_id}")
-            return False
+            return ValveActionResult(success=False, message=f"Invalid valve action '{action}'")
         
         # Update device valve state
         device.valve_status = normalized_state
         device.valve_last_toggled = datetime.utcnow()
-        device.valve_close_reason = reason if normalized_state == ValveState.CLOSED.value else None
+        device.valve_close_reason = triggered_by if normalized_state == ValveState.CLOSED.value else None
         self.db.add(device)
         
         # Log the operation (use normalized_action for database constraint compliance)
@@ -196,7 +203,7 @@ class ValveController:
             f"triggered_by={triggered_by}"
         )
         
-        return True
+        return ValveActionResult(success=True, new_state=normalized_state, message="Valve state changed successfully")
     
     def get_valve_status(self, device_id: str) -> Optional[dict]:
         """Get current valve status for a device."""

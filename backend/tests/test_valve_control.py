@@ -250,7 +250,7 @@ class TestValveAPIEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["device_id"] == "HYDRO_TEST_001"
-        assert data["valve_status"] in ["open", "closed"]
+        assert data["valve_state"] in ["open", "closed"]
 
     def test_get_valve_status_not_found(self, client: TestClient):
         """Test GET /devices/{device_id}/valve/status returns 404 for nonexistent device."""
