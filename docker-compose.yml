@@ -3,15 +3,15 @@ services:
     image: postgres:13
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-hydronix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hydronix_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-hydronix_db}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "10017:5432"
     volumes:
-      - "${DB_STORAGE:-D:/New folder/db}:/var/lib/postgresql/data"
+      - "${DB_STORAGE}:/var/lib/postgresql/data"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-hydronix} -d $${POSTGRES_DB:-hydronix_db}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,7 +22,7 @@ services:
     ports:
       - "10016:6379"
     volumes:
-      - "${REDIS_STORAGE:-D:/New folder/redis}:/data"
+      - "${REDIS_STORAGE}:/data"
 
   ml-service:
     build: ./ml-service
@@ -36,7 +36,7 @@ services:
     env_file:
       - .env
     environment:
-      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY:-"hydronix_local_key"}
+      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY}
     volumes:
       - ./ML-Model/models:/app/models:ro
     healthcheck:
@@ -61,25 +61,25 @@ services:
     ports:
       - "10020:8000"
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-hydronix}:${POSTGRES_PASSWORD:-hydronix_pass}@db:5432/${POSTGRES_DB:-hydronix_db}
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       ML_SERVICE_URL: http://ml-service:8000
-      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY:-"hydronix_local_key"}
+      ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY}
       ML_SERVICE_ENABLED: "true"
       REPORTS_STORAGE: "/storage/hydronix/reports"
       UPLOAD_STORAGE: "/storage/hydronix/uploads"
       LOG_STORAGE: "/storage/hydronix/logs"
       BACKUP_STORAGE: "/storage/hydronix/backups"
-      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@hydronix.com}
-      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-superadmin}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
     volumes:
       - ./ML-Model/models:/app/models:ro
       - ./backend/app:/app/app
       - ./backend/tests:/app/tests
-      - "${REPORTS_STORAGE:-D:/New folder/reports}:/storage/hydronix/reports"
-      - "${UPLOAD_STORAGE:-D:/New folder/uploads}:/storage/hydronix/uploads"
-      - "${LOG_STORAGE:-D:/New folder/logs}:/storage/hydronix/logs"
-      - "${BACKUP_STORAGE:-D:/New folder/backups}:/storage/hydronix/backups"
+      - "${REPORTS_STORAGE}:/storage/hydronix/reports"
+      - "${UPLOAD_STORAGE}:/storage/hydronix/uploads"
+      - "${LOG_STORAGE}:/storage/hydronix/logs"
+      - "${BACKUP_STORAGE}:/storage/hydronix/backups"
     healthcheck:
       test: ["CMD-SHELL","python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 30s
