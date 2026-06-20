@@ -64,14 +64,101 @@ export default function Sidebar({ currentUser, isActive }) {
               <span className="material-symbols-outlined">waves</span>
               <span className="font-title-md text-title-md">Reports</span>
             </Link>
-            {currentUser?.role === 'superadmin' && (
+            {/* Administration Section */}
+            <div className="pt-4 pb-2 px-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-fixed-dim opacity-50">Administration</p>
+            </div>
+
+            <Link 
+              to="/superadmin/devices/new" 
+              className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/devices/new') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+            >
+              <span className="material-symbols-outlined">add_box</span>
+              <span className="font-title-md text-title-md">Provision Node</span>
+            </Link>
+
+            <Link 
+              to="/superadmin/firmware" 
+              className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/firmware') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+            >
+              <span className="material-symbols-outlined">system_update</span>
+              <span className="font-title-md text-title-md">Firmware OTA</span>
+            </Link>
+
+            {currentUser?.role === 'superadmin' ? (
+              <Link 
+                to="/superadmin/users" 
+                className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/users') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+              >
+                <span className="material-symbols-outlined">group</span>
+                <span className="font-title-md text-title-md flex-1">User Accounts</span>
+              </Link>
+            ) : (
+              <div 
+                className="flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-40 cursor-not-allowed select-none"
+                title="Super Admin role required"
+              >
+                <span className="material-symbols-outlined">group</span>
+                <span className="font-title-md text-title-md flex-1">User Accounts</span>
+                <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">lock</span>
+              </div>
+            )}
+
+            {currentUser?.role === 'superadmin' ? (
+              <Link 
+                to="/superadmin/audit" 
+                className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/audit') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+              >
+                <span className="material-symbols-outlined">shield</span>
+                <span className="font-title-md text-title-md flex-1">Security Audit</span>
+              </Link>
+            ) : (
+              <div 
+                className="flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-40 cursor-not-allowed select-none"
+                title="Super Admin role required"
+              >
+                <span className="material-symbols-outlined">shield</span>
+                <span className="font-title-md text-title-md flex-1">Security Audit</span>
+                <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">lock</span>
+              </div>
+            )}
+
+            {currentUser?.role === 'superadmin' ? (
+              <Link 
+                to="/superadmin/ml-settings" 
+                className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/ml-settings') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+              >
+                <span className="material-symbols-outlined">settings_suggest</span>
+                <span className="font-title-md text-title-md flex-1">AI Model Settings</span>
+              </Link>
+            ) : (
+              <div 
+                className="flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-40 cursor-not-allowed select-none"
+                title="Super Admin role required"
+              >
+                <span className="material-symbols-outlined">settings_suggest</span>
+                <span className="font-title-md text-title-md flex-1">AI Model Settings</span>
+                <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">lock</span>
+              </div>
+            )}
+
+            {currentUser?.role === 'superadmin' ? (
               <Link 
                 to="/superadmin/overview" 
                 className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/overview') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
               >
-                <span className="material-symbols-outlined">settings</span>
-                <span className="font-title-md text-title-md">Super Admin</span>
+                <span className="material-symbols-outlined">dns</span>
+                <span className="font-title-md text-title-md flex-1">Infrastructure</span>
               </Link>
+            ) : (
+              <div 
+                className="flex items-center gap-3 px-3 py-2 text-on-primary-fixed-variant opacity-40 cursor-not-allowed select-none"
+                title="Super Admin role required"
+              >
+                <span className="material-symbols-outlined">dns</span>
+                <span className="font-title-md text-title-md flex-1">Infrastructure</span>
+                <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">lock</span>
+              </div>
             )}
           </>
         )}
