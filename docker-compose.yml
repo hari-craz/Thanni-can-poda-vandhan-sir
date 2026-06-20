@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:13
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-hydronix}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hydronix_pass}
@@ -17,6 +18,7 @@ services:
 
   redis:
     image: redis:7
+    restart: unless-stopped
     ports:
       - "10016:6379"
     volumes:
@@ -25,6 +27,7 @@ services:
   ml-service:
     build: ./ml-service
     image: ghcr.io/hari-craz/hydronix-ml-service:latest
+    restart: unless-stopped
     ports:
       - "10019:8000"
     depends_on:
@@ -45,6 +48,7 @@ services:
   backend:
     build: ./backend
     image: ghcr.io/hari-craz/hydronix-backend:latest
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -87,7 +91,7 @@ services:
     ports:
       - "10021:3100"
     command: -config.file=/etc/loki/local-config.yaml
-    restart: always
+    restart: unless-stopped
 
   promtail:
     image: grafana/promtail:2.9.2
@@ -98,12 +102,13 @@ services:
     command: -config.file=/etc/promtail/config.yml
     depends_on:
       - loki
-    restart: always
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend/app
       dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "10018:80"
     depends_on:
