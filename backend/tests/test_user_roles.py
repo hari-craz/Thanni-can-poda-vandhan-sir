@@ -131,15 +131,15 @@ def test_user_role_permissions(auth_client, setup_users_and_device):
 
 
 def test_admin_role_permissions(auth_client, setup_users_and_device):
-    """Test that an 'admin' can view users and edit configs, but cannot manage user accounts (create)."""
+    """Test that an 'admin' can edit configs, but cannot view/manage user accounts."""
     # Generate admin token
     token = create_access_token({"username": "admin@test.com", "role": "admin"})
     headers = {"Authorization": f"Bearer {token}"}
     
-    # 1. Allowed: GET /users (List users)
+    # 1. Blocked: GET /users (List users - restricted to superadmin)
     users_resp = auth_client.get("/users", headers=headers)
-    assert users_resp.status_code == 200
-    assert len(users_resp.json()) == 3
+    assert users_resp.status_code == 403
+    assert "Operation restricted to super-administrators" in users_resp.json()["error"]
     
     # 2. Allowed: PATCH /devices/HYDRO_001/config (Config update)
     config_resp = auth_client.patch(

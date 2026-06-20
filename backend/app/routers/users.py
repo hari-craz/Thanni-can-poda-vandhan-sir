@@ -20,10 +20,10 @@ async def get_current_superadmin(current_user_email: str = Depends(get_current_a
 
 @router.get("", response_model=List[UserResponse])
 async def list_users(
-    current_user_email: str = Depends(get_current_admin),
+    superadmin: User = Depends(get_current_superadmin),
     db: Session = Depends(get_db)
 ):
-    """List all user accounts. Accessible to both admins and superadmins."""
+    """List all user accounts. Accessible to superadmins only."""
     return db.query(User).order_by(User.id).all()
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

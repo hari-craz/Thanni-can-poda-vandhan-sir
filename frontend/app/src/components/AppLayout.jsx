@@ -68,16 +68,16 @@ export default function AppLayout() {
               <span className="material-symbols-outlined">hub</span>
               <span className="text-[10px] font-bold">Nodes</span>
             </button>
+            {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && (
+              <button onClick={() => navigate('/superadmin/devices/new')} className="btn-premium flex flex-col items-center justify-center -mt-8 bg-primary w-12 h-12 rounded-full shadow-lg text-on-primary">
+                <span className="material-symbols-outlined">add</span>
+              </button>
+            )}
             {currentUser?.role === 'superadmin' ? (
-              <>
-                <button onClick={() => navigate('/superadmin/devices/new')} className="btn-premium flex flex-col items-center justify-center -mt-8 bg-primary w-12 h-12 rounded-full shadow-lg text-on-primary">
-                  <span className="material-symbols-outlined">add</span>
-                </button>
-                <button onClick={() => navigate('/superadmin/overview')} className={`flex flex-col items-center justify-center gap-0.5 ${isActive('/superadmin/overview') ? 'text-primary-fixed' : 'text-on-primary-fixed-variant opacity-60'}`}>
-                  <span className="material-symbols-outlined">settings</span>
-                  <span className="text-[10px] font-bold">Admin</span>
-                </button>
-              </>
+              <button onClick={() => navigate('/superadmin/overview')} className={`flex flex-col items-center justify-center gap-0.5 ${isActive('/superadmin/overview') ? 'text-primary-fixed' : 'text-on-primary-fixed-variant opacity-60'}`}>
+                <span className="material-symbols-outlined">settings</span>
+                <span className="text-[10px] font-bold">Admin</span>
+              </button>
             ) : (
               <button onClick={() => navigate('/admin/alerts')} className={`flex flex-col items-center justify-center gap-0.5 ${isActive('/admin/alerts') ? 'text-primary-fixed' : 'text-on-primary-fixed-variant opacity-60'}`}>
                 <span className="material-symbols-outlined">notifications</span>

@@ -99,12 +99,12 @@ function App() {
             </RoleGuard>
           } />
           <Route path="/superadmin/devices/new" element={
-            <RoleGuard allowedRoles={['superadmin']}>
+            <RoleGuard allowedRoles={['superadmin', 'admin']}>
               <HardwareProvisioning />
             </RoleGuard>
           } />
           <Route path="/superadmin/firmware" element={
-            <RoleGuard allowedRoles={['superadmin']}>
+            <RoleGuard allowedRoles={['superadmin', 'admin']}>
               <FirmwareOTA />
             </RoleGuard>
           } />

@@ -77,7 +77,7 @@ export default function Sidebar({ currentUser, isActive }) {
         )}
       </nav>
       
-      {currentUser?.role === 'superadmin' && (
+      {(currentUser?.role === 'superadmin' || currentUser?.role === 'admin') && (
         <div className="px-6 mt-auto pt-6 border-t border-primary-fixed-variant/20">
           <Link to="/superadmin/devices/new" className="btn-premium w-full bg-primary py-2.5 px-4 text-on-primary font-bold rounded shadow-sm hover:opacity-100 transition-all flex items-center justify-center gap-2">
             <span className="material-symbols-outlined text-[20px]">add</span>
