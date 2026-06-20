@@ -37,8 +37,6 @@ services:
       - .env
     environment:
       ML_SERVICE_API_KEY: ${ML_SERVICE_API_KEY}
-    volumes:
-      - ./ML-Model/models:/app/models:ro
     healthcheck:
       test: ["CMD-SHELL","python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 30s
@@ -73,9 +71,6 @@ services:
       SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
       SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
     volumes:
-      - ./ML-Model/models:/app/models:ro
-      - ./backend/app:/app/app
-      - ./backend/tests:/app/tests
       - "${REPORTS_STORAGE}:/storage/hydronix/reports"
       - "${UPLOAD_STORAGE}:/storage/hydronix/uploads"
       - "${LOG_STORAGE}:/storage/hydronix/logs"
@@ -94,9 +89,11 @@ services:
     restart: unless-stopped
 
   promtail:
-    image: grafana/promtail:2.9.2
+    build:
+      context: ./monitoring
+      dockerfile: promtail.Dockerfile
+    image: ghcr.io/hari-craz/hydronix-promtail:latest
     volumes:
-      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     command: -config.file=/etc/promtail/config.yml
