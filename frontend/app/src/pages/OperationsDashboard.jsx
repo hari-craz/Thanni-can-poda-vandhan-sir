@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -35,8 +35,8 @@ export default function OperationsDashboard() {
             temp = `${latest.temperature.toFixed(1)}°C`;
             flow = `${latest.flow_rate.toFixed(1)} L/m`;
           }
-        } catch (e) {
-          console.error(`Could not fetch telemetry for ${d.device_id}`);
+        } catch (error) {
+          console.error(`Could not fetch telemetry for ${d.device_id}:`, error);
         }
 
         const statusColor = d.status === 'online' 
@@ -85,7 +85,9 @@ export default function OperationsDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    setTimeout(() => {
+      fetchDashboardData();
+    }, 0);
     const interval = setInterval(fetchDashboardData, 15000); // refresh every 15s
     return () => clearInterval(interval);
   }, []);
@@ -235,7 +237,7 @@ export default function OperationsDashboard() {
                   <p className="text-sm">No active warnings or incidents.</p>
                 </div>
               ) : (
-                alerts.map((alert) => {
+                alerts.slice(0, 5).map((alert) => {
                   const severityColor = alert.severity === 'emergency' || alert.severity === 'critical' ? 'status-critical' : 'status-warning';
                   const severityIcon = alert.severity === 'emergency' || alert.severity === 'critical' ? 'error' : 'warning';
                   

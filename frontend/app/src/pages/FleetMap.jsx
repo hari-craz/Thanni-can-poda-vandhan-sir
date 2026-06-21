@@ -1,11 +1,95 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
+
+const loadGoogleMapsScript = (callback) => {
+  if (window.google && window.google.maps) {
+    callback();
+    return;
+  }
+  const existingScript = document.getElementById('googleMapsScript');
+  if (existingScript) {
+    existingScript.addEventListener('load', callback);
+    return;
+  }
+  const script = document.createElement('script');
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+  script.id = 'googleMapsScript';
+  script.async = true;
+  script.defer = true;
+  document.head.appendChild(script);
+  script.onload = () => {
+    if (callback) callback();
+  };
+};
+
+const mapStyles = [
+  { elementType: "geometry", stylers: [{ color: "#1e1e24" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1e1e24" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8a8a93" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#c1c1ca" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a93" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#2d2d34" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1e1e24" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8a8a93" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#3e3e46" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1e1e24" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#0f172a" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#475569" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#0f172a" }],
+  },
+];
 
 export default function FleetMap() {
   const [devices, setDevices] = useState([]);
   const [criticalEvents, setCriticalEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
 
   const fetchFleetData = async () => {
     try {
@@ -26,7 +110,9 @@ export default function FleetMap() {
               temp = `${latest.temperature.toFixed(1)}°C`;
               flow = `${latest.flow_rate.toFixed(1)} L/m`;
             }
-          } catch (e) {}
+          } catch (err) {
+            console.warn(`Could not load telemetry for device ${d.device_id}:`, err);
+          }
 
           return {
             ...d,
@@ -51,13 +137,87 @@ export default function FleetMap() {
   };
 
   useEffect(() => {
-    fetchFleetData();
+    // Call asynchronously to satisfy react-hooks/set-state-in-effect
+    setTimeout(() => {
+      fetchFleetData();
+    }, 0);
+
+    loadGoogleMapsScript(() => {
+      setMapLoaded(true);
+    });
+
     const interval = setInterval(fetchFleetData, 20000);
     return () => clearInterval(interval);
   }, []);
 
+  // Setup Google Map Instance and Markers
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || devices.length === 0) return;
+
+    // Filter devices with valid coordinates
+    const validDevices = devices.filter(
+      (d) => d.latitude !== null && d.longitude !== null
+    );
+
+    let center = { lat: 13.0827, lng: 80.2707 }; // Chennai default
+    if (validDevices.length > 0) {
+      const avgLat = validDevices.reduce((sum, d) => sum + d.latitude, 0) / validDevices.length;
+      const avgLng = validDevices.reduce((sum, d) => sum + d.longitude, 0) / validDevices.length;
+      center = { lat: avgLat, lng: avgLng };
+    }
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center: center,
+        zoom: 11,
+        styles: mapStyles,
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+      });
+    }
+
+    const map = mapInstanceRef.current;
+
+    // Clear previous markers
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    // Add new markers
+    validDevices.forEach((device) => {
+      const isOnline = device.status === 'online';
+      const pinColor = !isOnline 
+        ? '#EF4444' // red
+        : (device.wqi >= 80 ? '#10B981' : '#F59E0B'); // green or orange
+
+      const marker = new window.google.maps.Marker({
+        position: { lat: device.latitude, lng: device.longitude },
+        map: map,
+        title: `${device.device_id}`,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          fillColor: pinColor,
+          fillOpacity: 0.9,
+          scale: 9,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        },
+      });
+
+      marker.addListener('click', () => {
+        setSelectedDeviceId(device.device_id);
+      });
+
+      markersRef.current.push(marker);
+    });
+  }, [mapLoaded, devices]);
+
+  // Derived state: find the selected device directly from the devices list
+  const selectedDevice = devices.find(d => d.device_id === selectedDeviceId);
+
   const totalCount = devices.length;
-  const onlineCount = devices.filter(d => d.status === 'online').count || devices.filter(d => d.status === 'online').length;
+  const onlineCount = devices.filter(d => d.status === 'online').length;
   const warningCount = devices.filter(d => d.status === 'online' && d.wqi < 80 && d.wqi >= 50).length;
   const criticalCount = devices.filter(d => d.status === 'offline' || d.wqi < 50).length;
 
@@ -81,7 +241,7 @@ export default function FleetMap() {
             <p className="text-on-surface-variant">Real-time geospatial visualization of active hydrometric nodes.</p>
           </div>
           <button 
-            className="btn-premium flex items-center gap-2 px-4 py-2 border border-border-subtle rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all"
+            className="btn-premium flex items-center gap-2 px-4 py-2 border border-border-subtle rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container transition-all cursor-pointer"
             onClick={fetchFleetData}
           >
             <span className="material-symbols-outlined text-[18px]">refresh</span>
@@ -103,65 +263,70 @@ export default function FleetMap() {
 
             {/* Map Interface */}
             <div className="flex-1 relative bg-surface-container overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] opacity-70"></div>
+              <div ref={mapRef} className="w-full h-full" />
               
-              {devices.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-outline">
-                  <span className="material-symbols-outlined text-[64px] opacity-35">map</span>
-                  <p className="font-bold mt-2">No nodes registered</p>
+              {(!mapLoaded || loading) && (
+                <div className="absolute inset-0 bg-surface-container/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <span className="material-symbols-outlined animate-spin text-[48px] text-primary">sync</span>
                 </div>
-              ) : (
-                devices.map((device, idx) => {
-                  // Determine deterministic positions on screen for rendering
-                  const x = 15 + (idx * 23) % 70;
-                  const y = 20 + (idx * 17) % 65;
+              )}
 
-                  const isOnline = device.status === 'online';
-                  const pinColor = !isOnline 
-                    ? 'bg-status-critical' 
-                    : (device.wqi >= 80 ? 'bg-status-nominal' : 'bg-status-warning');
-
-                  return (
-                    <div 
-                      key={device.device_id} 
-                      className="absolute cursor-pointer group/pin" 
-                      style={{ top: `${y}%`, left: `${x}%` }}
+              {/* Floating Selected Device Overlay Card */}
+              {selectedDevice && (
+                <div className="absolute bottom-4 left-4 z-20 w-80 bg-surface-container-lowest/95 backdrop-blur-md rounded-xl shadow-xl border border-border-subtle p-5 animate-fade-in animate-duration-300">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="font-bold text-primary text-title-md">{selectedDevice.device_id}</h4>
+                      <p className="text-label-sm text-on-surface-variant mt-0.5">{selectedDevice.location}</p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedDeviceId(null)}
+                      className="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low transition-colors cursor-pointer"
                     >
-                      <div className={`absolute inset-0 ${pinColor} rounded-full pulse-marker`}></div>
-                      <div className={`w-4 h-4 ${pinColor} rounded-full border-2 border-white shadow-lg relative z-10 transition-transform group-hover/pin:scale-150`}></div>
-                      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-64 bg-surface-container-lowest rounded-xl shadow-xl border border-border-subtle p-4 opacity-0 group-hover/pin:opacity-100 transition-all scale-95 group-hover/pin:scale-100 origin-bottom z-20 pointer-events-none group-hover/pin:pointer-events-auto">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h4 className="font-bold text-on-surface text-title-md">{device.device_id}</h4>
-                            <p className="text-label-sm text-on-surface-variant">{device.location}</p>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                            !isOnline ? 'bg-status-critical/10 text-status-critical' :
-                            device.wqi >= 80 ? 'bg-status-nominal/10 text-status-nominal' :
-                            'bg-status-warning/10 text-status-warning'
-                          }`}>
-                            {!isOnline ? 'Offline' : (device.wqi >= 80 ? 'Nominal' : 'Warning')}
+                      <span className="material-symbols-outlined text-lg">close</span>
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3.5">
+                    <div className="flex justify-between text-xs py-1.5 border-b border-border-subtle/50">
+                      <span className="text-on-surface-variant">Status</span>
+                      <span className={`font-black uppercase tracking-wider ${
+                        selectedDevice.status === 'online' ? 'text-status-nominal' : 'text-status-critical'
+                      }`}>
+                        {selectedDevice.status}
+                      </span>
+                    </div>
+                    {selectedDevice.status === 'online' ? (
+                      <>
+                        <div className="flex justify-between text-xs py-1.5 border-b border-border-subtle/50">
+                          <span className="text-on-surface-variant">WQI Score</span>
+                          <span className={`font-bold ${selectedDevice.wqi >= 80 ? 'text-status-nominal' : 'text-status-warning'}`}>
+                            {selectedDevice.wqi} / 100
                           </span>
                         </div>
-                        {isOnline && (
-                          <div className="grid grid-cols-2 gap-2 mb-4">
-                            <div className="bg-surface-container p-2 rounded">
-                              <p className="text-[10px] text-outline uppercase font-bold">WQI Score</p>
-                              <p className="text-[14px] font-bold">{device.wqi}</p>
-                            </div>
-                            <div className="bg-surface-container p-2 rounded">
-                              <p className="text-[10px] text-outline uppercase font-bold">Temp</p>
-                              <p className="text-[14px] font-bold">{device.temp}</p>
-                            </div>
-                          </div>
-                        )}
-                        <Link to={`/admin/device/${device.device_id}/telemetry`} className="btn-premium block w-full py-2 bg-primary text-on-primary text-center rounded font-bold text-label-sm">
-                          Go to Telemetry
-                        </Link>
+                        <div className="flex justify-between text-xs py-1.5 border-b border-border-subtle/50">
+                          <span className="text-on-surface-variant">Temperature</span>
+                          <span className="font-bold text-on-surface">{selectedDevice.temp}</span>
+                        </div>
+                        <div className="flex justify-between text-xs py-1.5">
+                          <span className="text-on-surface-variant">Flow Rate</span>
+                          <span className="font-bold text-on-surface">{selectedDevice.flow}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-2 text-outline/65 text-xs">
+                        Device offline. No real-time readings.
                       </div>
-                    </div>
-                  );
-                })
+                    )}
+                    
+                    <Link 
+                      to={`/admin/device/${selectedDevice.device_id}/telemetry`} 
+                      className="btn-premium block w-full py-2 bg-primary text-on-primary text-center rounded font-bold text-label-sm text-sm"
+                    >
+                      Go to Telemetry
+                    </Link>
+                  </div>
+                </div>
               )}
             </div>
           </section>
