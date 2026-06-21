@@ -264,6 +264,22 @@ async def partition_manager_loop():
         await asyncio.sleep(86400)
 
 
+async def device_timeout_check_loop():
+    """Background loop to periodically check and mark timed-out devices as offline."""
+    import asyncio
+    from .routers.devices import check_offline_devices
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                check_offline_devices(db)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Error in device timeout check loop: {e}")
+        await asyncio.sleep(5)
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and background tasks on v2.0.0 (HTTPS-only, no MQTT)."""
@@ -303,6 +319,7 @@ async def startup_event():
     
     import asyncio
     asyncio.create_task(partition_manager_loop())
+    asyncio.create_task(device_timeout_check_loop())
 
     db = next(get_db())
     try:

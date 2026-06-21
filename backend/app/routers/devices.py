@@ -799,3 +799,50 @@ async def clear_full_database(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+def check_offline_devices(db: Session):
+    """
+    Checks all 'online' devices and marks them 'offline' if they have not sent a heartbeat
+    within the configured timeout.
+    """
+    from datetime import timedelta
+    from ..main import ws_manager
+    
+    timeout_threshold = datetime.utcnow() - timedelta(seconds=settings.device_heartbeat_timeout_seconds)
+    
+    timed_out_devices = db.query(Device).filter(
+        Device.status == "online",
+        Device.last_seen < timeout_threshold
+    ).all()
+    
+    if not timed_out_devices:
+        return
+        
+    for device in timed_out_devices:
+        device.status = "offline"
+        logger.info(f"Device {device.device_id} timed out. Marking offline.")
+        
+        # Log this state transition to AuditLog
+        audit = AuditLog(
+            action="device_timeout_offline",
+            resource_type="device",
+            resource_id=device.device_id,
+            details={"last_seen": device.last_seen.isoformat() if device.last_seen else None}
+        )
+        db.add(audit)
+        
+        # Broadcast real-time status change to WebSocket clients (admin dashboard)
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(ws_manager.broadcast_json({
+                "event": "device_status_change",
+                "device_id": device.device_id,
+                "status": "offline"
+            }))
+        except RuntimeError:
+            pass
+        
+    db.commit()
+
+

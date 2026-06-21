@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     rate_limit_per_ip_hour: int = 10000
     
     # Device Configuration
-    device_heartbeat_timeout_seconds: int = 120  # Mark as offline if no heartbeat in 2 min
+    device_heartbeat_timeout_seconds: int = 15  # Mark as offline if no heartbeat in 15 seconds
     device_offline_escalation_minutes: list = [5, 15, 60]  # Escalation thresholds
     # Time drift handling (seconds)
     max_drift_seconds: int = 300  # If device timestamp differs from server by this much, use server time

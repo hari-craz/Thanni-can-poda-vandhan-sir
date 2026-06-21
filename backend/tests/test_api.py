@@ -218,6 +218,25 @@ class TestDeviceManagement:
         assert data["ok"] is True
         assert "server_timestamp" in data
     
+    def test_device_heartbeat_timeout(self, db_session, test_device):
+        """Test that devices are marked offline after heartbeat timeout."""
+        from datetime import datetime, timedelta
+        from app.routers.devices import check_offline_devices
+        
+        # Initially, the device is online
+        assert test_device.status == "online"
+        
+        # Set last_seen to be older than the timeout threshold
+        test_device.last_seen = datetime.utcnow() - timedelta(seconds=20)
+        db_session.commit()
+        
+        # Run check_offline_devices status checker
+        check_offline_devices(db_session)
+        
+        # Refresh device status from database and assert it is offline
+        db_session.refresh(test_device)
+        assert test_device.status == "offline"
+    
     def test_api_key_rotation(self, test_client, test_api_key):
         """Test API key rotation."""
         headers = {"X-API-Key": test_api_key["key"]}

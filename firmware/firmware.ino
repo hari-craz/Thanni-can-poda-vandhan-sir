@@ -673,7 +673,7 @@ void taskHealthHeartbeat(void* pvParameters) {
       }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1800000));
+    vTaskDelay(pdMS_TO_TICKS(10000));
   }
 }
 
