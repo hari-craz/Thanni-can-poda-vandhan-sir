@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 
-export default function Header({ currentUser, initials, onLogout }) {
+export default function Header({ currentUser, initials, onLogout, onMenuClick }) {
   const navigate = useNavigate();
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -160,7 +160,7 @@ export default function Header({ currentUser, initials, onLogout }) {
       )}
 
       <div className="flex items-center gap-4">
-        <button className="md:hidden text-on-surface">
+        <button onClick={onMenuClick} className="md:hidden text-on-surface p-1 hover:bg-surface-container rounded transition-colors flex items-center justify-center">
           <span className="material-symbols-outlined">menu</span>
         </button>
         <div className="hidden sm:block relative">
@@ -218,7 +218,7 @@ export default function Header({ currentUser, initials, onLogout }) {
 
           {/* 1. Notifications Dropdown */}
           {activeDropdown === 'notifications' && (
-            <div className="absolute top-12 right-12 w-80 bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-3">
+            <div className="absolute top-12 right-0 sm:right-12 w-[calc(100vw-2rem)] sm:w-80 max-w-xs bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-3">
               <div className="flex justify-between items-center pb-2 border-b border-border-subtle/50">
                 <span className="font-bold text-sm text-on-surface">Active Alerts ({alerts.length})</span>
                 {alerts.length > 5 && (
@@ -283,7 +283,7 @@ export default function Header({ currentUser, initials, onLogout }) {
 
           {/* 2. Settings Dropdown */}
           {activeDropdown === 'settings' && (
-            <div className="absolute top-12 right-6 w-72 bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-4">
+            <div className="absolute top-12 right-0 sm:right-6 w-[calc(100vw-2rem)] sm:w-72 max-w-xs bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-4">
               <div className="pb-2 border-b border-border-subtle/50">
                 <span className="font-bold text-sm text-on-surface">Quick Settings</span>
               </div>
@@ -357,7 +357,7 @@ export default function Header({ currentUser, initials, onLogout }) {
 
           {/* 3. Profile Dropdown */}
           {activeDropdown === 'profile' && (
-            <div className="absolute top-12 right-0 w-64 bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-4">
+            <div className="absolute top-12 right-0 w-[calc(100vw-2rem)] sm:w-64 max-w-xs bg-white border border-border-subtle rounded-xl shadow-xl p-4 z-50 animate-fade-in flex flex-col gap-4">
               <div className="flex items-center gap-3 pb-3 border-b border-border-subtle/50">
                 <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-title-md">
                   {initials}

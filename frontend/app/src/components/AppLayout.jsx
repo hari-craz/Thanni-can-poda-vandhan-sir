@@ -8,6 +8,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!api.isAuthenticated()) {
@@ -33,13 +34,23 @@ export default function AppLayout() {
   return (
     <div className="bg-background text-on-surface min-h-screen">
       {/* Sidebar Navigation */}
-      <Sidebar currentUser={currentUser} isActive={isActive} />
+      <Sidebar 
+        currentUser={currentUser} 
+        isActive={isActive} 
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* Top AppBar */}
-      <Header currentUser={currentUser} initials={initials} onLogout={handleLogout} />
+      <Header 
+        currentUser={currentUser} 
+        initials={initials} 
+        onLogout={handleLogout} 
+        onMenuClick={() => setSidebarOpen(true)}
+      />
 
       {/* Main Content Canvas */}
-      <main className="pt-24 pb-12 px-6 md:ml-[15rem] min-h-screen">
+      <main className="pt-24 pb-24 md:pb-12 px-6 md:ml-[15rem] min-h-screen">
         <div className="max-w-[1600px] mx-auto">
           <Outlet />
         </div>
