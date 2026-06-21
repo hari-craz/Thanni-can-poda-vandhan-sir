@@ -62,6 +62,29 @@ async def get_current_admin(token: str = Depends(oauth2_scheme)):
     return username
 
 
+async def get_current_superadmin(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        username: str = payload.get("username")
+        role: str = payload.get("role")
+        if username is None or role is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    if role != "superadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Operation restricted to super-administrators only"
+        )
+    return username
+
+
 async def get_current_admin_optional(token: str = Depends(oauth2_scheme)):
     # Return username or None if token missing/invalid
     try:

@@ -4,7 +4,10 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.orm import Session
 
-from ..database import get_db, Device, AuditLog, DeviceRemoteConfig
+from ..database import (
+    get_db, Device, AuditLog, DeviceRemoteConfig,
+    SensorData, Alert, ValveOperation, MLAnomaly, APIKey, Firmware
+)
 from ..auth import validate_api_key, create_api_key_for_device
 from ..config import settings
 from ..schemas import (
@@ -20,8 +23,10 @@ from ..schemas import (
     CalibrationStatusResponse,
     CalibrationRequest,
     CalibrationResponse,
+    DeviceUpdateRequest,
 )
 from ..main import cache, get_device_id_from_auth, get_current_admin
+from ..security import get_current_superadmin
 
 logger = logging.getLogger(__name__)
 
@@ -442,3 +447,203 @@ async def post_calibration(
         logger.error(f"Error saving calibration: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/devices/{device_id}", response_model=DeviceResponse)
+async def update_device(
+    device_id: str,
+    request: DeviceUpdateRequest,
+    db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
+):
+    """
+    PATCH /devices/{device_id}
+    Update device metadata (name, location, latitude, longitude, firmware_channel, etc.).
+    Admin/Superadmin only.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Update fields if provided
+        if request.name is not None:
+            device.name = request.name
+        if request.location is not None:
+            device.location = request.location
+        if request.latitude is not None:
+            device.latitude = request.latitude
+        if request.longitude is not None:
+            device.longitude = request.longitude
+        if request.is_active is not None:
+            device.is_active = request.is_active
+        if request.firmware_channel is not None:
+            device.firmware_channel = request.firmware_channel
+        if request.calibration_interval_days is not None:
+            device.calibration_interval_days = request.calibration_interval_days
+
+        device.updated_at = datetime.utcnow()
+
+        # Audit log
+        audit = AuditLog(
+            action="update",
+            resource_type="device",
+            resource_id=device_id,
+            details=request.model_dump(exclude_none=True),
+            user_id=admin_user,
+        )
+        db.add(audit)
+        db.commit()
+        db.refresh(device)
+
+        logger.info(f"Device {device_id} updated by {admin_user}")
+        return DeviceResponse.model_validate(device)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating device {device_id}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/devices/{device_id}")
+async def delete_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    admin_user: str = Depends(get_current_admin),
+):
+    """
+    DELETE /devices/{device_id}
+    Delete device entirely. Cascades automatically to SensorData, Alerts, etc.
+    Admin/Superadmin only.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Delete non-cascaded referencing records to avoid integrity errors
+        db.query(MLAnomaly).filter(MLAnomaly.device_id == device_id).delete()
+
+        # Delete device record (cascades to other tables)
+        db.delete(device)
+
+        # Audit log
+        audit = AuditLog(
+            action="delete",
+            resource_type="device",
+            resource_id=device_id,
+            details={"name": device.name, "location": device.location},
+            user_id=admin_user,
+        )
+        db.add(audit)
+        db.commit()
+
+        logger.info(f"Device {device_id} and all related data deleted by {admin_user}")
+        return {"ok": True, "message": f"Device {device_id} deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting device {device_id}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/devices/{device_id}/data/clear")
+async def clear_device_data(
+    device_id: str,
+    db: Session = Depends(get_db),
+    superadmin_user: str = Depends(get_current_superadmin),
+):
+    """
+    POST /devices/{device_id}/data/clear
+    Clear all telemetry data, alerts, and valve operations for a device.
+    Superadmin only.
+    """
+    try:
+        device = db.query(Device).filter(Device.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Device not found")
+
+        # Delete associated records
+        db.query(SensorData).filter(SensorData.device_id == device_id).delete()
+        db.query(Alert).filter(Alert.device_id == device_id).delete()
+        db.query(ValveOperation).filter(ValveOperation.device_id == device_id).delete()
+        db.query(MLAnomaly).filter(MLAnomaly.device_id == device_id).delete()
+
+        # Reset device runtime statistics
+        device.status = "offline"
+        device.last_seen = datetime.utcnow()
+        device.last_heartbeat = None
+        device.last_free_heap = None
+        device.last_queued_records = None
+        device.last_sd_usage_percent = None
+        device.valve_status = "open"
+        device.valve_last_toggled = None
+        device.valve_close_reason = None
+        device.last_smoothed_readings = {}
+
+        # Audit log
+        audit = AuditLog(
+            action="clear_device_data",
+            resource_type="device",
+            resource_id=device_id,
+            user_id=superadmin_user,
+        )
+        db.add(audit)
+        db.commit()
+
+        logger.info(f"All data for device {device_id} cleared by Super Admin {superadmin_user}")
+        return {"ok": True, "message": f"All data for device {device_id} cleared successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error clearing data for device {device_id}: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/admin/database/clear")
+async def clear_full_database(
+    db: Session = Depends(get_db),
+    superadmin_user: str = Depends(get_current_superadmin),
+):
+    """
+    POST /admin/database/clear
+    Truncate/delete all operational database tables (except users).
+    Superadmin only.
+    """
+    try:
+        # Delete from tables in order of dependency
+        db.query(SensorData).delete()
+        db.query(Alert).delete()
+        db.query(ValveOperation).delete()
+        db.query(MLAnomaly).delete()
+        db.query(AuditLog).delete()
+        db.query(APIKey).delete()
+        db.query(DeviceRemoteConfig).delete()
+        db.query(Firmware).delete()
+        db.query(Device).delete()
+
+        # Users table is intentionally kept intact.
+
+        # Log this database reset in the clean audit logs
+        audit = AuditLog(
+            action="clear_database",
+            resource_type="database",
+            resource_id="all",
+            user_id=superadmin_user,
+            details={"status": "completed"}
+        )
+        db.add(audit)
+        db.commit()
+
+        logger.info(f"Full operational database cleared by Super Admin {superadmin_user}")
+        return {"ok": True, "message": "Entire database (except users) cleared successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error performing full database clear: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+

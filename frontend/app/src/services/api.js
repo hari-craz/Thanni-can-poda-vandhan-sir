@@ -263,4 +263,46 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async updateDevice(deviceId, data) {
+    const res = await fetch(`${BASE_URL}/devices/${deviceId}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteDevice(deviceId) {
+    const res = await fetch(`${BASE_URL}/devices/${deviceId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async rotateDeviceKey(deviceId) {
+    const res = await fetch(`${BASE_URL}/devices/${deviceId}/keys/rotate`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({}),
+    });
+    return handleResponse(res);
+  },
+
+  async clearDeviceData(deviceId) {
+    const res = await fetch(`${BASE_URL}/devices/${deviceId}/data/clear`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async clearFullDatabase() {
+    const res = await fetch(`${BASE_URL}/admin/database/clear`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };

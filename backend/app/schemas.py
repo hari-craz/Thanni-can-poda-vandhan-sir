@@ -205,6 +205,17 @@ class DeviceRemoteConfigUpdateRequest(BaseModel):
     flow_offset: Optional[float] = None
 
 
+class DeviceUpdateRequest(BaseModel):
+    """PATCH /devices/:device_id — admin/superadmin updates device profile."""
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    location: Optional[str] = Field(None, min_length=1, max_length=255)
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    is_active: Optional[bool] = None
+    firmware_channel: Optional[str] = Field(None, pattern="^(stable|beta|canary)$")
+    calibration_interval_days: Optional[int] = Field(None, ge=1, le=365)
+
+
 class FirmwareCheckResponse(BaseModel):
     """Response for GET /devices/:device_id/firmware — device checks for OTA update."""
     device_id: str

@@ -15,6 +15,7 @@ import ValveControl from './pages/ValveControl';
 import IntelligenceAnomalies from './pages/IntelligenceAnomalies';
 import ReportsGenerator from './pages/ReportsGenerator';
 import SuperAdminOverview from './pages/SuperAdminOverview';
+import NodeManagement from './pages/NodeManagement';
 import HardwareProvisioning from './pages/HardwareProvisioning';
 import FirmwareOTA from './pages/FirmwareOTA';
 import UserAccessManagement from './pages/UserAccessManagement';
@@ -96,6 +97,11 @@ function App() {
           <Route path="/superadmin/overview" element={
             <RoleGuard allowedRoles={['superadmin']}>
               <SuperAdminOverview />
+            </RoleGuard>
+          } />
+          <Route path="/superadmin/nodes" element={
+            <RoleGuard allowedRoles={['superadmin', 'admin']}>
+              <NodeManagement />
             </RoleGuard>
           } />
           <Route path="/superadmin/devices/new" element={

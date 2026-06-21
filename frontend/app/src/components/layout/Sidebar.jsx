@@ -78,6 +78,14 @@ export default function Sidebar({ currentUser, isActive }) {
             </Link>
 
             <Link 
+              to="/superadmin/nodes" 
+              className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/nodes') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
+            >
+              <span className="material-symbols-outlined">developer_board</span>
+              <span className="font-title-md text-title-md">Manage Nodes</span>
+            </Link>
+
+            <Link 
               to="/superadmin/firmware" 
               className={`flex items-center gap-3 px-3 py-2 transition-colors duration-150 ease-in-out ${isActive('/superadmin/firmware') ? 'bg-primary/20 text-primary-fixed font-bold border-l-4 border-primary' : 'sidebar-link text-on-primary-fixed-variant opacity-80 hover:bg-primary/10 hover:text-primary-fixed hover:opacity-100'}`}
             >
