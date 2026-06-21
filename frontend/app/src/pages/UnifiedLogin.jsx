@@ -294,9 +294,11 @@ export default function UnifiedLogin() {
                       It processes high-frequency sensor readings across regional water junctions and provides real-time valve cutoff triggers.
                     </p>
                     <div className="bg-surface-container-low border border-border-subtle p-4 mb-4 font-mono text-[11px] leading-relaxed text-outline">
-                      [Edge Nodes (ESP32)] --(HTTPS/HMAC)--> [FastAPI Relay] --(SQLAlchemy)--> [PostgreSQL DB]
-                                                                    |
-                                                             [Redis Cache] &lt;--&gt; [Rate Limiting]
+                      {"[Edge Nodes (ESP32)] --(HTTPS/HMAC)--> [FastAPI Relay] --(SQLAlchemy)--> [PostgreSQL DB]"}
+                      <br />
+                      {"                                    |"}
+                      <br />
+                      {"                             [Redis Cache] <--> [Rate Limiting]"}
                     </div>
                     <h4 className="font-bold text-sm mb-2 text-on-surface">Core Infrastructure Services:</h4>
                     <ul className="list-disc list-inside space-y-2 text-on-surface-variant text-xs">
