@@ -32,6 +32,16 @@ export default function UserAccessManagement() {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setMenuOpen(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
   async function fetchUsers() {
     setLoading(true);
     setError(null);
@@ -132,7 +142,7 @@ export default function UserAccessManagement() {
         </div>
       ) : (
         <div className="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[200px]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border-subtle text-[10px] font-bold uppercase tracking-widest text-on-primary bg-on-surface">
@@ -169,7 +179,10 @@ export default function UserAccessManagement() {
                           <>
                             <button 
                               className="p-1 hover:bg-surface-container rounded transition-colors" 
-                              onClick={() => setMenuOpen(menuOpen === i ? null : i)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuOpen(menuOpen === i ? null : i);
+                              }}
                             >
                               <span className="material-symbols-outlined">more_vert</span>
                             </button>

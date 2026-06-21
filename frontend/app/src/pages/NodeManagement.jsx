@@ -60,6 +60,16 @@ export default function NodeManagement() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setActiveMenuIndex(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
   const handleEditOpen = (device) => {
     setSelectedDevice(device);
     setFormData({
@@ -218,7 +228,7 @@ export default function NodeManagement() {
         </div>
       ) : (
         <div className="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[260px]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border-subtle text-[10px] font-bold uppercase tracking-widest text-on-primary bg-on-surface">
@@ -267,7 +277,10 @@ export default function NodeManagement() {
                         <td className="px-6 py-4 text-center relative">
                           <button 
                             className="p-1 hover:bg-surface-container rounded transition-colors" 
-                            onClick={() => setActiveMenuIndex(activeMenuIndex === index ? null : index)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuIndex(activeMenuIndex === index ? null : index);
+                            }}
                           >
                             <span className="material-symbols-outlined">more_vert</span>
                           </button>

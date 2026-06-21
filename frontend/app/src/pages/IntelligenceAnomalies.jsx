@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
+const defaultStats = {
+  algorithm: 'Isolation Forest',
+  version: 'v2.1.0',
+  lastTrained: '12 Hours Ago',
+  accuracy: '89.4%',
+  datasetSize: '2.4M readings',
+  featureCount: '12 parameters'
+};
+
 export default function IntelligenceAnomalies() {
   const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const [modelStats] = useState(() => {
+    const saved = localStorage.getItem('hydronix_model_stats');
+    return saved ? JSON.parse(saved) : defaultStats;
+  });
 
   const fetchAnomalies = async () => {
     try {
@@ -85,9 +99,9 @@ export default function IntelligenceAnomalies() {
           <div className="bg-on-surface text-on-primary rounded-lg p-6">
             <h4 className="font-title-md mb-2">Model Status</h4>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="opacity-60">Algorithm</span><span className="font-bold">Isolation Forest v2.1</span></div>
-              <div className="flex justify-between"><span className="opacity-60">Last Trained</span><span className="font-bold">12h ago</span></div>
-              <div className="flex justify-between"><span className="opacity-60">Accuracy</span><span className="font-bold text-status-nominal">89.4%</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Algorithm</span><span className="font-bold">{modelStats.algorithm} {modelStats.version}</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Last Trained</span><span className="font-bold">{modelStats.lastTrained}</span></div>
+              <div className="flex justify-between"><span className="opacity-60">Accuracy</span><span className="font-bold text-status-nominal">{modelStats.accuracy}</span></div>
               <div className="flex justify-between"><span className="opacity-60">Next Retrain</span><span className="font-bold">In 12h</span></div>
             </div>
           </div>
