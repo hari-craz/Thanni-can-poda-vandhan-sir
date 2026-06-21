@@ -4,6 +4,7 @@ import { api } from '../services/api';
 export default function SuperAdminOverview() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('operators');
 
   const fetchStatus = async () => {
     try {
@@ -214,62 +215,135 @@ export default function SuperAdminOverview() {
           </div>
         </div>
 
-        {/* Live Active User Sessions */}
+        {/* Live Active Sessions Console */}
         <div className="lg:col-span-7 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden flex flex-col justify-between">
-          <div className="p-4 border-b border-border-subtle bg-surface-container flex justify-between items-center">
-            <h3 className="font-title-md text-title-md">Live Active User Sessions</h3>
-            <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
-              {status?.live_users?.length || 0} active
+          <div className="border-b border-border-subtle bg-surface-container flex items-center justify-between px-4">
+            <div className="flex gap-2 text-xs font-bold uppercase tracking-wider">
+              <button 
+                className={`py-4 px-3 border-b-2 transition-all ${
+                  activeTab === 'operators' 
+                    ? 'border-primary text-primary font-black' 
+                    : 'border-transparent text-outline hover:text-on-surface'
+                }`}
+                onClick={() => setActiveTab('operators')}
+              >
+                Operators Online ({status?.live_users?.length || 0})
+              </button>
+              <button 
+                className={`py-4 px-3 border-b-2 transition-all ${
+                  activeTab === 'viewers' 
+                    ? 'border-primary text-primary font-black' 
+                    : 'border-transparent text-outline hover:text-on-surface'
+                }`}
+                onClick={() => setActiveTab('viewers')}
+              >
+                Public Viewers ({status?.public_viewers?.length || 0})
+              </button>
+            </div>
+            <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider rounded-full">
+              Live Console
             </span>
           </div>
+
           <div className="flex-1 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-[11px] font-bold uppercase tracking-wider text-outline bg-surface-container-low border-b border-border-subtle">
-                <tr>
-                  <th className="px-6 py-3">User</th>
-                  <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3">Activity</th>
-                  <th className="px-6 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-subtle">
-                {status?.live_users?.map((usr, index) => {
-                  const isSuper = usr.role === 'superadmin';
-                  const avatarLetter = usr.name ? usr.name.charAt(0).toUpperCase() : (usr.email ? usr.email.charAt(0).toUpperCase() : 'U');
-                  return (
-                    <tr key={index} className="hover:bg-surface-container-low transition-colors">
-                      <td className="px-6 py-4 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                          {avatarLetter}
-                        </div>
-                        <div>
-                          <div className="font-bold text-on-surface">{usr.name || usr.email}</div>
-                          <div className="text-xs text-outline leading-none mt-0.5">{usr.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          isSuper 
-                            ? 'bg-status-critical/10 text-status-critical border-status-critical/20' 
-                            : 'bg-primary/10 text-primary border-primary/20'
-                        }`}>
-                          {isSuper ? 'Super Admin' : 'Admin'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-on-surface-variant">
-                        {formatLastActive(usr.last_active)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5 text-status-nominal font-bold text-xs">
-                          <span className="w-2.5 h-2.5 bg-status-nominal rounded-full animate-pulse"></span>
-                          <span>Online</span>
-                        </div>
+            {activeTab === 'operators' ? (
+              <table className="w-full text-left text-sm">
+                <thead className="text-[11px] font-bold uppercase tracking-wider text-outline bg-surface-container-low border-b border-border-subtle">
+                  <tr>
+                    <th className="px-6 py-3">User</th>
+                    <th className="px-6 py-3">Role</th>
+                    <th className="px-6 py-3">Activity</th>
+                    <th className="px-6 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-subtle">
+                  {status?.live_users?.map((usr, index) => {
+                    const isSuper = usr.role === 'superadmin';
+                    const avatarLetter = usr.name ? usr.name.charAt(0).toUpperCase() : (usr.email ? usr.email.charAt(0).toUpperCase() : 'U');
+                    return (
+                      <tr key={index} className="hover:bg-surface-container-low transition-colors">
+                        <td className="px-6 py-4 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                            {avatarLetter}
+                          </div>
+                          <div>
+                            <div className="font-bold text-on-surface">{usr.name || usr.email}</div>
+                            <div className="text-xs text-outline leading-none mt-0.5">{usr.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                            isSuper 
+                              ? 'bg-status-critical/10 text-status-critical border-status-critical/20' 
+                              : 'bg-primary/10 text-primary border-primary/20'
+                          }`}>
+                            {isSuper ? 'Super Admin' : 'Admin'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                          {formatLastActive(usr.last_active)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-status-nominal font-bold text-xs">
+                            <span className="w-2.5 h-2.5 bg-status-nominal rounded-full animate-pulse"></span>
+                            <span>Online</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="text-[11px] font-bold uppercase tracking-wider text-outline bg-surface-container-low border-b border-border-subtle">
+                  <tr>
+                    <th className="px-6 py-3">Viewer ID</th>
+                    <th className="px-6 py-3">Location</th>
+                    <th className="px-6 py-3">Activity</th>
+                    <th className="px-6 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-subtle">
+                  {status?.public_viewers?.map((viewer, index) => {
+                    return (
+                      <tr key={index} className="hover:bg-surface-container-low transition-colors">
+                        <td className="px-6 py-4 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-secondary-container/20 text-secondary flex items-center justify-center font-bold text-sm">
+                            G
+                          </div>
+                          <div>
+                            <div className="font-bold text-on-surface">{viewer.viewer_id}</div>
+                            <div className="text-xs text-outline leading-none mt-0.5">Guest Viewer</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-secondary-container/10 text-secondary border-secondary-container/20">
+                            {viewer.location}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                          {formatLastActive(viewer.last_active)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-status-nominal font-bold text-xs">
+                            <span className="w-2.5 h-2.5 bg-status-nominal rounded-full animate-pulse"></span>
+                            <span>Active</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(!status?.public_viewers || status.public_viewers.length === 0) && (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-8 text-center text-xs text-outline font-medium">
+                        No active guest viewers browsing the public map.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

@@ -305,4 +305,13 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async pingExplorer(viewerId) {
+    const res = await fetch(`${BASE_URL}/explorer/ping`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ viewer_id: viewerId }),
+    });
+    return handleResponse(res);
+  },
 };

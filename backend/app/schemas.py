@@ -425,6 +425,18 @@ class LiveUserResponse(BaseModel):
     last_active: float
 
 
+class PublicViewerResponse(BaseModel):
+    """Response for a single active public explorer session."""
+    viewer_id: str
+    location: str
+    last_active: float
+
+
+class ExplorerPingRequest(BaseModel):
+    """POST /explorer/ping request."""
+    viewer_id: str
+
+
 class SystemStatusResponse(BaseModel):
     """Response for GET /status."""
     ok: bool
@@ -440,6 +452,7 @@ class SystemStatusResponse(BaseModel):
     memory_usage_pct: float
     db_connections: int
     live_users: List[LiveUserResponse]
+    public_viewers: List[PublicViewerResponse]
     transport: str = "https"  # always https in v2
 
     class Config:
@@ -465,9 +478,17 @@ class SystemStatusResponse(BaseModel):
                         "last_active": 1782027219.0
                     }
                 ],
+                "public_viewers": [
+                    {
+                        "viewer_id": "guest_a4b9",
+                        "location": "Adyar, Chennai",
+                        "last_active": 1782027219.0
+                    }
+                ],
                 "transport": "https",
             }
         }
+
 
 
 

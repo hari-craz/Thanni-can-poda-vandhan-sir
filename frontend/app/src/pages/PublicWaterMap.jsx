@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 
@@ -105,13 +105,35 @@ export default function PublicWaterMap() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDevices();
     loadGoogleMapsScript(() => {
       setMapLoaded(true);
     });
+
+    // Track active guest sessions visiting this explorer map
+    let viewerId = sessionStorage.getItem('viewer_id');
+    if (!viewerId) {
+      const randHex = Math.floor(1000 + Math.random() * 9000).toString(16);
+      viewerId = `guest_${randHex}`;
+      sessionStorage.setItem('viewer_id', viewerId);
+    }
+
+    const pingExplorer = async () => {
+      try {
+        await api.pingExplorer(viewerId);
+      } catch (e) {
+        console.debug('Failed to ping explorer:', e);
+      }
+    };
+
+    pingExplorer();
+    const pingInterval = setInterval(pingExplorer, 10000);
+
+    return () => clearInterval(pingInterval);
   }, []);
 
-  const handleNodeClick = async (device) => {
+  const handleNodeClick = useCallback(async (device) => {
     if (activeNode === device.device_id) {
       setActiveNode(null);
       setActiveNodeData(null);
@@ -128,7 +150,7 @@ export default function PublicWaterMap() {
     } catch (e) {
       console.error('Failed to load telemetry for active node:', e);
     }
-  };
+  }, [activeNode]);
 
   const handleNodeClickRef = useRef(handleNodeClick);
   useEffect(() => {
