@@ -417,6 +417,14 @@ class CalibrationResponse(BaseModel):
         }
 
 
+class LiveUserResponse(BaseModel):
+    """Response for a single live user session."""
+    email: str
+    name: str
+    role: str
+    last_active: float
+
+
 class SystemStatusResponse(BaseModel):
     """Response for GET /status."""
     ok: bool
@@ -426,6 +434,12 @@ class SystemStatusResponse(BaseModel):
     active_devices: int
     total_devices: int
     uptime_seconds: int
+    traffic_in_mbps: float
+    traffic_out_mbps: float
+    cpu_usage_pct: float
+    memory_usage_pct: float
+    db_connections: int
+    live_users: List[LiveUserResponse]
     transport: str = "https"  # always https in v2
 
     class Config:
@@ -438,9 +452,23 @@ class SystemStatusResponse(BaseModel):
                 "active_devices": 5,
                 "total_devices": 10,
                 "uptime_seconds": 864000,
+                "traffic_in_mbps": 1.5,
+                "traffic_out_mbps": 0.45,
+                "cpu_usage_pct": 12.5,
+                "memory_usage_pct": 42.1,
+                "db_connections": 8,
+                "live_users": [
+                    {
+                        "email": "superadmin@hydronix.local",
+                        "name": "Super Administrator",
+                        "role": "superadmin",
+                        "last_active": 1782027219.0
+                    }
+                ],
                 "transport": "https",
             }
         }
+
 
 
 # ============================================================================

@@ -1,6 +1,8 @@
 """
 Simple OAuth2 password flow issuing JWTs for admin access.
 """
+import time
+import json
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -13,6 +15,55 @@ from .database import get_db, User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+
+
+# Global in-memory fallback for live user sessions
+_MEM_ACTIVE_USERS = {}  # email -> {email, name, role, last_active}
+
+
+def track_active_user(email: str, name: str, role: str):
+    """Register user session with Redis (TTL 45s) or in-memory fallback."""
+    from .main import cache
+    now_ts = time.time()
+    user_info = {
+        "email": email,
+        "name": name,
+        "role": role,
+        "last_active": now_ts
+    }
+    if cache.client:
+        try:
+            key = f"active_user:{email}"
+            cache.client.set(key, json.dumps(user_info), ex=45)
+            return
+        except Exception:
+            pass
+    _MEM_ACTIVE_USERS[email] = user_info
+
+
+def get_active_users() -> list:
+    """Fetch all active user sessions from Redis or in-memory fallback."""
+    from .main import cache
+    now_ts = time.time()
+    if cache.client:
+        try:
+            keys = cache.client.keys("active_user:*")
+            users = []
+            for k in keys:
+                val = cache.client.get(k)
+                if val:
+                    if isinstance(val, bytes):
+                        val = val.decode('utf-8')
+                    users.append(json.loads(val))
+            return users
+        except Exception:
+            pass
+    
+    # In-memory fallback cleanup and retrieval
+    expired = [email for email, info in _MEM_ACTIVE_USERS.items() if now_ts - info["last_active"] > 45]
+    for email in expired:
+        _MEM_ACTIVE_USERS.pop(email, None)
+    return list(_MEM_ACTIVE_USERS.values())
 
 
 def verify_password(plain, hashed):
@@ -39,7 +90,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded
 
 
-async def get_current_admin(token: str = Depends(oauth2_scheme)):
+async def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -59,10 +110,19 @@ async def get_current_admin(token: str = Depends(oauth2_scheme)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operation restricted to administrators"
         )
+
+    # Track activity
+    try:
+        user = db.query(User).filter(User.email == username.lower().strip()).first()
+        name = user.name if (user and user.name) else username
+        track_active_user(username, name, role)
+    except Exception:
+        pass
+
     return username
 
 
-async def get_current_superadmin(token: str = Depends(oauth2_scheme)):
+async def get_current_superadmin(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -82,15 +142,25 @@ async def get_current_superadmin(token: str = Depends(oauth2_scheme)):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Operation restricted to super-administrators only"
         )
+
+    # Track activity
+    try:
+        user = db.query(User).filter(User.email == username.lower().strip()).first()
+        name = user.name if (user and user.name) else username
+        track_active_user(username, name, role)
+    except Exception:
+        pass
+
     return username
 
 
-async def get_current_admin_optional(token: str = Depends(oauth2_scheme)):
+async def get_current_admin_optional(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     # Return username or None if token missing/invalid
     try:
-        return await get_current_admin(token)
+        return await get_current_admin(token, db)
     except Exception:
         return None
+
 
 
 # Token endpoint handler to be wired into FastAPI app
