@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument("--interval", type=int, default=5, help="Transmission interval in seconds")
     parser.add_argument("--admin-user", default="admin", help="Admin username for provisioning")
     parser.add_argument("--admin-pass", default="admin", help="Admin password for provisioning")
+    parser.add_argument("--api-key", default=None, help="Direct Device API Key to skip auth/provisioning")
     return parser.parse_args()
 
 def make_request(url, method="GET", headers=None, data=None):
@@ -121,17 +122,19 @@ def main():
     print(f"Interval   : {args.interval}s")
     print("-" * 60)
     
-    # Get Auth Token
-    token = get_admin_token(args.url, args.admin_user, args.admin_pass)
-    if not token:
-        print("[-] Exiting due to authentication failure.")
-        return
-        
     # Get or Rotate API Key
-    api_key = setup_device_key(args.url, args.device, token)
+    api_key = args.api_key
     if not api_key:
-        print("[-] Exiting due to provisioning failure.")
-        return
+        # Get Auth Token
+        token = get_admin_token(args.url, args.admin_user, args.admin_pass)
+        if not token:
+            print("[-] Exiting due to authentication failure.")
+            return
+            
+        api_key = setup_device_key(args.url, args.device, token)
+        if not api_key:
+            print("[-] Exiting due to provisioning failure.")
+            return
         
     print(f"[+] Telemetry loop started. API Key: {api_key[:15]}...")
     

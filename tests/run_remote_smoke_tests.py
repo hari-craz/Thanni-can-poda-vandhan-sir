@@ -98,7 +98,9 @@ def main():
     # Check 4: Admin Authentication
     credentials = [
         {"username": "superadmin@hydronix.com", "password": "superadmin"},
-        {"username": "admin@localhost.com", "password": "admin"}
+        {"username": "admin@localhost.com", "password": "admin"},
+        {"username": "harikavi1301@gmail.com", "password": "admin"},
+        {"username": "harikavi1301@gmail.com", "password": "superadmin"}
     ]
     
     token = None
@@ -121,7 +123,7 @@ def main():
 
     # User provided API key for device HYDRO_001
     device_id = "HYDRO_001"
-    device_api_key = "hydro_HYDRO_001_eHk3wX4uQT6DhMzOWrd-E8YdQqWeuAL8bFVjPpeT_Zk"
+    device_api_key = "hydro_HYDRO_001_vj2qlO0GTBQ3oXbCfKpLuaf7YzQ2uG5UfqF2CpggZzs"
     
     # Check 5: Verify Device Exists in Backend (if token is available)
     device_exists = False
