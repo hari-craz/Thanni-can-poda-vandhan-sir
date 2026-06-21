@@ -321,4 +321,13 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async requestAccess(data) {
+    const res = await fetch(`${BASE_URL}/auth/request-access`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
 };

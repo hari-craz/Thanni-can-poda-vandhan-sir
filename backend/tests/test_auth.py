@@ -89,3 +89,45 @@ class TestAPIKeyValidation:
         
         device = validate_api_key(db_session, test_key)
         assert device is None
+
+
+def test_request_access_endpoint(db_session):
+    """Test public access request endpoint."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.database import Alert, AuditLog
+    from app.database import get_db
+
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+
+    payload = {
+        "name": "Jane Smith",
+        "email": "jane@test.com",
+        "role": "admin",
+        "reason": "Need admin access for debugging"
+    }
+
+    response = client.post("/auth/request-access", json=payload)
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    # Verify Alert was created in database
+    alert = db_session.query(Alert).filter(Alert.message.contains("jane@test.com")).first()
+    assert alert is not None
+    assert alert.severity == "warning"
+    assert "Jane Smith" in alert.message
+
+    # Verify AuditLog was created in database
+    audit = db_session.query(AuditLog).filter(AuditLog.action == "request_access").first()
+    assert audit is not None
+    assert audit.resource_id == "jane@test.com"
+

@@ -669,3 +669,11 @@ class AuditLogsListResponse(BaseModel):
     logs: List[AuditLogResponse]
     total: int
 
+
+class AccessRequest(BaseModel):
+    name: str
+    email: str
+    role: str
+    reason: str
+
+
