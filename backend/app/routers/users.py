@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from ..database import get_db, User, AuditLog
-from ..schemas import UserCreate, UserResponse, UserBase
+from ..schemas import UserCreate, UserResponse, UserBase, AuditLogsListResponse
 from ..security import get_current_admin, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -25,6 +25,18 @@ async def list_users(
 ):
     """List all user accounts. Accessible to superadmins only."""
     return db.query(User).order_by(User.id).all()
+
+@router.get("/audit/logs", response_model=AuditLogsListResponse)
+async def get_audit_logs(
+    skip: int = 0,
+    limit: int = 100,
+    superadmin: User = Depends(get_current_superadmin),
+    db: Session = Depends(get_db)
+):
+    """Retrieve paginated audit logs. Restricted to superadmin."""
+    total = db.query(AuditLog).count()
+    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    return {"logs": logs, "total": total}
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(

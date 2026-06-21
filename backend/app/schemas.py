@@ -649,3 +649,23 @@ class ValveCommandResponse(BaseModel):
                 "timestamp": "2026-06-17T20:05:00Z"
             }
         }
+
+
+class AuditLogResponse(BaseModel):
+    id: int
+    user_id: Optional[str] = None
+    action: str
+    resource_type: Optional[str] = None
+    resource_id: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    ip_address: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AuditLogsListResponse(BaseModel):
+    logs: List[AuditLogResponse]
+    total: int
+

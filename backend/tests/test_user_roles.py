@@ -180,3 +180,55 @@ def test_superadmin_role_permissions(auth_client, setup_users_and_device):
     users_resp = auth_client.get("/users", headers=headers)
     assert users_resp.status_code == 200
     assert len(users_resp.json()) == 4
+
+
+def test_get_audit_logs_permissions(auth_client, setup_users_and_device, db_session):
+    """Test permissions for retrieving audit logs."""
+    from app.database import AuditLog
+    from datetime import datetime, timedelta
+
+    # Seed some audit logs with explicit creation times to ensure ordering
+    log1 = AuditLog(
+        user_id="superadmin@test.com",
+        action="test_action_1",
+        resource_type="user",
+        resource_id="user1@test.com",
+        created_at=datetime.utcnow() - timedelta(minutes=5)
+    )
+    log2 = AuditLog(
+        user_id="superadmin@test.com",
+        action="test_action_2",
+        resource_type="user",
+        resource_id="user2@test.com",
+        created_at=datetime.utcnow()
+    )
+    db_session.add(log1)
+    db_session.add(log2)
+    db_session.commit()
+
+    # 1. Superadmin should succeed
+    token_superadmin = create_access_token({"username": "superadmin@test.com", "role": "superadmin"})
+    headers_superadmin = {"Authorization": f"Bearer {token_superadmin}"}
+    resp = auth_client.get("/users/audit/logs?skip=0&limit=10", headers=headers_superadmin)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "logs" in data
+    assert "total" in data
+    assert data["total"] >= 2
+    assert len(data["logs"]) >= 2
+    # Check that they are ordered descending (created_at desc)
+    assert data["logs"][0]["action"] == "test_action_2"
+    assert data["logs"][1]["action"] == "test_action_1"
+
+    # 2. Admin should fail with 403
+    token_admin = create_access_token({"username": "admin@test.com", "role": "admin"})
+    headers_admin = {"Authorization": f"Bearer {token_admin}"}
+    resp = auth_client.get("/users/audit/logs", headers=headers_admin)
+    assert resp.status_code == 403
+
+    # 3. User should fail with 403
+    token_user = create_access_token({"username": "user@test.com", "role": "user"})
+    headers_user = {"Authorization": f"Bearer {token_user}"}
+    resp = auth_client.get("/users/audit/logs", headers=headers_user)
+    assert resp.status_code == 403
+

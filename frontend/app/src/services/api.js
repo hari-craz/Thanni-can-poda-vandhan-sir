@@ -314,4 +314,11 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  async getAuditLogs(skip = 0, limit = 100) {
+    const res = await fetch(`${BASE_URL}/users/audit/logs?skip=${skip}&limit=${limit}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };
