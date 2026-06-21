@@ -46,13 +46,17 @@ app = FastAPI(
     version=settings.api_version,
 )
 
-# Add CORS middleware (permissive for development)
+# Add CORS middleware aligned with settings configuration
+allow_credentials = True
+if "*" in settings.cors_origins:
+    allow_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
 # HTTPS Enforcement & Security Headers Middleware (v2.0.0 Cloudflare Tunnel)

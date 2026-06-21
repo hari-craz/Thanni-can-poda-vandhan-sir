@@ -99,7 +99,7 @@ class APIKey(Base):
     __tablename__ = "api_keys"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False)
+    device_id = Column(String(50), ForeignKey("devices.device_id"), nullable=False, index=True)
     key_hash = Column(String(255), unique=True, nullable=False)
     name = Column(String(100))
     expires_at = Column(DateTime)

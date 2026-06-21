@@ -33,12 +33,31 @@ def validate_api_key(db: Session, api_key: str) -> Optional[Device]:
     Validate an API key and return the associated device.
     Returns None if invalid or expired.
     """
-    # Try to find a matching key
-    api_key_record = db.query(APIKey).filter(
-        APIKey.key_hash == hash_api_key(api_key),  # This won't work - need exact match
-    ).first()
-    
-    # Better approach: fetch candidate keys and verify
+    if not api_key or not isinstance(api_key, str):
+        return None
+
+    # Parse potential device_id candidates from the prefix
+    candidates = []
+    parts = api_key.split("_")
+    if api_key.startswith("hydro_") and len(parts) >= 3:
+        for i in range(1, len(parts) - 1):
+            candidates.append("_".join(parts[1:i+1]))
+
+    # If we have candidate device_ids, query only keys for those devices
+    if candidates:
+        api_key_records = db.query(APIKey).filter(
+            APIKey.device_id.in_(candidates),
+            APIKey.is_active == True,
+            APIKey.revoked_at == None,
+        ).all()
+        for record in api_key_records:
+            if verify_api_key(api_key, record.key_hash):
+                if record.expires_at and record.expires_at < datetime.utcnow():
+                    return None
+                return db.query(Device).filter(Device.device_id == record.device_id).first()
+        return None
+
+    # Fallback to full-table query for legacy or unparseable keys
     api_key_records = db.query(APIKey).filter(
         APIKey.is_active == True,
         APIKey.revoked_at == None,
