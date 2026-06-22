@@ -39,8 +39,9 @@ Each Hydronix device is an independent IoT node.
 1. Continuously collect sensor data at fixed intervals.
 2. Display live readings on the device screen.
 3. Send data to the server when internet is available.
-4. Store data locally on SD card when offline.
-5. Automatically sync buffered data when connection is restored.
+4. Send lightweight health heartbeats every 10 seconds to the backend.
+5. Store data locally on SD card when offline.
+6. Automatically sync buffered data when connection is restored.
 
 Each device must have:
 
@@ -82,10 +83,13 @@ Each ESP32 hosts a lightweight web server for setup.
 
 ### Data Format
 
-1. JSON payloads for all telemetry
-2. Timestamp included in every packet
-3. Retry and reconnection logic for reliability
-4. Buffered offline data must sync later without loss
+1. JSON payloads for all telemetry and heartbeats.
+2. Timestamp included in every packet.
+3. Telemetry and Heartbeat rates:
+   - **Telemetry Data**: Sent at the configured sampling interval (default 60 seconds).
+   - **Health Heartbeats**: Sent every 10 seconds containing device statistics (heap memory, queued records count, SD usage, and stuck sensor flags).
+4. Retry and reconnection logic for reliability.
+5. Buffered offline data must sync later without loss.
 
 Example payload:
 
@@ -109,7 +113,10 @@ The backend handles multiple devices simultaneously.
 
 1. Accept data from multiple ESP devices.
 2. Store sensor data in a database.
-3. Track device status as online or offline.
+3. Track device status as online or offline:
+   - Run a lightweight background task every 5 seconds checking all active devices.
+   - Transition a device to `offline` if no heartbeats or telemetry are received within 15 seconds.
+   - Broadcast status change events immediately to the frontend dashboard over WebSockets.
 4. Process and analyze incoming data.
 5. Provide APIs for the dashboard.
 
