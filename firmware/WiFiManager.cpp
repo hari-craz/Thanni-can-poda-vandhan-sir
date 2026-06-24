@@ -117,7 +117,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
         </div>
         <div class="fg">
           <label>Sampling Interval (seconds)</label>
-          <input type="number" name="sample_interval" value="%d" min="30" max="3600" required>
+          <input type="number" name="sample_interval" value="%d" min="5" max="3600" required>
         </div>
         <div class="fg">
           <label>Firmware Channel</label>
@@ -347,7 +347,7 @@ void handleSavePortal() {
   }
 
   uint32_t interval = (uint32_t)webServer.arg("sample_interval").toInt();
-  config.sample_interval_sec = max(30UL, min(3600UL, (unsigned long)interval));
+  config.sample_interval_sec = max(5UL, min(3600UL, (unsigned long)interval));
 
   String chan = webServer.arg("firmware_channel");
   if (chan == "beta" || chan == "canary") {
@@ -382,6 +382,7 @@ void handleResetPortal() {
 }
 
 void handleCalibratePortal() {
+  Serial.println("[WEBSERVER] Calibration start requested via portal.");
   calibrationSampleCount = 0;
   calibrationStartMs     = millis();
   calibrationRunning     = true;
@@ -410,13 +411,17 @@ void handleCalibrationStatus() {
 }
 
 void handleTestWiFi() {
+  Serial.println("[WEBSERVER] WiFi connection test requested.");
   StaticJsonDocument<256> doc;
   if (WiFi.status() == WL_CONNECTED) {
     doc["status"]  = "Connected";
     doc["details"] = "SSID: " + WiFi.SSID() + " | RSSI: " + String(WiFi.RSSI()) + " dBm";
+    Serial.printf("[WEBSERVER] WiFi connection test: Connected (SSID: %s, RSSI: %d dBm)\n",
+                  WiFi.SSID().c_str(), WiFi.RSSI());
   } else {
     doc["status"]  = "Disconnected";
     doc["details"] = "WiFi link is down.";
+    Serial.println("[WEBSERVER] WiFi connection test: Disconnected");
   }
   String out;
   serializeJson(doc, out);
@@ -424,12 +429,14 @@ void handleTestWiFi() {
 }
 
 void handleTestServer() {
+  Serial.printf("[WEBSERVER] API health test requested for: %s/health\n", config.api_base_url);
   StaticJsonDocument<256> doc;
   doc["url"] = String(config.api_base_url) + "/health";
 
   if (WiFi.status() != WL_CONNECTED) {
     doc["status"]  = "Failed";
     doc["details"] = "WiFi not connected.";
+    Serial.println("[WEBSERVER] API health test failed: WiFi not connected.");
   } else {
     String body;
     uint32_t t0 = millis();
@@ -438,12 +445,15 @@ void handleTestServer() {
     if (code == 200) {
       doc["status"]  = "OK";
       doc["details"] = "HTTPS /health returned 200 in " + String(latency) + "ms";
+      Serial.printf("[WEBSERVER] API health test OK: 200 returned in %lu ms\n", (unsigned long)latency);
     } else if (code < 0) {
       doc["status"]  = "Failed";
       doc["details"] = "TLS/connection error. Check CA cert and api_base_url.";
+      Serial.printf("[WEBSERVER] API health test failed: connection error (code: %d)\n", code);
     } else {
       doc["status"]  = "Error";
       doc["details"] = "HTTP " + String(code) + " from server.";
+      Serial.printf("[WEBSERVER] API health test failed: HTTP %d from server\n", code);
     }
   }
   String out;

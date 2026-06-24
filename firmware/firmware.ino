@@ -126,7 +126,7 @@ void loadFactoryDefaults() {
   config.schema_version      = CONFIG_SCHEMA_VERSION;
   strcpy(config.device_id,   "HYDRO_001");
   config.reset_count         = 0;
-  config.sample_interval_sec = 60;
+  config.sample_interval_sec = 5;
   strcpy(config.api_base_url, "https://api.hydronix.local/v2");
   strcpy(config.firmware_channel, "stable");
   config.server_config_version = 0;
@@ -343,6 +343,7 @@ void taskSensorRead(void* pvParameters) {
       float raw = analogRead(PIN_PH) * (3.3f / 4095.0f) * 3.5f;
       if (calibrationSampleCount < 30) {
         calibrationSamples[calibrationSampleCount++] = raw;
+        Serial.printf("[CAL] Sampling pH: %d/30 (raw: %.3f)\n", calibrationSampleCount, raw);
       }
       if (calibrationSampleCount >= 30) {
         for (int i = 1; i < 30; i++) {
@@ -367,6 +368,9 @@ void taskSensorRead(void* pvParameters) {
 
     SensorReading rd;
     if (reader.performReading(rd, interval, maxStuckSamples)) {
+      Serial.printf("[SENSOR] Reading OK! pH: %.2f | Turbidity: %.2f NTU | TDS: %.1f ppm | Temp: %.1f C | Flow: %.2f L/min (Seq: %lu)\n",
+                    rd.ph, rd.turbidity, rd.tds, rd.temperature, rd.flow_rate, (unsigned long)rd.seq_no);
+
       if (xQueueSend(sensorQueue, &rd, 0) != pdPASS) {
         Serial.println("[SENSOR] sensorQueue full — reading dropped!");
       }
@@ -382,7 +386,12 @@ void taskSensorRead(void* pvParameters) {
       }
       valve_controller.periodicCheck();
     } else {
-      Serial.println("[SENSOR] Reading discarded (out-of-bounds or stuck check).");
+      float raw_ph   = analogRead(PIN_PH)        * (3.3f / 4095.0f) * 3.5f;
+      float raw_turb = analogRead(PIN_TURBIDITY) * (1000.0f / 4095.0f);
+      float raw_tds  = analogRead(PIN_TDS)       * (5000.0f / 4095.0f);
+      float raw_temp = -10.0f + analogRead(PIN_TEMP) * (100.0f / 4095.0f);
+      Serial.printf("[SENSOR] Reading discarded (out-of-bounds or stuck check). Raw values - pH: %.2f, Turbidity: %.2f, TDS: %.1f, Temp: %.1f\n",
+                    raw_ph, raw_turb, raw_tds, raw_temp);
     }
 
     vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(interval * 1000));
@@ -695,7 +704,7 @@ void taskHealthHeartbeat(void* pvParameters) {
                 if (deserializeJson(cfgDoc, cfgBody) == DeserializationError::Ok) {
                   if (cfgDoc.containsKey("sample_interval_sec")) {
                     uint32_t si = (uint32_t)cfgDoc["sample_interval_sec"];
-                    config.sample_interval_sec = max(30UL, min(3600UL, (unsigned long)si));
+                    config.sample_interval_sec = max(5UL, min(3600UL, (unsigned long)si));
                   }
                   if (cfgDoc.containsKey("ph_offset"))
                     config.ph_offset = (float)cfgDoc["ph_offset"];
@@ -726,11 +735,29 @@ void taskHealthHeartbeat(void* pvParameters) {
   }
 }
 
+void scanI2CBus() {
+  Serial.println("[I2C] Scanning bus...");
+  byte count = 0;
+  for (byte address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    byte error = Wire.endTransmission();
+    if (error == 0) {
+      Serial.printf("[I2C] Found device at address 0x%02X\n", address);
+      count++;
+    }
+  }
+  if (count == 0) {
+    Serial.println("[I2C] No I2C devices found!");
+  }
+}
+
 // ─── SETUP & LOOP ────────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
 
   Wire.begin(I2C_SDA, I2C_SCL);
+  delay(100); // Give I2C bus and LCD backpack time to power up and stabilize
+  scanI2CBus(); // Run diagnostics scan and print to Serial Monitor
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0); lcd.print("Hydronix v2.0 Boot");

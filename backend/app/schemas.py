@@ -196,7 +196,7 @@ class DeviceRemoteConfigResponse(BaseModel):
 
 class DeviceRemoteConfigUpdateRequest(BaseModel):
     """PATCH /devices/:device_id/config — admin sets new remote config values."""
-    sample_interval_sec: Optional[int] = Field(None, ge=30, le=3600)
+    sample_interval_sec: Optional[int] = Field(None, ge=5, le=3600)
     firmware_channel: Optional[str] = Field(None, pattern="^(stable|beta|canary)$")
     ph_offset: Optional[float] = None
     turbidity_offset: Optional[float] = None
