@@ -36,9 +36,12 @@ def override_session_local(monkeypatch, engine):
     )
     import app.database
     import app.main
+    import app.config
     monkeypatch.setattr(app.database, "SessionLocal", TestingSessionLocal)
     monkeypatch.setattr(app.main, "SessionLocal", TestingSessionLocal)
     monkeypatch.setattr(app.database, "engine", engine)
+    monkeypatch.setattr(app.config.settings, "https_only", False)
+    monkeypatch.setattr(app.config.settings, "force_https_redirect", False)
 
 
 @pytest.fixture(scope="function")

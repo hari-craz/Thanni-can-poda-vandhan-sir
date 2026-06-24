@@ -162,6 +162,7 @@ class DeviceHeartbeatResponse(BaseModel):
     server_timestamp: datetime
     # v2 additions: tells the device what server config version is current
     config_version: int = 0
+    valve_status: str = "open"
 
 
 class DeviceRemoteConfigResponse(BaseModel):

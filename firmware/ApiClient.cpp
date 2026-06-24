@@ -76,8 +76,15 @@ static void attachAuthHeaders(HTTPClient& https, const char* method,
 }
 
 // Signed HTTPS POST. Returns HTTP status code, or negative on connection error.
-int httpsSignedPost(const char* path, const String& body) {
+int httpsSignedPost(const char* path, const String& body, String* responseBody) {
   if (!isOnline) return -1;
+
+  if (httpsMutex != nullptr) {
+    if (xSemaphoreTake(httpsMutex, pdMS_TO_TICKS(30000)) != pdTRUE) {
+      Serial.println("[TLS] POST failed to acquire HTTPS mutex within 30s");
+      return -1;
+    }
+  }
 
   char url[384];
   size_t baseLen = strlen(config.api_base_url);
@@ -103,18 +110,34 @@ int httpsSignedPost(const char* path, const String& body) {
   https.setTimeout(15000);
 
   int code = https.POST(body);
-  if (code < 0) {
+  if (code > 0) {
+    if (responseBody != nullptr) {
+      *responseBody = https.getString();
+    }
+  } else {
     char errBuf[128];
     secureClient.lastError(errBuf, sizeof(errBuf));
     Serial.printf("[TLS] POST connection error: %s (code: %d)\n", errBuf, code);
   }
   https.end();
+
+  if (httpsMutex != nullptr) {
+    xSemaphoreGive(httpsMutex);
+  }
+
   return code;
 }
 
 // Signed HTTPS GET. Returns HTTP status code; body written to responseBody.
 int httpsSignedGet(const char* path, String& responseBody) {
   if (!isOnline) return -1;
+
+  if (httpsMutex != nullptr) {
+    if (xSemaphoreTake(httpsMutex, pdMS_TO_TICKS(30000)) != pdTRUE) {
+      Serial.println("[TLS] GET failed to acquire HTTPS mutex within 30s");
+      return -1;
+    }
+  }
 
   char url[384];
   size_t baseLen = strlen(config.api_base_url);
@@ -144,5 +167,10 @@ int httpsSignedGet(const char* path, String& responseBody) {
     Serial.printf("[TLS] GET connection error: %s (code: %d)\n", errBuf, code);
   }
   https.end();
+
+  if (httpsMutex != nullptr) {
+    xSemaphoreGive(httpsMutex);
+  }
+
   return code;
 }

@@ -69,6 +69,7 @@ LiquidCrystal_I2C lcd(LCD_ADDR, 20, 4);
 QueueHandle_t     sensorQueue  = NULL;
 QueueHandle_t     displayQueue = NULL;
 SemaphoreHandle_t sdMutex      = NULL;
+SemaphoreHandle_t httpsMutex   = NULL;
 
 // Global state
 bool     isApMode       = false;
@@ -719,19 +720,27 @@ void taskHealthHeartbeat(void* pvParameters) {
       char path[96];
       snprintf(path, sizeof(path), "/devices/%s/heartbeat", config.device_id);
       String responseBody;
-      int code = httpsSignedPost(path, payload);
+      int code = httpsSignedPost(path, payload, &responseBody);
 
-      if (code == HTTP_CODE_OK) {
-        int getCode = httpsSignedGet(path, responseBody);
-        if (getCode == HTTP_CODE_OK && responseBody.length() > 0) {
-          StaticJsonDocument<256> resp;
-          if (deserializeJson(resp, responseBody) == DeserializationError::Ok) {
-            uint32_t remoteVer = resp["config_version"] | 0;
-            if (remoteVer > config.server_config_version) {
-              char cfgPath[96];
-              snprintf(cfgPath, sizeof(cfgPath), "/devices/%s/config", config.device_id);
-              String cfgBody;
-              int cfgCode = httpsSignedGet(cfgPath, cfgBody);
+      if (code == HTTP_CODE_OK && responseBody.length() > 0) {
+        StaticJsonDocument<256> resp;
+        if (deserializeJson(resp, responseBody) == DeserializationError::Ok) {
+          // Sync remote valve state
+          if (resp.containsKey("valve_status")) {
+            String valveStatus = resp["valve_status"].as<String>();
+            if (valveStatus == "closed") {
+              valve_controller.closeValveRemote("remote_command");
+            } else if (valveStatus == "open") {
+              valve_controller.openValveRemote("remote_command");
+            }
+          }
+
+          uint32_t remoteVer = resp["config_version"] | 0;
+          if (remoteVer > config.server_config_version) {
+            char cfgPath[96];
+            snprintf(cfgPath, sizeof(cfgPath), "/devices/%s/config", config.device_id);
+            String cfgBody;
+            int cfgCode = httpsSignedGet(cfgPath, cfgBody);
               if (cfgCode == HTTP_CODE_OK && cfgBody.length() > 0) {
                 StaticJsonDocument<512> cfgDoc;
                 if (deserializeJson(cfgDoc, cfgBody) == DeserializationError::Ok) {
@@ -843,6 +852,7 @@ void setup() {
   initWebServer();
 
   sdMutex      = xSemaphoreCreateMutex();
+  httpsMutex   = xSemaphoreCreateMutex();
   sensorQueue  = xQueueCreate(10, sizeof(SensorReading));
   displayQueue = xQueueCreate(5,  sizeof(SensorReading));
 

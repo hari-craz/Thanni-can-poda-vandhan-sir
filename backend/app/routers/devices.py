@@ -517,6 +517,7 @@ async def device_heartbeat(
             ok=True,
             server_timestamp=datetime.utcnow(),
             config_version=server_config_version,
+            valve_status=device.valve_status,
         )
 
     except HTTPException:

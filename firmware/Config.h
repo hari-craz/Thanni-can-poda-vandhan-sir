@@ -77,6 +77,7 @@ extern LiquidCrystal_I2C lcd;
 extern QueueHandle_t     sensorQueue;
 extern QueueHandle_t     displayQueue;
 extern SemaphoreHandle_t sdMutex;
+extern SemaphoreHandle_t httpsMutex;
 
 // Global state
 extern bool     isApMode;
