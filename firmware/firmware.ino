@@ -420,7 +420,8 @@ void taskDisplayUpdate(void* pvParameters) {
       static bool showIP = false;
       showIP = !showIP;
       if (isOnline && showIP) {
-        snprintf(line, sizeof(line), "IP: %-16s", WiFi.localIP().toString().c_str());
+        IPAddress ip = WiFi.localIP();
+        snprintf(line, sizeof(line), "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
       } else {
         int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
         snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
@@ -758,7 +759,7 @@ void setup() {
   displayQueue = xQueueCreate(5,  sizeof(SensorReading));
 
   xTaskCreatePinnedToCore(taskSensorRead,    "SensorSampling", 4096, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(taskDisplayUpdate, "LCDDisplay",     2048, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(taskDisplayUpdate, "LCDDisplay",     4096, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(taskNetworkManager, "NetWatchdog",  3072, NULL, 2, NULL, 0);
   xTaskCreatePinnedToCore(taskUplinkSender,   "UplinkSender", 8192, NULL, 2, NULL, 0);
   xTaskCreatePinnedToCore(taskOfflineSync,    "OfflineSync",  8192, NULL, 1, NULL, 0);
