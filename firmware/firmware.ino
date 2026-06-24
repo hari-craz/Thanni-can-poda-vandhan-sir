@@ -390,54 +390,75 @@ void taskSensorRead(void* pvParameters) {
 }
 
 void taskDisplayUpdate(void* pvParameters) {
-  SensorReading rd;
+  SensorReading lastRd;
+  memset(&lastRd, 0, sizeof(SensorReading));
+  bool hasReading = false;
   char line[21];
 
   for (;;) {
-    if (xQueueReceive(displayQueue, &rd, pdMS_TO_TICKS(2500)) == pdPASS) {
-      lcd.setCursor(0, 0);
-      if (isPhStuck || isTurbStuck || isTdsStuck || isTempStuck || isFlowStuck) {
-        String stuckStr = String(isPhStuck ? "pH " : "") +
-                          String(isTurbStuck ? "Tb " : "") +
-                          String(isTdsStuck ? "TD " : "") +
-                          String(isTempStuck ? "Tm " : "") +
-                          String(isFlowStuck ? "Fl" : "");
-        snprintf(line, sizeof(line), "STUCK:%-14s", stuckStr.c_str());
-      } else {
-        snprintf(line, sizeof(line), "%-9s pH:%-6.1f",
-                 config.device_id, rd.ph);
-        if (rd.ph < 6.5f || rd.ph > 8.5f) line[18] = '!';
-      }
-      lcd.print(line);
-
-      lcd.setCursor(0, 1);
-      snprintf(line, sizeof(line), "Tb:%-6.1f  T:%-4.0fC",
-               rd.turbidity, rd.temperature);
-      if (rd.turbidity > 5.0f) line[9] = '!';
-      lcd.print(line);
-
-      lcd.setCursor(0, 2);
-      static bool showIP = false;
-      showIP = !showIP;
-      if (isOnline && showIP) {
-        IPAddress ip = WiFi.localIP();
-        snprintf(line, sizeof(line), "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-      } else {
-        int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
-        snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
-                 isOnline ? "Online" : "Offline", rssi);
-      }
-      lcd.print(line);
-
-      lcd.setCursor(0, 3);
-      if (lowStorageMode) {
-        snprintf(line, sizeof(line), "%-20s", "SD CARD FULL ALERT! ");
-      } else {
-        snprintf(line, sizeof(line), "Q:%-6lu %s",
-                 (unsigned long)globalSeqNo, lastSendTimeStr);
-      }
-      lcd.print(line);
+    SensorReading newRd;
+    if (xQueueReceive(displayQueue, &newRd, pdMS_TO_TICKS(1000)) == pdPASS) {
+      lastRd = newRd;
+      hasReading = true;
     }
+
+    if (!hasReading) {
+      lcd.setCursor(0, 0);
+      lcd.print("Hydronix v2.0       ");
+      lcd.setCursor(0, 1);
+      lcd.print("Waiting for sensor  ");
+      lcd.setCursor(0, 2);
+      int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+      snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
+               isOnline ? "Online" : "Offline", rssi);
+      lcd.print(line);
+      lcd.setCursor(0, 3);
+      lcd.print("Initializing...     ");
+      continue;
+    }
+
+    lcd.setCursor(0, 0);
+    if (isPhStuck || isTurbStuck || isTdsStuck || isTempStuck || isFlowStuck) {
+      String stuckStr = String(isPhStuck ? "pH " : "") +
+                        String(isTurbStuck ? "Tb " : "") +
+                        String(isTdsStuck ? "TD " : "") +
+                        String(isTempStuck ? "Tm " : "") +
+                        String(isFlowStuck ? "Fl" : "");
+      snprintf(line, sizeof(line), "STUCK:%-14s", stuckStr.c_str());
+    } else {
+      snprintf(line, sizeof(line), "%-9s pH:%-6.1f",
+               config.device_id, lastRd.ph);
+      if (lastRd.ph < 6.5f || lastRd.ph > 8.5f) line[18] = '!';
+    }
+    lcd.print(line);
+
+    lcd.setCursor(0, 1);
+    snprintf(line, sizeof(line), "Tb:%-6.1f  T:%-4.0fC",
+             lastRd.turbidity, lastRd.temperature);
+    if (lastRd.turbidity > 5.0f) line[9] = '!';
+    lcd.print(line);
+
+    lcd.setCursor(0, 2);
+    static bool showIP = false;
+    showIP = !showIP;
+    if (isOnline && showIP) {
+      IPAddress ip = WiFi.localIP();
+      snprintf(line, sizeof(line), "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+    } else {
+      int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+      snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
+               isOnline ? "Online" : "Offline", rssi);
+    }
+    lcd.print(line);
+
+    lcd.setCursor(0, 3);
+    if (lowStorageMode) {
+      snprintf(line, sizeof(line), "%-20s", "SD CARD FULL ALERT! ");
+    } else {
+      snprintf(line, sizeof(line), "Q:%-6lu %s",
+               (unsigned long)globalSeqNo, lastSendTimeStr);
+    }
+    lcd.print(line);
   }
 }
 
@@ -721,11 +742,18 @@ void setup() {
 
   valve_controller.begin();
 
-  if (!SD.begin(SD_CS_PIN)) {
+  // Explicitly configure SPI and SD Card chip select
+  SPI.begin(18, 19, 23, SD_CS_PIN); // SCK=18, MISO=19, MOSI=23, SS=5
+  pinMode(SD_CS_PIN, OUTPUT);
+  digitalWrite(SD_CS_PIN, HIGH);
+  delay(100);
+
+  if (!SD.begin(SD_CS_PIN, SPI, 4000000)) { // Run at 4MHz for reliability
     sdAvailable    = false;
     lowStorageMode = true;
   } else {
     sdAvailable = true;
+    lowStorageMode = false;
     if (SD.exists("/data/queue_old.jsonl")) {
       if (!SD.exists("/data/queue.jsonl")) {
         SD.rename("/data/queue_old.jsonl", "/data/queue.jsonl");

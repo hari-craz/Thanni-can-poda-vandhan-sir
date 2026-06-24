@@ -22,8 +22,8 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
     *{box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
       background:var(--bg);background-image:
-        radial-gradient(circle at 10% 20%,rgba(0,229,255,.05) 0%,transparent 40%),
-        radial-gradient(circle at 90% 80%,rgba(255,0,127,.05) 0%,transparent 40%);
+        radial-gradient(circle at 10%% 20%%,rgba(0,229,255,.05) 0%%,transparent 40%%),
+        radial-gradient(circle at 90%% 80%%,rgba(255,0,127,.05) 0%%,transparent 40%%);
       margin:0;padding:20px;color:var(--text)}
     .container{max-width:820px;margin:0 auto}
     header{text-align:center;margin-bottom:30px}
@@ -41,7 +41,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
     .fg{margin-bottom:14px}
     label{display:block;font-weight:600;margin-bottom:5px;font-size:.85rem;color:var(--muted)}
     input[type=text],input[type=password],input[type=number],select{
-      width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);
+      width:100%%;background:rgba(0,0,0,.3);border:1px solid var(--border);
       border-radius:8px;padding:10px 14px;color:#fff;font-size:.95rem;
       transition:border-color .3s,box-shadow .3s}
     input:focus,select:focus{outline:none;border-color:var(--cyan);
@@ -49,7 +49,7 @@ const char SETUP_HTML[] PROGMEM = R"rawliteral(
     .note{font-size:.78rem;color:var(--muted);margin-top:4px}
     .btn{background:linear-gradient(135deg,#00c6ff,#0072ff);color:#fff;
       padding:12px 20px;border:none;border-radius:8px;cursor:pointer;
-      font-size:.95rem;font-weight:600;width:100%;transition:all .2s;margin-top:4px}
+      font-size:.95rem;font-weight:600;width:100%%;transition:all .2s;margin-top:4px}
     .btn:hover{opacity:.9;transform:translateY(-1px)}
     .btn-danger{background:linear-gradient(135deg,var(--pink),#d90429)}
     .btn-secondary{background:rgba(255,255,255,.08);color:var(--text);

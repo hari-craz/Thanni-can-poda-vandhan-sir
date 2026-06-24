@@ -9,6 +9,7 @@
 #include <DNSServer.h>
 #include <ArduinoJson.h>
 #include <FS.h>
+#include <SPI.h>
 #include <SD.h>
 #include <HTTPClient.h>
 
