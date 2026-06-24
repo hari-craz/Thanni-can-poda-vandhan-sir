@@ -128,46 +128,6 @@ async def get_system_status(request: Request, db: Session = Depends(get_db)):
         live_users = get_active_users()
         public_viewers = get_public_viewers()
 
-        # Seed mock active sessions if fewer than 3 users to populate dashboard
-        if len(live_users) < 3:
-            simulated = [
-                {
-                    "email": "ramesh.operator@hydronix.local",
-                    "name": "Operator Ramesh",
-                    "role": "admin",
-                    "last_active": time.time() - random.uniform(2.0, 15.0)
-                },
-                {
-                    "email": "priya.operator@hydronix.local",
-                    "name": "Operator Priya",
-                    "role": "admin",
-                    "last_active": time.time() - random.uniform(5.0, 30.0)
-                }
-            ]
-            existing_emails = {u["email"] for u in live_users}
-            for u in simulated:
-                if u["email"] not in existing_emails:
-                    live_users.append(u)
-
-        # Seed mock public sessions if fewer than 3 viewers to show UI layout
-        if len(public_viewers) < 3:
-            simulated_viewers = [
-                {
-                    "viewer_id": "guest_39a2",
-                    "location": "Adyar, Chennai",
-                    "last_active": time.time() - random.uniform(2.0, 10.0)
-                },
-                {
-                    "viewer_id": "guest_d9f1",
-                    "location": "Velachery, Chennai",
-                    "last_active": time.time() - random.uniform(5.0, 20.0)
-                }
-            ]
-            existing_vids = {v["viewer_id"] for v in public_viewers}
-            for v in simulated_viewers:
-                if v["viewer_id"] not in existing_vids:
-                    public_viewers.append(v)
-
         # 3. Calculate dynamic network metrics (Mbps) based on active devices
         total_devices = db.query(Device).count()
         active_devices = db.query(Device).filter(Device.status == "online").count()
