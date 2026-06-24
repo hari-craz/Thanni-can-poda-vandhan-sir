@@ -8,6 +8,9 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <ArduinoJson.h>
+#include <FS.h>
+#include <SD.h>
+#include <HTTPClient.h>
 
 // ─── HARDWARE PINS ───────────────────────────────────────────────────────────
 #define SD_CS_PIN       5
@@ -126,5 +129,7 @@ void getAPPassword(char* outPass, size_t outSize);
 void getUTCTime(char* buffer, size_t maxLen, bool& synced);
 int getQueueCount();
 float getSDUsagePercent();
+void generateCSRFToken();
+void initWebServer();
 
 #endif // CONFIG_H

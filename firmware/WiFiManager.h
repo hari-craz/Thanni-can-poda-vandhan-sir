@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 void startSetupPortal();
+void initWebServer();
 void handleRootPortal();
 void handleSavePortal();
 void handleResetPortal();

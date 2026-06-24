@@ -173,6 +173,14 @@ void loadConfiguration() {
   }
 }
 
+void generateCSRFToken() {
+  const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  for (int i = 0; i < 16; i++) {
+    csrfToken[i] = charset[esp_random() % (sizeof(charset) - 1)];
+  }
+  csrfToken[16] = '\0';
+}
+
 void factoryReset() {
   pref.begin("hydronix", false);
   pref.clear();
@@ -389,12 +397,12 @@ void taskDisplayUpdate(void* pvParameters) {
     if (xQueueReceive(displayQueue, &rd, pdMS_TO_TICKS(2500)) == pdPASS) {
       lcd.setCursor(0, 0);
       if (isPhStuck || isTurbStuck || isTdsStuck || isTempStuck || isFlowStuck) {
-        snprintf(line, sizeof(line), "STUCK:%-14s",
-          String(isPhStuck ? "pH " : "") +
-          String(isTurbStuck ? "Tb " : "") +
-          String(isTdsStuck ? "TD " : "") +
-          String(isTempStuck ? "Tm " : "") +
-          String(isFlowStuck ? "Fl" : ""));
+        String stuckStr = String(isPhStuck ? "pH " : "") +
+                          String(isTurbStuck ? "Tb " : "") +
+                          String(isTdsStuck ? "TD " : "") +
+                          String(isTempStuck ? "Tm " : "") +
+                          String(isFlowStuck ? "Fl" : "");
+        snprintf(line, sizeof(line), "STUCK:%-14s", stuckStr.c_str());
       } else {
         snprintf(line, sizeof(line), "%-9s pH:%-6.1f",
                  config.device_id, rd.ph);
@@ -409,9 +417,15 @@ void taskDisplayUpdate(void* pvParameters) {
       lcd.print(line);
 
       lcd.setCursor(0, 2);
-      int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
-      snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
-               isOnline ? "Online" : "Offline", rssi);
+      static bool showIP = false;
+      showIP = !showIP;
+      if (isOnline && showIP) {
+        snprintf(line, sizeof(line), "IP: %-16s", WiFi.localIP().toString().c_str());
+      } else {
+        int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+        snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
+                 isOnline ? "Online" : "Offline", rssi);
+      }
       lcd.print(line);
 
       lcd.setCursor(0, 3);
@@ -427,8 +441,14 @@ void taskDisplayUpdate(void* pvParameters) {
 }
 
 void taskNetworkManager(void* pvParameters) {
+  bool wasConnected = false;
+
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
+      if (wasConnected) {
+        Serial.println("[WIFI] Disconnected!");
+        wasConnected = false;
+      }
       isOnline = false;
       WiFi.begin(config.wifi_ssid, config.wifi_password);
 
@@ -442,16 +462,23 @@ void taskNetworkManager(void* pvParameters) {
         WiFi.begin(config.wifi_ssid, config.wifi_password);
       }
 
+      isOnline = true;
+      wasConnected = true;
+      Serial.printf("[WIFI] Connected! Local IP: %s\n", WiFi.localIP().toString().c_str());
+
       configTime(0, 0, "pool.ntp.org", "time.nist.gov");
       struct tm timeinfo;
       if (getLocalTime(&timeinfo)) {
-        isOnline = true;
         bool tOk = false;
         getUTCTime(config.last_ntp_sync, sizeof(config.last_ntp_sync), tOk);
         saveConfiguration();
       }
     } else {
       isOnline = true;
+      if (!wasConnected) {
+        Serial.printf("[WIFI] Connected! Local IP: %s\n", WiFi.localIP().toString().c_str());
+        wasConnected = true;
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(30000));
@@ -724,6 +751,7 @@ void setup() {
   }
 
   WiFi.begin(config.wifi_ssid, config.wifi_password);
+  initWebServer();
 
   sdMutex      = xSemaphoreCreateMutex();
   sensorQueue  = xQueueCreate(10, sizeof(SensorReading));
@@ -740,7 +768,7 @@ void setup() {
 void loop() {
   if (isApMode) {
     dnsServer.processNextRequest();
-    webServer.handleClient();
   }
+  webServer.handleClient();
   delay(1);
 }

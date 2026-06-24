@@ -451,17 +451,12 @@ void handleTestServer() {
   webServer.send(200, "application/json", out);
 }
 
-void startSetupPortal() {
-  isApMode = true;
+void initWebServer() {
+  static bool initialized = false;
+  if (initialized) return;
+  initialized = true;
+
   generateCSRFToken();
-
-  char apSSID[64];
-  char apPass[32];
-  snprintf(apSSID, sizeof(apSSID), "Hydronix_Setup_%s", config.device_id);
-  getAPPassword(apPass, sizeof(apPass));
-
-  WiFi.softAP(apSSID, apPass);
-  dnsServer.start(53, "*", WiFi.softAPIP());
 
   webServer.on("/",                   HTTP_GET,  handleRootPortal);
   webServer.on("/save",               HTTP_POST, handleSavePortal);
@@ -471,6 +466,22 @@ void startSetupPortal() {
   webServer.on("/test-wifi",          HTTP_GET,  handleTestWiFi);
   webServer.on("/test-server",        HTTP_GET,  handleTestServer);
   webServer.begin();
+
+  Serial.println("[WEBSERVER] Local dashboard server started.");
+}
+
+void startSetupPortal() {
+  isApMode = true;
+
+  char apSSID[64];
+  char apPass[32];
+  snprintf(apSSID, sizeof(apSSID), "Hydronix_Setup_%s", config.device_id);
+  getAPPassword(apPass, sizeof(apPass));
+
+  WiFi.softAP(apSSID, apPass);
+  dnsServer.start(53, "*", WiFi.softAPIP());
+
+  initWebServer();
 
   Serial.printf("[PORTAL] AP SSID: %s  Password: %s  IP: %s\n",
                 apSSID, apPass, WiFi.softAPIP().toString().c_str());
