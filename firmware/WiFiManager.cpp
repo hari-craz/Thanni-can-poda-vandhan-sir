@@ -263,7 +263,7 @@ void handleRootPortal() {
 
   int qCount = getQueueCount();
 
-  const size_t BUF_SIZE = 9000;
+  const size_t BUF_SIZE = 16384;
   char* html = (char*)malloc(BUF_SIZE);
   if (!html) {
     webServer.send(500, "text/plain", "OOM");
