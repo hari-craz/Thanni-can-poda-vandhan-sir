@@ -523,7 +523,7 @@ void taskNetworkManager(void* pvParameters) {
     if (isOnline) {
       if (!ntpInitialized) {
         Serial.println("[NTP] Initializing configTime...");
-        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        configTime(0, 0, "pool.ntp.org", "time.google.com", "time.windows.com");
         ntpInitialized = true;
       }
 
@@ -771,9 +771,8 @@ void taskHealthHeartbeat(void* pvParameters) {
           }
         }
       }
+      vTaskDelay(pdMS_TO_TICKS(10000));
     }
-
-    vTaskDelay(pdMS_TO_TICKS(10000));
   }
 
 

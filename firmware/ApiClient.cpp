@@ -3,6 +3,85 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include "mbedtls/md.h"
+#include <sys/time.h>
+#include <time.h>
+
+// Convert UTC struct tm to epoch time manually to avoid timezone offset issues
+static time_t parseHTTPDateToEpoch(const String& dateStr) {
+  int commaIdx = dateStr.indexOf(',');
+  if (commaIdx == -1) return 0;
+  
+  String trimmed = dateStr.substring(commaIdx + 2);
+  trimmed.trim(); // E.g., "24 Jun 2026 14:42:05 GMT"
+  
+  char monthStr[4];
+  int day = 0, year = 0, hour = 0, minute = 0, second = 0;
+  
+  if (sscanf(trimmed.c_str(), "%d %3s %d %d:%d:%d", 
+             &day, monthStr, &year, &hour, &minute, &second) != 6) {
+    return 0;
+  }
+  
+  const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+  int month = -1;
+  for (int i = 0; i < 12; i++) {
+    if (strcmp(monthStr, months[i]) == 0) {
+      month = i;
+      break;
+    }
+  }
+  
+  if (month == -1) return 0;
+  
+  struct tm tm_time;
+  tm_time.tm_sec = second;
+  tm_time.tm_min = minute;
+  tm_time.tm_hour = hour;
+  tm_time.tm_mday = day;
+  tm_time.tm_mon = month;
+  tm_time.tm_year = year - 1900;
+  tm_time.tm_isdst = 0;
+  
+  int y = tm_time.tm_year + 1900;
+  int m = tm_time.tm_mon;
+  int d = tm_time.tm_mday;
+  
+  const int days_before_month[] = {
+    0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+  };
+  
+  int num_leap_years = (y - 1969) / 4 - (y - 1901) / 100 + (y - 1601) / 400;
+  long total_days = (y - 1970) * 365 + num_leap_years + days_before_month[m] + (d - 1);
+  
+  bool is_leap_year = (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0));
+  if (is_leap_year && m > 1) {
+    total_days += 1;
+  }
+  
+  return total_days * 86400 + tm_time.tm_hour * 3600 + tm_time.tm_min * 60 + tm_time.tm_sec;
+}
+
+static void syncTimeFromHTTPDate(const String& dateHeader) {
+  time_t now = time(nullptr);
+  if (now > 1600000000) { // Clock is already synced (year > 2020)
+    return;
+  }
+  
+  time_t t = parseHTTPDateToEpoch(dateHeader);
+  if (t > 1600000000) {
+    struct timeval tv;
+    tv.tv_sec = t;
+    tv.tv_usec = 0;
+    settimeofday(&tv, nullptr);
+    
+    struct tm ts_tm;
+    gmtime_r(&t, &ts_tm);
+    strftime(config.last_ntp_sync, sizeof(config.last_ntp_sync), "%Y-%m-%dT%H:%M:%SZ", &ts_tm);
+    saveConfiguration();
+    Serial.printf("[NTP] Clock synced via HTTP Date Header: %s\n", config.last_ntp_sync);
+  }
+}
 
 // SHA256 of empty string — used for GET signing
 static const char SHA256_EMPTY[] = "e3b0c44298fc1c149afbf4c8996fb924"
@@ -110,6 +189,9 @@ int httpsSignedPost(const char* path, const String& body, String* responseBody) 
   attachAuthHeaders(https, "POST", path, bodyHash);
   https.setTimeout(15000);
 
+  const char* headerKeys[] = {"Date"};
+  https.collectHeaders(headerKeys, 1);
+
   int code = https.POST(body);
   if (code > 0) {
     if (responseBody != nullptr) {
@@ -120,6 +202,12 @@ int httpsSignedPost(const char* path, const String& body, String* responseBody) 
     secureClient.lastError(errBuf, sizeof(errBuf));
     Serial.printf("[TLS] POST connection error: %s (code: %d)\n", errBuf, code);
   }
+
+  String dateHeader = https.header("Date");
+  if (dateHeader.length() > 0) {
+    syncTimeFromHTTPDate(dateHeader);
+  }
+
   https.end();
 
   if (httpsMutex != nullptr) {
@@ -160,6 +248,9 @@ int httpsSignedGet(const char* path, String& responseBody) {
   attachAuthHeaders(https, "GET", path, SHA256_EMPTY);
   https.setTimeout(15000);
 
+  const char* headerKeys[] = {"Date"};
+  https.collectHeaders(headerKeys, 1);
+
   int code = https.GET();
   if (code > 0) {
     responseBody = https.getString();
@@ -168,6 +259,12 @@ int httpsSignedGet(const char* path, String& responseBody) {
     secureClient.lastError(errBuf, sizeof(errBuf));
     Serial.printf("[TLS] GET connection error: %s (code: %d)\n", errBuf, code);
   }
+
+  String dateHeader = https.header("Date");
+  if (dateHeader.length() > 0) {
+    syncTimeFromHTTPDate(dateHeader);
+  }
+
   https.end();
 
   if (httpsMutex != nullptr) {
