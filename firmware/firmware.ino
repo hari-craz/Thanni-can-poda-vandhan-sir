@@ -775,7 +775,7 @@ void taskHealthHeartbeat(void* pvParameters) {
 
     vTaskDelay(pdMS_TO_TICKS(10000));
   }
-}
+
 
 void scanI2CBus() {
   Serial.println("[I2C] Scanning bus...");

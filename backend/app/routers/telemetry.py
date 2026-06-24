@@ -132,6 +132,8 @@ async def ingest_sensor_data(
             received_at=server_now,
             timestamp_source=timestamp_source,
             trace_id=trace_id,
+            valve_state=request.valve_state,
+            valve_last_toggled=request.valve_last_toggled,
         )
         db.add(sensor_data)
         db.flush() # Assign ID to sensor_data
@@ -203,6 +205,10 @@ async def ingest_sensor_data(
         if device:
             device.last_seen = datetime.utcnow()
             device.status = "online"
+            if request.valve_state in ("open", "closed"):
+                device.valve_status = request.valve_state
+            if request.valve_last_toggled is not None:
+                device.valve_last_toggled = request.valve_last_toggled
         
         # Check for alerts (primary rule-based)
         alert_severity = alert_manager.get_alert_severity(quality_score)

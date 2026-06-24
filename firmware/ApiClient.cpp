@@ -106,6 +106,7 @@ int httpsSignedPost(const char* path, const String& body, String* responseBody) 
   HTTPClient https;
   https.begin(secureClient, url);
   https.addHeader("Content-Type", "application/json");
+  https.addHeader("Connection", "close");
   attachAuthHeaders(https, "POST", path, bodyHash);
   https.setTimeout(15000);
 
@@ -155,6 +156,7 @@ int httpsSignedGet(const char* path, String& responseBody) {
 
   HTTPClient https;
   https.begin(secureClient, url);
+  https.addHeader("Connection", "close");
   attachAuthHeaders(https, "GET", path, SHA256_EMPTY);
   https.setTimeout(15000);
 

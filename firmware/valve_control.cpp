@@ -25,18 +25,18 @@ ValveController::~ValveController() {}
 void ValveController::begin() {
   pinMode(VALVE_GPIO_PIN, OUTPUT);
   
-  // Set initial state based on failsafe mode
-  // LOW = de-energized = open (for normally-open solenoid)
+  // Set initial state to failsafe (de-energized = LOW pin)
+  digitalWrite(VALVE_GPIO_PIN, LOW);
+  
   if (VALVE_NORMALLY_OPEN) {
-    digitalWrite(VALVE_GPIO_PIN, LOW);
     current_state = VALVE_OPEN;
   } else {
-    digitalWrite(VALVE_GPIO_PIN, HIGH);
     current_state = VALVE_CLOSED;
   }
   
   last_toggle_time = time(NULL);
-  Serial.println("[VALVE] Controller initialized - Normally Open Failsafe");
+  Serial.printf("[VALVE] Controller initialized - %s Failsafe (de-energized)\n",
+                VALVE_NORMALLY_OPEN ? "Normally Open" : "Normally Closed");
 }
 
 bool ValveController::isQualitySafe(float ph, float turbidity, float tds, float temperature) {
