@@ -32,6 +32,7 @@ from ..schemas import (
 )
 from ..main import cache, get_device_id_from_auth, get_current_admin
 from ..security import get_current_superadmin, track_active_user, get_active_users
+from ..time_sync import time_synchronizer
 
 
 logger = logging.getLogger(__name__)
@@ -163,6 +164,7 @@ async def get_system_status(request: Request, db: Session = Depends(get_db)):
             db_connections=db_connections,
             live_users=live_users,
             public_viewers=public_viewers,
+            server_timestamp=time_synchronizer.get_current_time(),
             transport="https",
         )
     except Exception as e:

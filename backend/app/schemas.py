@@ -454,6 +454,7 @@ class SystemStatusResponse(BaseModel):
     db_connections: int
     live_users: List[LiveUserResponse]
     public_viewers: List[PublicViewerResponse]
+    server_timestamp: float
     transport: str = "https"  # always https in v2
 
     class Config:

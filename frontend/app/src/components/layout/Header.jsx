@@ -7,6 +7,37 @@ export default function Header({ currentUser, initials, onLogout, onMenuClick })
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [alerts, setAlerts] = useState([]);
   
+  const [timeOffset, setTimeOffset] = useState(0);
+  const [timeString, setTimeString] = useState('');
+
+  // Sync clock offset with server NTP-adjusted time
+  useEffect(() => {
+    const syncTimeOffset = async () => {
+      try {
+        const statusData = await api.getSystemStatus();
+        if (statusData && statusData.server_timestamp) {
+          const offset = (statusData.server_timestamp * 1000) - Date.now();
+          setTimeOffset(offset);
+        }
+      } catch (err) {
+        console.warn('Failed to sync time offset with server:', err);
+      }
+    };
+    syncTimeOffset();
+  }, []);
+
+  // Update clock every second
+  useEffect(() => {
+    const updateTime = () => {
+      const ntpTime = new Date(Date.now() + timeOffset);
+      setTimeString(ntpTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    };
+    
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, [timeOffset]);
+  
   // Quick Settings States (persisted in localStorage)
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const val = localStorage.getItem('hydronix_sound_enabled');
@@ -202,6 +233,14 @@ export default function Header({ currentUser, initials, onLogout, onMenuClick })
           >
             <span className="material-symbols-outlined text-[24px]">settings</span>
           </button>
+
+          {/* Running Clock */}
+          {timeString && (
+            <div className="hidden sm:flex flex-col items-end text-right text-xs mr-2 select-none leading-none">
+              <span className="text-on-surface text-[12px] font-bold tracking-tight">{timeString}</span>
+              <span className="text-outline text-[9px] font-black uppercase mt-0.5 tracking-wider">Local Time</span>
+            </div>
+          )}
 
           {/* Profile Avatar Button */}
           <div 
