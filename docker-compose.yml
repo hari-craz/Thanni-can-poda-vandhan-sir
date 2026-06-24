@@ -92,7 +92,6 @@ services:
     build:
       context: ./monitoring
       dockerfile: promtail.Dockerfile
-    image: ghcr.io/hari-craz/hydronix-promtail:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
