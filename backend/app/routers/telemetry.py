@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db, Device, SensorData, MLAnomaly, Alert
 from ..config import settings
+from ..time_sync import time_synchronizer
 from ..schemas import (
     SensorDataIngestionRequest,
     DataIngestionResponse,
@@ -101,7 +102,7 @@ async def ingest_sensor_data(
                 return DataIngestionResponse(ok=True, accepted=0, rejected=1)
 
         # Apply NTP/time-drift handling
-        server_now = datetime.utcnow()
+        server_now = time_synchronizer.get_current_datetime()
         request_ts = request.timestamp
         if request_ts and request_ts.tzinfo is not None:
             request_ts = request_ts.replace(tzinfo=None)

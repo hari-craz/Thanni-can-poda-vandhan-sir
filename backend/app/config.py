@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"  # json or text
     
+    # NTP Configuration
+    ntp_server: str = "pool.ntp.org"
+    ntp_port: int = 123
+    ntp_sync_interval_seconds: int = 3600
+    
     # Environment
     environment: str = "development"  # development, staging, production
     

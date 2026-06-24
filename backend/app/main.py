@@ -280,10 +280,39 @@ async def device_timeout_check_loop():
         await asyncio.sleep(5)
 
 
+async def ntp_sync_loop():
+    """Background loop to periodically refresh time offset from NTP server."""
+    import asyncio
+    from .time_sync import time_synchronizer
+    loop = asyncio.get_running_loop()
+    while True:
+        await asyncio.sleep(settings.ntp_sync_interval_seconds)
+        try:
+            logger.info("Refreshing NTP time offset...")
+            await loop.run_in_executor(None, time_synchronizer.sync_time_sync)
+        except Exception as e:
+            logger.error(f"Error in NTP sync refresh loop: {e}")
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and background tasks on v2.0.0 (HTTPS-only, no MQTT)."""
     logger.info(f"Starting Hydronix Backend API v2 (env: {settings.environment})")
+    
+    # NTP initialization
+    import asyncio
+    from .time_sync import time_synchronizer
+    logger.info("Initializing NTP time synchronization")
+    try:
+        await asyncio.wait_for(
+            asyncio.get_running_loop().run_in_executor(None, time_synchronizer.sync_time_sync),
+            timeout=6.0
+        )
+    except asyncio.TimeoutError:
+        logger.warning("NTP initialization timed out. Proceeding with system time fallback.")
+    except Exception as e:
+        logger.warning(f"NTP initialization failed: {e}. Proceeding with system time fallback.")
+
     init_db()
     logger.info("Database initialized")
 
@@ -317,9 +346,9 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to initialize Cloudflare Tunnel: {e}")
     
-    import asyncio
     asyncio.create_task(partition_manager_loop())
     asyncio.create_task(device_timeout_check_loop())
+    asyncio.create_task(ntp_sync_loop())
 
     db = next(get_db())
     try:

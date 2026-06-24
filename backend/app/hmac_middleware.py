@@ -26,6 +26,7 @@ import hmac
 import logging
 import time
 from typing import Optional
+from .time_sync import time_synchronizer
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -121,7 +122,7 @@ class HMACSignatureMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid X-Timestamp — must be Unix epoch integer."},
             )
 
-        server_now = int(time.time())
+        server_now = int(time_synchronizer.get_current_time())
         drift = abs(server_now - ts)
         if drift > HMAC_TIMESTAMP_TOLERANCE_SEC:
             logger.warning(
