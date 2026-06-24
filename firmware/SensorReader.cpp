@@ -12,6 +12,7 @@ SensorReader::SensorReader() {
   stuck_tds  = 0;
   stuck_temp = 0;
   stuck_flow = 0;
+  is_first   = true;
 }
 
 bool SensorReader::performReading(SensorReading& rd, uint32_t interval, uint32_t maxStuckSamples) {
@@ -38,33 +39,44 @@ bool SensorReader::performReading(SensorReading& rd, uint32_t interval, uint32_t
   float cal_temp = raw_temp + config.temp_offset;
   float cal_flow = raw_flow + config.flow_offset;
 
-  // ── Per-sensor rate-of-change clamp ─────────────────────────────────
-  float dMin = (float)interval / 60.0f;
-  float lim_ph   = PH_DELTA_PER_MIN   * dMin;
-  float lim_turb = TURB_DELTA_PER_MIN * dMin;
-  float lim_tds  = TDS_DELTA_PER_MIN  * dMin;
-  float lim_temp = TEMP_DELTA_PER_MIN * dMin;
-  float lim_flow = FLOW_DELTA_PER_MIN * dMin;
+  float sm_ph, sm_turb, sm_tds, sm_temp, sm_flow;
 
-  auto clamp = [](float val, float prev, float limit) -> float {
-    float diff = val - prev;
-    if (diff > limit)  return prev + limit;
-    if (diff < -limit) return prev - limit;
-    return val;
-  };
+  if (is_first) {
+    sm_ph   = cal_ph;
+    sm_turb = cal_turb;
+    sm_tds  = cal_tds;
+    sm_temp = cal_temp;
+    sm_flow = cal_flow;
+    is_first = false;
+  } else {
+    // ── Per-sensor rate-of-change clamp ─────────────────────────────────
+    float dMin = (float)interval / 60.0f;
+    float lim_ph   = PH_DELTA_PER_MIN   * dMin;
+    float lim_turb = TURB_DELTA_PER_MIN * dMin;
+    float lim_tds  = TDS_DELTA_PER_MIN  * dMin;
+    float lim_temp = TEMP_DELTA_PER_MIN * dMin;
+    float lim_flow = FLOW_DELTA_PER_MIN * dMin;
 
-  cal_ph   = clamp(cal_ph,   prev_ph,   lim_ph);
-  cal_turb = clamp(cal_turb, prev_turb, lim_turb);
-  cal_tds  = clamp(cal_tds,  prev_tds,  lim_tds);
-  cal_temp = clamp(cal_temp, prev_temp, lim_temp);
-  cal_flow = clamp(cal_flow, prev_flow, lim_flow);
+    auto clamp = [](float val, float prev, float limit) -> float {
+      float diff = val - prev;
+      if (diff > limit)  return prev + limit;
+      if (diff < -limit) return prev - limit;
+      return val;
+    };
 
-  // ── EMA smoothing (alpha = 0.3) ──────────────────────────────────────
-  float sm_ph   = cal_ph   * 0.3f + prev_ph   * 0.7f;
-  float sm_turb = cal_turb * 0.3f + prev_turb * 0.7f;
-  float sm_tds  = cal_tds  * 0.3f + prev_tds  * 0.7f;
-  float sm_temp = cal_temp * 0.3f + prev_temp * 0.7f;
-  float sm_flow = cal_flow * 0.3f + prev_flow * 0.7f;
+    cal_ph   = clamp(cal_ph,   prev_ph,   lim_ph);
+    cal_turb = clamp(cal_turb, prev_turb, lim_turb);
+    cal_tds  = clamp(cal_tds,  prev_tds,  lim_tds);
+    cal_temp = clamp(cal_temp, prev_temp, lim_temp);
+    cal_flow = clamp(cal_flow, prev_flow, lim_flow);
+
+    // ── EMA smoothing (alpha = 0.3) ──────────────────────────────────────
+    sm_ph   = cal_ph   * 0.3f + prev_ph   * 0.7f;
+    sm_turb = cal_turb * 0.3f + prev_turb * 0.7f;
+    sm_tds  = cal_tds  * 0.3f + prev_tds  * 0.7f;
+    sm_temp = cal_temp * 0.3f + prev_temp * 0.7f;
+    sm_flow = cal_flow * 0.3f + prev_flow * 0.7f;
+  }
 
   // ── Sanity bounds ────────────────────────────────────────────────────
   bool valid = (sm_ph   >= PH_MIN   && sm_ph   <= PH_MAX   &&

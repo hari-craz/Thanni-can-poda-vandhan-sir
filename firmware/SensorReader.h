@@ -16,6 +16,7 @@ private:
   uint32_t stuck_tds;
   uint32_t stuck_temp;
   uint32_t stuck_flow;
+  bool is_first;
 
 public:
   SensorReader();

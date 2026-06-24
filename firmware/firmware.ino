@@ -42,6 +42,20 @@ oyi3B43njTOQ5yOf+1CceWxG1bQVs5ZufpsMljq4Ui0/1lvh+wjChP4kqKOJ2qxq
 amRb/ne5S/7HM3JTRH/4qRwHCKKYmQyMCfpSfcAu5p26rWDkbVEJKRtLU//aXEwn
 v0b8i1Dz1gEMxuLFhA==
 -----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIICGzCCAaGgAwIBAgIQQdKd0XLq7qeAwSxs6S+HUjAKBggqhkjOPQQDAzBPMQsw
+CQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJuZXQgU2VjdXJpdHkgUmVzZWFyY2gg
+R3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBYMjAeFw0yMDA5MDQwMDAwMDBaFw00
+MDA5MTcxNjAwMDBaME8xCzAJBgNVBAYTAlVTMSkwJwYDVQQKEyBJbnRlcm5ldCBT
+ZWN1cml0eSBSZXNlYXJjaCBHcm91cDEVMBMGA1UEAxMMSVNSRyBSb290IFgyMHYw
+EAYHKoZIzj0CAQYFK4EEACIDYgAEzZvVn4CDCuwJSvMWSj5cz3es3mcFDR0HttwW
++1qLFNvicWDEukWVEYmO6gbf9yoWHKS5xcUy4APgHoIYOIvXRdgKam7mAHf7AlF9
+ItgKbppbd9/w+kHsOdx1ymgHDB/qo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0T
+AQH/BAUwAwEB/zAdBgNVHQ4EFgQUfEKWrt5LSDv6kviejM9ti6lyN5UwCgYIKoZI
+zj0EAwMDaAAwZQIwe3lORlCEwkSHRhtFcP9Ymd70/aTSVaYgLXTWNLxBo1BfASdW
+tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
+/q4AaOeMSQ+2b1tbFfLn
+-----END CERTIFICATE-----
 )PEM";
 
 // ─── GLOBAL INSTANCES ────────────────────────────────────────────────────────
@@ -95,11 +109,11 @@ const float TDS_MIN  = 0.0f,   TDS_MAX  = 10000.0f;
 const float TEMP_MIN = -50.0f, TEMP_MAX = 150.0f;
 const float FLOW_MIN = 0.0f,   FLOW_MAX = 10000.0f;
 
-const float PH_DELTA_PER_MIN   = 1.0f;
-const float TURB_DELTA_PER_MIN = 50.0f;
-const float TDS_DELTA_PER_MIN  = 200.0f;
-const float TEMP_DELTA_PER_MIN = 2.0f;
-const float FLOW_DELTA_PER_MIN = 5.0f;
+const float PH_DELTA_PER_MIN   = 24.0f;    // Allow up to 2.0 pH units change per 5s
+const float TURB_DELTA_PER_MIN = 600.0f;   // Allow up to 50.0 NTU change per 5s
+const float TDS_DELTA_PER_MIN  = 2400.0f;  // Allow up to 200.0 ppm change per 5s
+const float TEMP_DELTA_PER_MIN = 60.0f;    // Allow up to 5.0 C change per 5s
+const float FLOW_DELTA_PER_MIN = 120.0f;   // Allow up to 10.0 L/min change per 5s
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
 uint32_t crc32_compute(const uint8_t* data, size_t size) {
@@ -473,6 +487,7 @@ void taskDisplayUpdate(void* pvParameters) {
 
 void taskNetworkManager(void* pvParameters) {
   bool wasConnected = false;
+  bool ntpInitialized = false;
 
   for (;;) {
     if (WiFi.status() != WL_CONNECTED) {
@@ -496,19 +511,37 @@ void taskNetworkManager(void* pvParameters) {
       isOnline = true;
       wasConnected = true;
       Serial.printf("[WIFI] Connected! Local IP: %s\n", WiFi.localIP().toString().c_str());
-
-      configTime(0, 0, "pool.ntp.org", "time.nist.gov");
-      struct tm timeinfo;
-      if (getLocalTime(&timeinfo)) {
-        bool tOk = false;
-        getUTCTime(config.last_ntp_sync, sizeof(config.last_ntp_sync), tOk);
-        saveConfiguration();
-      }
     } else {
       isOnline = true;
       if (!wasConnected) {
         Serial.printf("[WIFI] Connected! Local IP: %s\n", WiFi.localIP().toString().c_str());
         wasConnected = true;
+      }
+    }
+
+    if (isOnline) {
+      if (!ntpInitialized) {
+        Serial.println("[NTP] Initializing configTime...");
+        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+        ntpInitialized = true;
+      }
+
+      struct tm timeinfo;
+      if (getLocalTime(&timeinfo, 1000)) {
+        if (timeinfo.tm_year > 120) {
+          bool tOk = false;
+          char oldSync[32];
+          strcpy(oldSync, config.last_ntp_sync);
+          getUTCTime(config.last_ntp_sync, sizeof(config.last_ntp_sync), tOk);
+          if (strcmp(oldSync, config.last_ntp_sync) != 0) {
+            saveConfiguration();
+            Serial.printf("[NTP] Time synced successfully: %s\n", config.last_ntp_sync);
+          }
+        } else {
+          Serial.println("[NTP] Waiting for sync (year is still 1970)...");
+        }
+      } else {
+        Serial.println("[NTP] getLocalTime failed");
       }
     }
 
@@ -813,8 +846,8 @@ void setup() {
   sensorQueue  = xQueueCreate(10, sizeof(SensorReading));
   displayQueue = xQueueCreate(5,  sizeof(SensorReading));
 
-  xTaskCreatePinnedToCore(taskSensorRead,    "SensorSampling", 4096, NULL, 3, NULL, 1);
-  xTaskCreatePinnedToCore(taskDisplayUpdate, "LCDDisplay",     4096, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(taskSensorRead,    "SensorSampling", 8192, NULL, 3, NULL, 1);
+  xTaskCreatePinnedToCore(taskDisplayUpdate, "LCDDisplay",     8192, NULL, 1, NULL, 1);
   xTaskCreatePinnedToCore(taskNetworkManager, "NetWatchdog",  3072, NULL, 2, NULL, 0);
   xTaskCreatePinnedToCore(taskUplinkSender,   "UplinkSender", 8192, NULL, 2, NULL, 0);
   xTaskCreatePinnedToCore(taskOfflineSync,    "OfflineSync",  8192, NULL, 1, NULL, 0);

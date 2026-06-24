@@ -429,9 +429,15 @@ void handleTestWiFi() {
 }
 
 void handleTestServer() {
-  Serial.printf("[WEBSERVER] API health test requested for: %s/health\n", config.api_base_url);
+  String urlStr = String(config.api_base_url);
+  if (urlStr.endsWith("/")) {
+    urlStr.concat("health");
+  } else {
+    urlStr.concat("/health");
+  }
+  Serial.printf("[WEBSERVER] API health test requested for: %s\n", urlStr.c_str());
   StaticJsonDocument<256> doc;
-  doc["url"] = String(config.api_base_url) + "/health";
+  doc["url"] = urlStr;
 
   if (WiFi.status() != WL_CONNECTED) {
     doc["status"]  = "Failed";

@@ -80,14 +80,26 @@ int httpsSignedPost(const char* path, const String& body) {
   if (!isOnline) return -1;
 
   char url[384];
-  snprintf(url, sizeof(url), "%s%s", config.api_base_url, path);
+  size_t baseLen = strlen(config.api_base_url);
+  if (baseLen > 0 && config.api_base_url[baseLen - 1] == '/' && path[0] == '/') {
+    snprintf(url, sizeof(url), "%s%s", config.api_base_url, path + 1);
+  } else if (baseLen > 0 && config.api_base_url[baseLen - 1] != '/' && path[0] != '/') {
+    snprintf(url, sizeof(url), "%s/%s", config.api_base_url, path);
+  } else {
+    snprintf(url, sizeof(url), "%s%s", config.api_base_url, path);
+  }
 
   char bodyHash[65];
   computeSHA256(body.c_str(), body.length(), bodyHash, sizeof(bodyHash));
 
   WiFiClientSecure secureClient;
-  secureClient.setCACert(ISRG_ROOT_X1_PEM);
-  secureClient.setTimeout(15);
+  time_t now = time(nullptr);
+  if (now < 1000000000L) { // If NTP is not yet synced (year is still ~1970)
+    secureClient.setInsecure();
+  } else {
+    secureClient.setCACert(ISRG_ROOT_X1_PEM);
+  }
+  secureClient.setTimeout(15000);
 
   HTTPClient https;
   https.begin(secureClient, url);
@@ -96,6 +108,11 @@ int httpsSignedPost(const char* path, const String& body) {
   https.setTimeout(15000);
 
   int code = https.POST(body);
+  if (code < 0) {
+    char errBuf[128];
+    secureClient.lastError(errBuf, sizeof(errBuf));
+    Serial.printf("[TLS] POST connection error: %s (code: %d)\n", errBuf, code);
+  }
   https.end();
   return code;
 }
@@ -105,11 +122,23 @@ int httpsSignedGet(const char* path, String& responseBody) {
   if (!isOnline) return -1;
 
   char url[384];
-  snprintf(url, sizeof(url), "%s%s", config.api_base_url, path);
+  size_t baseLen = strlen(config.api_base_url);
+  if (baseLen > 0 && config.api_base_url[baseLen - 1] == '/' && path[0] == '/') {
+    snprintf(url, sizeof(url), "%s%s", config.api_base_url, path + 1);
+  } else if (baseLen > 0 && config.api_base_url[baseLen - 1] != '/' && path[0] != '/') {
+    snprintf(url, sizeof(url), "%s/%s", config.api_base_url, path);
+  } else {
+    snprintf(url, sizeof(url), "%s%s", config.api_base_url, path);
+  }
 
   WiFiClientSecure secureClient;
-  secureClient.setCACert(ISRG_ROOT_X1_PEM);
-  secureClient.setTimeout(15);
+  time_t now = time(nullptr);
+  if (now < 1000000000L) { // If NTP is not yet synced (year is still ~1970)
+    secureClient.setInsecure();
+  } else {
+    secureClient.setCACert(ISRG_ROOT_X1_PEM);
+  }
+  secureClient.setTimeout(15000);
 
   HTTPClient https;
   https.begin(secureClient, url);
@@ -117,7 +146,13 @@ int httpsSignedGet(const char* path, String& responseBody) {
   https.setTimeout(15000);
 
   int code = https.GET();
-  if (code > 0) responseBody = https.getString();
+  if (code > 0) {
+    responseBody = https.getString();
+  } else {
+    char errBuf[128];
+    secureClient.lastError(errBuf, sizeof(errBuf));
+    Serial.printf("[TLS] GET connection error: %s (code: %d)\n", errBuf, code);
+  }
   https.end();
   return code;
 }
