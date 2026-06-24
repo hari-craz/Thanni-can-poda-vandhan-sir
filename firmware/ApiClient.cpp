@@ -93,12 +93,7 @@ int httpsSignedPost(const char* path, const String& body) {
   computeSHA256(body.c_str(), body.length(), bodyHash, sizeof(bodyHash));
 
   WiFiClientSecure secureClient;
-  time_t now = time(nullptr);
-  if (now < 1000000000L) { // If NTP is not yet synced (year is still ~1970)
-    secureClient.setInsecure();
-  } else {
-    secureClient.setCACert(ISRG_ROOT_X1_PEM);
-  }
+  secureClient.setInsecure();
   secureClient.setTimeout(15000);
 
   HTTPClient https;
@@ -132,12 +127,7 @@ int httpsSignedGet(const char* path, String& responseBody) {
   }
 
   WiFiClientSecure secureClient;
-  time_t now = time(nullptr);
-  if (now < 1000000000L) { // If NTP is not yet synced (year is still ~1970)
-    secureClient.setInsecure();
-  } else {
-    secureClient.setCACert(ISRG_ROOT_X1_PEM);
-  }
+  secureClient.setInsecure();
   secureClient.setTimeout(15000);
 
   HTTPClient https;
