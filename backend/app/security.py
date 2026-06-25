@@ -3,6 +3,7 @@ Simple OAuth2 password flow issuing JWTs for admin access.
 """
 import time
 import json
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -39,6 +40,19 @@ def track_active_user(email: str, name: str, role: str):
         except Exception:
             pass
     _MEM_ACTIVE_USERS[email] = user_info
+
+
+def untrack_active_user(email: str):
+    """Remove user session from Redis or in-memory fallback."""
+    from .main import cache
+    if cache.client:
+        try:
+            key = f"active_user:{email}"
+            cache.client.delete(key)
+            return
+        except Exception:
+            pass
+    _MEM_ACTIVE_USERS.pop(email, None)
 
 
 def get_active_users() -> list:
@@ -162,6 +176,23 @@ async def get_current_admin_optional(token: str = Depends(oauth2_scheme), db: Se
         return None
 
 
+async def get_current_user_claims(token: str = Depends(oauth2_scheme)) -> dict:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        username: str = payload.get("username")
+        role: str = payload.get("role")
+        if username is None or role is None:
+            raise credentials_exception
+        return payload
+    except JWTError:
+        raise credentials_exception
+
+
 
 # Token endpoint handler to be wired into FastAPI app
 async def token_endpoint(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -169,14 +200,17 @@ async def token_endpoint(form_data: OAuth2PasswordRequestForm = Depends(), db: S
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     
+    csrf_token = secrets.token_hex(32)
     access_token = create_access_token({
         "username": user.email,
-        "role": user.role
+        "role": user.role,
+        "csrf_token": csrf_token
     })
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
+        "csrf_token": csrf_token,
         "user": {
             "email": user.email,
             "role": user.role,

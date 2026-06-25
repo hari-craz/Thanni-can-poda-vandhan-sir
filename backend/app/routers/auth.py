@@ -1,13 +1,13 @@
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 
 from ..database import get_db, Device, AuditLog, Alert
 from ..schemas import KeyRotationRequest, KeyRotationResponse, AccessRequest
 from ..auth import rotate_api_key
 from ..config import settings
-from ..security import token_endpoint, get_current_admin
+from ..security import token_endpoint, get_current_admin, get_current_user_claims, untrack_active_user
 from ..main import ws_manager
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,21 @@ router.post("/auth/token")(token_endpoint)
 router.post("/auth/login")(token_endpoint)
 
 @router.post("/auth/logout")
-async def logout():
+async def logout(
+    x_csrf_token: str = Header(..., alias="X-CSRF-Token"),
+    claims: dict = Depends(get_current_user_claims)
+):
+    expected_csrf = claims.get("csrf_token")
+    if not expected_csrf or x_csrf_token != expected_csrf:
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+    
+    try:
+        username = claims.get("username")
+        if username:
+            untrack_active_user(username)
+    except Exception:
+        pass
+
     return {"ok": True}
 
 @router.post("/auth/request-access")

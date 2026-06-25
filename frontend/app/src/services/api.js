@@ -45,13 +45,32 @@ export const api = {
     if (data.access_token) {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.csrf_token) {
+        localStorage.setItem('csrf_token', data.csrf_token);
+      }
     }
     return data;
   },
 
-  logout() {
+  async logout() {
+    const token = localStorage.getItem('token');
+    const csrfToken = localStorage.getItem('csrf_token');
+    if (token) {
+      try {
+        await fetch(`${BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-CSRF-Token': csrfToken || '',
+          },
+        });
+      } catch (e) {
+        console.error('Failed to log out on server:', e);
+      }
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('csrf_token');
   },
 
   getCurrentUser() {
