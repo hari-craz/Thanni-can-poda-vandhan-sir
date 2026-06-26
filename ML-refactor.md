@@ -14,7 +14,7 @@ This document analyzes the 9-Phase Production ML Roadmap provided by the user.
 Your hierarchy (`Rule Engine` -> `WQI` -> `AI` -> `Predictive`) is the gold standard for industrial IoT systems. AI is powerful but non-deterministic. By making the **Rule Engine the Source of Truth**, you guarantee life-safety compliance (e.g., if pH hits 3.0, the valve shuts off immediately without waiting for an AI inference).
 
 ### 2. Phase 1–3: The Foundation
-**Status:** Highly Feasible / Mostly Implemented.
+**Status:** Highly Feasible / Mostly Implmented.
 - We already have PostgreSQL storing the telemetry (`ph`, `tds`, `turbidity`, etc.).
 - The `QualityScorer` in `backend/app/quality_score.py` already implements Phase 2 (Rules) and Phase 3 (WQI 0-100 scoring).
 
