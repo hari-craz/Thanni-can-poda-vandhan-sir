@@ -25,7 +25,6 @@ graph TD
 ### Page 1: Executive Summary & System Overview
 *   **Primary Audience:** System Architects, Product Managers, Stakeholders
 *   **Objectives:** Introduce Hydronix, its core features, and its full-stack architecture.
-*   **Reference Files:** [README.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/README.md)
 *   **Topics to Cover:**
     *   One-line pitch & business value.
     *   Core system components: Edge Devices, Ingestion Server, ML Service, Web Dashboard.
@@ -35,7 +34,6 @@ graph TD
 ### Page 2: System-Wide Data Flow & Protocols
 *   **Primary Audience:** Integration Engineers, Network Administrators
 *   **Objectives:** Define transport protocols and detailed packet lifecycles.
-*   **Reference Files:** [Data-Flow-Diagram.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Data-Flow-Diagram.md), [End-to-End-Workflow.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/End-to-End-Workflow.md)
 *   **Topics to Cover:**
     *   MQTT protocol characteristics (topics, QoS, Keep-Alives).
     *   HTTP/HTTPS fallback mechanisms when MQTT is blocked.
@@ -45,7 +43,6 @@ graph TD
 ### Page 3: Device State Machine & Lifecycle
 *   **Primary Audience:** Firmware Engineers, QA Engineers
 *   **Objectives:** Define ESP32 states and transition rules.
-*   **Reference Files:** [Architecture-Overview.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Architecture-Overview.md)
 *   **Topics to Cover:**
     *   States: Initialization, Setup AP, Connecting, Online (Normal), Offline (Degraded), Safe Mode.
     *   Transition triggers: Connection loss, sensor errors, manual valve control override.
@@ -55,7 +52,6 @@ graph TD
 ### Page 4: Database ERD & Data Schema Specification
 *   **Primary Audience:** Database Administrators, Backend Developers
 *   **Objectives:** Detail relational tables, constraints, indexes, and performance scaling.
-*   **Reference Files:** [ER-Diagram.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/ER-Diagram.md)
 *   **Topics to Cover:**
     *   Table definitions: `devices`, `sensor_data`, `valves`, `alerts`, `ml_inferences`.
     *   Foreign keys and cascade constraints.
@@ -65,7 +61,6 @@ graph TD
 ### Page 5: End-to-End Authentication & Cryptographic Chain
 *   **Primary Audience:** Security Architects, Security Engineers
 *   **Objectives:** Describe the security mechanisms governing devices and dashboard.
-*   **Reference Files:** [Security-Reliability-Deployment.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Security-Reliability-Deployment.md), [device_test_hmac.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/tools/device_test_hmac.py)
 *   **Topics to Cover:**
     *   HMAC-SHA256 signature scheme for device verification.
     *   API Key lifecycle and key rotation procedures.
@@ -75,7 +70,6 @@ graph TD
 ### Page 6: System Scalability & Sharding Architecture
 *   **Primary Audience:** SREs, Systems Architects
 *   **Objectives:** Outline how the system scales to thousands of concurrent devices.
-*   **Reference Files:** [Architecture-Overview.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Architecture-Overview.md#L47-L53)
 *   **Topics to Cover:**
     *   Decoupling ingestion from query execution.
     *   Database partitioning rules (by device ID range and monthly intervals).
@@ -85,7 +79,6 @@ graph TD
 ### Page 7: Disaster Recovery & Offline Resiliency Protocol
 *   **Primary Audience:** System Operators, Support Engineers
 *   **Objectives:** Document buffer replay behavior during extended network outages.
-*   **Reference Files:** [Known-Issues-and-Solutions.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Known-Issues-and-Solutions.md)
 *   **Topics to Cover:**
     *   SD-card ring buffer rules: storage thresholds, log rotations, FIFO eviction.
     *   Sync client replay protocol: batching, backpressure handling, deduplication.
@@ -95,7 +88,6 @@ graph TD
 ### Page 8: Hardware-Firmware-Software Interaction Matrices
 *   **Primary Audience:** Hardware/Software Integration Leads
 *   **Objectives:** Establish precise interface boundaries and performance budgets.
-*   **Reference Files:** [ESP32-Firmware-Spec.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/ESP32-Firmware-Spec.md)
 *   **Topics to Cover:**
     *   Sensor reading polling cycles (1s internal, 60s reporting).
     *   Response time SLAs: valve shutoff command to physical closure (<2s).
@@ -110,7 +102,6 @@ graph TD
 ### Page 9: Microcontroller Selection & Pin Allocation Map
 *   **Primary Audience:** Hardware Engineers, Embedded Developers
 *   **Objectives:** Map ESP32 GPIOs and hardware subsystems.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   ESP32 DevKitC core specs, flash layouts, and CPU frequency configuration.
     *   Full GPIO allocation table (SPI, I2C, UART, ADC, interrupts).
@@ -120,7 +111,6 @@ graph TD
 ### Page 10: pH & Temperature Sensor Integration Guide
 *   **Primary Audience:** Hardware Engineers, Assembly Technicians
 *   **Objectives:** Specify analog pH module calibration and DS18B20 digital temperature bus.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   pH sensor conditioning module, impedance matching, calibration formulas.
     *   DS18B20 1-Wire bus layout, pull-up resistor requirements (4.7kΩ).
@@ -130,7 +120,6 @@ graph TD
 ### Page 11: TDS & Turbidity Sensor Integration Guide
 *   **Primary Audience:** Electrical Engineers
 *   **Objectives:** Outline integration of TDS and optical turbidity sensors.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   Analog TDS sensor: AC excitation to prevent polarization, TDS-to-voltage curves.
     *   Turbidity sensor: infrared emitter/phototransistor setup, non-linear calibration.
@@ -140,9 +129,8 @@ graph TD
 ### Page 12: Flow Rate Sensor & Solenoid Valve Control
 *   **Primary Audience:** Mechanical/Electrical Engineers
 *   **Objectives:** Detail flow rate sensor calibration and high-power solenoid valve control.
-*   **Reference Files:** [valve_control.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/valve_control.h)
 *   **Topics to Cover:**
-    *   YF-S201 Hall-Effect sensor: pulse frequency calculations ($Q = F / 7.5$).
+    *   YF-S201 Hall-Effect sensor: pulse frequency calculations (Q = F / 7.5).
     *   12V Solenoid valve drive circuit: optocoupler isolation, flyback diode protection.
     *   Fail-safe status checks using a current shunt to confirm solenoid actuation.
 *   **Visuals Required:** Transistor/Relay switching schematic with flyback diode.
@@ -150,7 +138,6 @@ graph TD
 ### Page 13: Local Display & Storage Modules
 *   **Primary Audience:** Assembly Technicians
 *   **Objectives:** Document SPI SD card reader and I2C OLED display wiring.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   SSD1306 OLED display connection (SDA, SCL, pull-ups, I2C address selection).
     *   SD card SPI pins (MOSI, MISO, SCK, CS), logic level shifting (5V to 3.3V).
@@ -160,7 +147,6 @@ graph TD
 ### Page 14: Power Delivery & Battery Backup Circuitry
 *   **Primary Audience:** Electrical Engineers
 *   **Objectives:** Specify stable power design and UPS circuitry for edge nodes.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   AC-DC converters, 12V supply for solenoid valve, 5V regulator for sensors/ESP32.
     *   TP4056 charge controllers, Li-ion 18650 battery cells, booster modules.
@@ -170,7 +156,6 @@ graph TD
 ### Page 15: PCB Layout, Enclosure Design, & Environmental Protection
 *   **Primary Audience:** Mechanical/Manufacturing Engineers
 *   **Objectives:** Document PCB layout considerations, enclosure specifications, and waterproofing.
-*   **Reference Files:** [Hardware-Wiring-Setup.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/Hardware-Wiring-Setup.md)
 *   **Topics to Cover:**
     *   PCB track sizing for power lines (solenoid current paths) and ground plane shielding.
     *   IP67/NEMA-4X plastic enclosures, PG7/PG9 waterproof cable glands.
@@ -185,7 +170,6 @@ graph TD
 ### Page 16: Firmware Project Structure & PlatformIO Configuration
 *   **Primary Audience:** Firmware Engineers
 *   **Objectives:** Guide workspace setup, libraries selection, and build profiles.
-*   **Reference Files:** [platformio.ini](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/platformio.ini)
 *   **Topics to Cover:**
     *   PlatformIO project layouts, board targets (`esp32dev`), and framework (`arduino`).
     *   Dependencies declaration: PubSubClient, ArduinoJson, OneWire, DallasTemperature.
@@ -195,7 +179,6 @@ graph TD
 ### Page 17: WiFi Manager & Local Configuration Captive Portal
 *   **Primary Audience:** Software Installation Teams, Support Specialists
 *   **Objectives:** Detail how the ESP32 hosts its AP configuration portal.
-*   **Reference Files:** [WiFiManager.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/WiFiManager.cpp), [WiFiManager.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/WiFiManager.h)
 *   **Topics to Cover:**
     *   AP initialization (`Hydronix_Setup` network), DNS server hijacking.
     *   Dynamic webpage rendering (HTML/CSS) for settings configuration.
@@ -205,7 +188,6 @@ graph TD
 ### Page 18: Non-Blocking Sensor Ingestion & Driver Implementation
 *   **Primary Audience:** Embedded Software Engineers
 *   **Objectives:** Detail standard sensor sampling routines using FreeRTOS tasks.
-*   **Reference Files:** [SensorReader.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/SensorReader.cpp), [SensorReader.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/SensorReader.h)
 *   **Topics to Cover:**
     *   Sampling scheduler loops (polling timers, task yielding).
     *   Analog inputs reading, median-filtering algorithms for pH/TDS noise suppression.
@@ -215,7 +197,6 @@ graph TD
 ### Page 19: Valve Control Logic & Offline Threshold Assessment
 *   **Primary Audience:** Firmware Engineers, Quality Engineers
 *   **Objectives:** Outline local safety loops and valve actuation thresholds.
-*   **Reference Files:** [valve_control.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/valve_control.cpp), [valve_control.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/valve_control.h)
 *   **Topics to Cover:**
     *   Safety parameters boundaries checking: pH limits, turbidity maximums, TDS ceilings.
     *   Automatic safety shutdown workflow: triggering local solenoid shutoff without backend instructions.
@@ -225,7 +206,6 @@ graph TD
 ### Page 20: Local Display Manager & Screen State Engine
 *   **Primary Audience:** Firmware UI Developers
 *   **Objectives:** Guide the visual presentation on the device LCD/OLED display.
-*   **Reference Files:** [firmware.ino](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/firmware.ino)
 *   **Topics to Cover:**
     *   Using U8g2 / Adafruit SSD1306 graphic engines.
     *   Layouts structure: status bar (WiFi signal, DB connection, queue size), reading cards, error codes.
@@ -235,7 +215,6 @@ graph TD
 ### Page 21: SD Card Database & Ring-Buffer Queue
 *   **Primary Audience:** Embedded Systems Architects
 *   **Objectives:** Detail SD card file queue management to prevent memory leaks and wear.
-*   **Reference Files:** [firmware.ino](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/firmware.ino) (SD write functions)
 *   **Topics to Cover:**
     *   Initializing SD card over SPI, handling initialization failures.
     *   Circular file layouts: logging readings into batch JSON files.
@@ -245,7 +224,6 @@ graph TD
 ### Page 22: MQTT Client & Connection Lifecycle
 *   **Primary Audience:** Firmware Engineers, Network Administrators
 *   **Objectives:** Detail robust MQTT connections with brokers.
-*   **Reference Files:** [ApiClient.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/ApiClient.cpp), [Config.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/Config.h)
 *   **Topics to Cover:**
     *   Broker endpoints definition, MQTT authentication, PubSubClient parameters.
     *   Connection backoff rules: linear vs. exponential retry schemes.
@@ -255,7 +233,6 @@ graph TD
 ### Page 23: HTTP Telemetry & Config Sync Fallback
 *   **Primary Audience:** Integration Developers
 *   **Objectives:** Specify HTTP fallback mechanisms.
-*   **Reference Files:** [ApiClient.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/ApiClient.cpp), [ApiClient.h](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/ApiClient.h)
 *   **Topics to Cover:**
     *   Initializing fallback HTTP client interfaces.
     *   Headers preparation: API key verification, HMAC signature headers.
@@ -265,7 +242,6 @@ graph TD
 ### Page 24: Over-the-Air (OTA) Firmware Updates
 *   **Primary Audience:** DevOps Engineers, Firmware Managers
 *   **Objectives:** Explain OTA update protocols for fleet deployment.
-*   **Reference Files:** [WiFiManager.cpp](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/firmware/WiFiManager.cpp)
 *   **Topics to Cover:**
     *   Partition tables customization: OTA0, OTA1, App Data partitions.
     *   Securing update downloads: HTTPS signature validations.
@@ -280,7 +256,6 @@ graph TD
 ### Page 25: Backend FastAPI Application Architecture
 *   **Primary Audience:** Backend Developers
 *   **Objectives:** Provide an overview of the server application structure and configuration files.
-*   **Reference Files:** [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py), [BACKEND-QUICKSTART.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/BACKEND-QUICKSTART.md)
 *   **Topics to Cover:**
     *   FastAPI initialization, lifespan context, CORSMiddleware.
     *   Configuration via `.env` files and settings validation using Pydantic Settings.
@@ -290,7 +265,6 @@ graph TD
 ### Page 26: Device Registry & Metadata Management APIs
 *   **Primary Audience:** Full-stack Developers, API Integration Engineers
 *   **Objectives:** Document device administration endpoints and provisioning flows.
-*   **Reference Files:** [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py)
 *   **Topics to Cover:**
     *   `GET /devices` and `POST /devices` endpoints.
     *   Metadata fields: device location details, custom safety thresholds settings.
@@ -300,7 +274,6 @@ graph TD
 ### Page 27: High-Throughput Telemetry Ingestion API
 *   **Primary Audience:** API Designers, Firmware Integrators
 *   **Objectives:** Document telemetry ingest endpoints.
-*   **Reference Files:** [ingest.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/ingest.py), [schemas.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/schemas.py)
 *   **Topics to Cover:**
     *   `POST /data` endpoint contract details.
     *   Input validation: processing array payloads vs. single packets.
@@ -310,7 +283,6 @@ graph TD
 ### Page 28: Live Device Heartbeat & Active Status Poller
 *   **Primary Audience:** Backend Engineers
 *   **Objectives:** Detail device connection tracking algorithms and background check routines.
-*   **Reference Files:** [ingest.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/ingest.py), [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py)
 *   **Topics to Cover:**
     *   Processing heartbeats on a 10s window.
     *   Device check worker routines: scanning database timestamps every 5s.
@@ -320,7 +292,6 @@ graph TD
 ### Page 29: Valve Control Overrides & WebSocket Command Routing
 *   **Primary Audience:** Backend/Frontend Integrators
 *   **Objectives:** Detail backend paths routing manual valve commands to ESP32 clients.
-*   **Reference Files:** [valve_routes.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/valve_routes.py), [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py)
 *   **Topics to Cover:**
     *   `POST /devices/{device_id}/valve` controls.
     *   WebSocket connections registry for active devices.
@@ -330,7 +301,6 @@ graph TD
 ### Page 30: Analytical Query Engine & Aggregation Routes
 *   **Primary Audience:** Frontend Developers, Data Analysts
 *   **Objectives:** Document time-series reading APIs.
-*   **Reference Files:** [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py)
 *   **Topics to Cover:**
     *   `GET /data/{device_id}` parameters (start_date, end_date, sample_rate).
     *   Aggregation queries: calculating averages for pH/TDS/temperature on hourly/daily scales.
@@ -340,7 +310,6 @@ graph TD
 ### Page 31: Relational Database Models & Migrations
 *   **Primary Audience:** DBAs, Backend Developers
 *   **Objectives:** Guide database schema changes and migrations.
-*   **Reference Files:** [docs/ER-Diagram.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/ER-Diagram.md)
 *   **Topics to Cover:**
     *   Declaring models via SQLAlchemy.
     *   Alembic migration configurations, generating migration scripts.
@@ -350,7 +319,6 @@ graph TD
 ### Page 32: Security Middleware & HMAC Request Validation
 *   **Primary Audience:** Security Engineers
 *   **Objectives:** Outline backend implementations of HMAC verification.
-*   **Reference Files:** [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py), [device_test_hmac.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/tools/device_test_hmac.py)
 *   **Topics to Cover:**
     *   Custom FastAPI dependency / middleware components for key validation.
     *   Computing SHA256 hashes on JSON payloads, processing timestamp nonces.
@@ -360,7 +328,6 @@ graph TD
 ### Page 33: Background Event Worker & Alert Dispatcher
 *   **Primary Audience:** Backend Developers
 *   **Objectives:** Detail anomaly notification processing logic.
-*   **Reference Files:** [main.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/app/main.py)
 *   **Topics to Cover:**
     *   Processing raw data events off-thread.
     *   Trigger rules evaluation: triggering email/SMS alerts on persistent anomalies.
@@ -375,7 +342,6 @@ graph TD
 ### Page 34: Frontend Application Architecture & State Management
 *   **Primary Audience:** Frontend Developers
 *   **Objectives:** Document React/Vite development framework setups and folder locations.
-*   **Reference Files:** [frontend/app/package.json](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/package.json), [frontend/app/vite.config.js](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/vite.config.js)
 *   **Topics to Cover:**
     *   Vite config, asset compiler pipelines, directory structure.
     *   Context / Zustand state store implementations.
@@ -385,7 +351,6 @@ graph TD
 ### Page 35: Global Multi-Device Status Map & Grid Dashboard
 *   **Primary Audience:** Frontend Developers, Operators
 *   **Objectives:** Detail core home screen layouts and grids.
-*   **Reference Files:** [frontend/app/index.html](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/index.html)
 *   **Topics to Cover:**
     *   Summary metric cards: Online devices total, average pH, critical alert feeds.
     *   Grid component cards: dynamic rendering based on device status.
@@ -395,7 +360,6 @@ graph TD
 ### Page 36: Real-Time Telemetry Streaming & WebSocket Integration
 *   **Primary Audience:** Frontend Developers
 *   **Objectives:** Detail incoming data feeds via WebSockets.
-*   **Reference Files:** [frontend/app/src](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/src)
 *   **Topics to Cover:**
     *   WebSocket provider initialization, heartbeats management.
     *   React state updates on message arrivals (preventing excessive rendering).
@@ -405,7 +369,6 @@ graph TD
 ### Page 37: Device Detail View & Historical Charting
 *   **Primary Audience:** Frontend Developers, UX/UI Designers
 *   **Objectives:** Explain single device analysis interfaces and historical charts.
-*   **Reference Files:** [frontend/app/src](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/src)
 *   **Topics to Cover:**
     *   Integrating Recharts / Chart.js for data visualization.
     *   Dynamic charts: rendering pH, TDS, temperature, and turbidity over time.
@@ -415,7 +378,6 @@ graph TD
 ### Page 38: Remote Control Interface & Valve Command Panels
 *   **Primary Audience:** Operator Console Developers
 *   **Objectives:** Detail manual solenoid control views and safety dialogues.
-*   **Reference Files:** [frontend/app/src](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/src)
 *   **Topics to Cover:**
     *   Design of valve status indicators (open/closed/override).
     *   Confirmation modals to prevent accidental valve actuation.
@@ -425,7 +387,6 @@ graph TD
 ### Page 39: System Alert Center & Notification Panel
 *   **Primary Audience:** Operator Console Developers, SREs
 *   **Objectives:** Detail alert hubs and notification structures.
-*   **Reference Files:** [frontend/app/src](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/src)
 *   **Topics to Cover:**
     *   Alert priorities: Info, Warning, Critical.
     *   Action components: acknowledging alerts, clearing alerts history.
@@ -435,7 +396,6 @@ graph TD
 ### Page 40: Comparative Analytics & Custom Reports Builder
 *   **Primary Audience:** Data Analysts, System Operators
 *   **Objectives:** Detail compare panels and data export tools.
-*   **Reference Files:** [frontend/app/src](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/frontend/app/src)
 *   **Topics to Cover:**
     *   Overlaying charts from multiple devices.
     *   Aggregating differences: comparing pH fluctuations across devices.
@@ -450,7 +410,6 @@ graph TD
 ### Page 41: Machine Learning Model Objectives & Dataset
 *   **Primary Audience:** Data Scientists, ML Engineers
 *   **Objectives:** Describe potability prediction objectives and target datasets.
-*   **Reference Files:** [ML-INTEGRATION-GUIDE.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/ML-INTEGRATION-GUIDE.md), [balanced_water_potability_3000.csv](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/balanced_water_potability_3000.csv)
 *   **Topics to Cover:**
     *   Defining target variable: Potability (binary classification).
     *   Features analysis: pH, TDS, temperature, turbidity, flow rate.
@@ -460,7 +419,6 @@ graph TD
 ### Page 42: Potability Prediction Model Training Pipeline
 *   **Primary Audience:** Data Scientists, ML Engineers
 *   **Objectives:** Document training script execution configurations.
-*   **Reference Files:** [train_production_model.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/train_production_model.py), [README.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/README.md)
 *   **Topics to Cover:**
     *   Selecting algorithms: Random Forest Classifier vs. XGBoost.
     *   Data pipelines: imputing missing values, scaling features.
@@ -470,7 +428,6 @@ graph TD
 ### Page 43: Model Evaluation, Validation, & Metrics
 *   **Primary Audience:** Data Scientists, QA Engineers
 *   **Objectives:** Detail metric standards for models to reach production.
-*   **Reference Files:** [FINAL-RESULTS.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/FINAL-RESULTS.md), [QUICK-REFERENCE.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-Model/QUICK-REFERENCE.md)
 *   **Topics to Cover:**
     *   Key performance indicators: Accuracy, Precision, Recall, F1-Score, ROC-AUC.
     *   Confusion matrix and error trade-off analyses (minimizing false negatives).
@@ -480,7 +437,6 @@ graph TD
 ### Page 44: FastAPI ML Inference Service
 *   **Primary Audience:** Machine Learning Engineers, Backend Engineers
 *   **Objectives:** Detail how the ML model is hosted in the production service.
-*   **Reference Files:** [ml-service/app.py](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ml-service/app.py), [ml-service/Dockerfile](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ml-service/Dockerfile)
 *   **Topics to Cover:**
     *   Serving endpoints: `POST /predict` structure.
     *   Model serialization (joblib/pickle loading, thread safety).
@@ -490,7 +446,6 @@ graph TD
 ### Page 45: Real-time Backend-ML Integration & Feedback Loops
 *   **Primary Audience:** System Architects, Backend Developers
 *   **Objectives:** Detail backend integration with ML services and safety interlocks.
-*   **Reference Files:** [ML-refactor.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/ML-refactor.md)
 *   **Topics to Cover:**
     *   Async API calls from ingestion worker to `ml-service`.
     *   Triggering alerts based on model predictions.
@@ -505,7 +460,6 @@ graph TD
 ### Page 46: Dockerized Deployment & Compose Specifications
 *   **Primary Audience:** DevOps Engineers, System Administrators
 *   **Objectives:** Detail local container orchestration steps.
-*   **Reference Files:** [docker-compose.yml](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docker-compose.yml), [backend/Dockerfile](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/backend/Dockerfile)
 *   **Topics to Cover:**
     *   Configuration parameters for `backend`, `frontend`, `db`, `mosquitto`, `ml-service`.
     *   Networking bridge setups, persistence volumes.
@@ -515,7 +469,6 @@ graph TD
 ### Page 47: Prometheus Metrics Collection & InfluxDB Setup
 *   **Primary Audience:** SREs, Monitoring Engineers
 *   **Objectives:** Explain system metric collection configurations.
-*   **Reference Files:** [monitoring/prometheus.yml](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/monitoring/prometheus.yml), [monitoring/docker-compose.monitoring.yml](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/monitoring/docker-compose.monitoring.yml)
 *   **Topics to Cover:**
     *   Scrape jobs definitions for system servers.
     *   FastAPI Prometheus instrumentation middlewares.
@@ -525,7 +478,6 @@ graph TD
 ### Page 48: Grafana Dashboard Design & Live Visualization
 *   **Primary Audience:** Operations Teams, Support Engineers
 *   **Objectives:** Detail visualization panels and alert criteria.
-*   **Reference Files:** [monitoring/grafana-dashboard.json](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/monitoring/grafana-dashboard.json)
 *   **Topics to Cover:**
     *   Grafana dashboard structure (panels, variables, filters).
     *   Visualizing device heartbeat ratios, DB query times, and queue lengths.
@@ -535,7 +487,6 @@ graph TD
 ### Page 49: Centralized Log Aggregation via Promtail & Loki
 *   **Primary Audience:** SREs, System Administrators
 *   **Objectives:** Detail log collection and ingestion setup.
-*   **Reference Files:** [monitoring/promtail-config.yml](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/monitoring/promtail-config.yml), [monitoring/promtail.Dockerfile](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/monitoring/promtail.Dockerfile)
 *   **Topics to Cover:**
     *   Configuring Promtail: scraping Docker container logs, parsing logs.
     *   Loki ingestion endpoints configuration.
@@ -545,7 +496,6 @@ graph TD
 ### Page 50: Continuous Integration, Deployment (CI/CD) & Maintenance
 *   **Primary Audience:** DevOps Engineers, Release Managers
 *   **Objectives:** Document release pipelines and maintenance operations.
-*   **Reference Files:** [SERVER_SETUP_A_TO_Z.md](file:///c:/Users/harik/OneDrive/Desktop/Git/Thanni-can-poda-vandhan-sir/docs/SERVER_SETUP_A_TO_Z.md)
 *   **Topics to Cover:**
     *   GitHub Actions CI workflow: testing backend, validating firmware compilation.
     *   CD workflows: build push to registry, remote servers deployment.
