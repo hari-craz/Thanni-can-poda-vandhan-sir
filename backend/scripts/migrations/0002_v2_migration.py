@@ -44,6 +44,16 @@ def upgrade():
             sa.Float(),
             nullable=True,
         ))
+        batch_op.add_column(sa.Column(
+            'last_sd_total_bytes',
+            sa.BigInteger(),
+            nullable=True,
+        ))
+        batch_op.add_column(sa.Column(
+            'last_sd_used_bytes',
+            sa.BigInteger(),
+            nullable=True,
+        ))
         # Add check constraint for firmware_channel
         batch_op.create_check_constraint(
             'check_firmware_channel_devices',
@@ -133,3 +143,5 @@ def downgrade():
         batch_op.drop_column('last_free_heap')
         batch_op.drop_column('last_queued_records')
         batch_op.drop_column('last_sd_usage_percent')
+        batch_op.drop_column('last_sd_total_bytes')
+        batch_op.drop_column('last_sd_used_bytes')
