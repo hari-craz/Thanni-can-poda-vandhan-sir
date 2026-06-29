@@ -411,11 +411,11 @@ void pruneOfflineQueue() {
   }
 }
 
-// ─── FREERTOS TASKS ──────────────────────────────────────────────────────────
 void taskSensorRead(void* pvParameters) {
   SensorReader reader;
   TickType_t lastWakeTime = xTaskGetTickCount();
   bool wasThrottled = false;
+  uint32_t lastSaveTimeMs = 0;
 
   for (;;) {
     bool throttled = lowStorageMode;
@@ -424,8 +424,11 @@ void taskSensorRead(void* pvParameters) {
         "Low SD storage — throttling 5x." : "Storage healthy — resuming normal rate.");
       wasThrottled = throttled;
     }
-    uint32_t interval = config.sample_interval_sec * (throttled ? 5 : 1);
-    const uint32_t maxStuckSamples = 86400 / max(1UL, (unsigned long)config.sample_interval_sec);
+    
+    // We now read every 2 seconds for live display and instant valve reaction
+    uint32_t readInterval = 2;
+    uint32_t saveInterval = config.sample_interval_sec * (throttled ? 5 : 1);
+    const uint32_t maxStuckSamples = 86400 / readInterval;
 
     if (calibrationRunning) {
       float raw = analogRead(PIN_PH) * (3.3f / 4095.0f) * 3.5f;
@@ -450,22 +453,17 @@ void taskSensorRead(void* pvParameters) {
         calibrationRunning = false;
         Serial.printf("[CAL] Calibration done. pH offset: %.3f\n", config.ph_offset);
       }
-      vTaskDelay(pdMS_TO_TICKS(1000));
+      vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(1000));
       continue;
     }
 
     SensorReading rd;
-    if (reader.performReading(rd, interval, maxStuckSamples)) {
-      Serial.printf("[SENSOR] Reading OK! pH: %.2f | Turbidity: %.2f NTU | TDS: %.1f ppm | Temp: %.1f C | Flow: %.2f L/min (Seq: %lu)\n",
-                    rd.ph, rd.turbidity, rd.tds, rd.temperature, rd.flow_rate, (unsigned long)rd.seq_no);
+    if (reader.performReading(rd, readInterval, maxStuckSamples)) {
+      
+      // Always update the display for real-time visualization
+      xQueueSend(displayQueue, &rd, 0);
 
-      if (xQueueSend(sensorQueue, &rd, 0) != pdPASS) {
-        Serial.println("[SENSOR] sensorQueue full — reading dropped!");
-      }
-      if (xQueueSend(displayQueue, &rd, 0) != pdPASS) {
-        // Drop non-critical
-      }
-
+      // Valve reacts instantly to live readings
       bool valveChanged = valve_controller.processSensorReading(
         rd.ph, rd.turbidity, rd.tds, rd.temperature, 0);
       if (valveChanged) {
@@ -473,16 +471,29 @@ void taskSensorRead(void* pvParameters) {
           valve_controller.getCurrentState() == VALVE_OPEN ? "OPEN" : "CLOSED");
       }
       valve_controller.periodicCheck();
+
+      // Check if it's time to save/upload the reading
+      uint32_t nowMs = millis();
+      if (lastSaveTimeMs == 0 || (nowMs - lastSaveTimeMs >= (saveInterval * 1000))) {
+        lastSaveTimeMs = nowMs;
+        Serial.printf("[SENSOR] Saved Reading! pH: %.2f | Turbidity: %.2f NTU | TDS: %.1f ppm | Temp: %.1f C | Flow: %.2f (Seq: %lu)\n",
+                      rd.ph, rd.turbidity, rd.tds, rd.temperature, rd.flow_rate, (unsigned long)rd.seq_no);
+
+        if (xQueueSend(sensorQueue, &rd, 0) != pdPASS) {
+          Serial.println("[SENSOR] sensorQueue full — reading dropped!");
+        }
+      }
+      
     } else {
       float raw_ph   = analogRead(PIN_PH)        * (3.3f / 4095.0f) * 3.5f;
       float raw_turb = analogRead(PIN_TURBIDITY) * (1000.0f / 4095.0f);
       float raw_tds  = analogRead(PIN_TDS)       * (5000.0f / 4095.0f);
       float raw_temp = -10.0f + analogRead(PIN_TEMP) * (100.0f / 4095.0f);
-      Serial.printf("[SENSOR] Reading discarded (out-of-bounds or stuck check). Raw values - pH: %.2f, Turbidity: %.2f, TDS: %.1f, Temp: %.1f\n",
+      Serial.printf("[SENSOR] Reading discarded (out-of-bounds/stuck). Raw: pH: %.2f, Turb: %.2f, TDS: %.1f, Temp: %.1f\n",
                     raw_ph, raw_turb, raw_tds, raw_temp);
     }
 
-    vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(interval * 1000));
+    vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(readInterval * 1000));
   }
 }
 
@@ -540,7 +551,9 @@ void taskDisplayUpdate(void* pvParameters) {
     showIP = !showIP;
     if (isOnline && showIP) {
       IPAddress ip = WiFi.localIP();
-      snprintf(line, sizeof(line), "IP: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+      char ipStr[16];
+      snprintf(ipStr, sizeof(ipStr), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+      snprintf(line, sizeof(line), "IP: %-16s", ipStr);
     } else {
       int32_t rssi = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
       snprintf(line, sizeof(line), "%-7s %4ddBm  HTTPS",
@@ -845,6 +858,54 @@ void taskHealthHeartbeat(void* pvParameters) {
       vTaskDelay(pdMS_TO_TICKS(10000));
     }
   }
+void taskStatusLEDs(void* pvParameters) {
+  for (;;) {
+    // Module 1: Network Status
+    if (isApMode || (strlen(config.wifi_ssid) == 0)) {
+      digitalWrite(PIN_LED_M1_R, LOW);
+      digitalWrite(PIN_LED_M1_Y, HIGH);
+      digitalWrite(PIN_LED_M1_G, LOW);
+    } else if (isOnline) {
+      digitalWrite(PIN_LED_M1_R, LOW);
+      digitalWrite(PIN_LED_M1_Y, LOW);
+      digitalWrite(PIN_LED_M1_G, HIGH);
+    } else {
+      digitalWrite(PIN_LED_M1_R, HIGH);
+      digitalWrite(PIN_LED_M1_Y, LOW);
+      digitalWrite(PIN_LED_M1_G, LOW);
+    }
+
+    // Module 2: System Health
+    bool hasSensorError = isPhStuck || isTurbStuck || isTdsStuck || isTempStuck || isFlowStuck;
+    bool hasStorageError = !sdAvailable || lowStorageMode;
+    if (calibrationRunning) {
+      digitalWrite(PIN_LED_M2_R, LOW);
+      digitalWrite(PIN_LED_M2_G, LOW);
+      digitalWrite(PIN_LED_M2_B, HIGH);
+    } else if (hasSensorError || hasStorageError) {
+      digitalWrite(PIN_LED_M2_R, HIGH);
+      digitalWrite(PIN_LED_M2_G, LOW);
+      digitalWrite(PIN_LED_M2_B, LOW);
+    } else {
+      digitalWrite(PIN_LED_M2_R, LOW);
+      digitalWrite(PIN_LED_M2_G, HIGH);
+      digitalWrite(PIN_LED_M2_B, LOW);
+    }
+
+    // Module 3: Relay Status
+    if (valve_controller.getCurrentState() == VALVE_OPEN) {
+      digitalWrite(PIN_LED_M3_R, LOW);
+      digitalWrite(PIN_LED_M3_G, HIGH);
+      digitalWrite(PIN_LED_M3_B, LOW);
+    } else {
+      digitalWrite(PIN_LED_M3_R, HIGH);
+      digitalWrite(PIN_LED_M3_G, LOW);
+      digitalWrite(PIN_LED_M3_B, LOW);
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+}
 
 
 void scanI2CBus() {
@@ -872,7 +933,18 @@ void setup() {
   scanI2CBus(); // Run diagnostics scan and print to Serial Monitor
   lcd.init();
   lcd.backlight();
+  lcd.clear();
   lcd.setCursor(0, 0); lcd.print("Hydronix v2.0 Boot");
+
+  // Initialize LED Pins
+  pinMode(PIN_LED_M1_R, OUTPUT); pinMode(PIN_LED_M1_Y, OUTPUT); pinMode(PIN_LED_M1_G, OUTPUT);
+  pinMode(PIN_LED_M2_R, OUTPUT); pinMode(PIN_LED_M2_G, OUTPUT); pinMode(PIN_LED_M2_B, OUTPUT);
+  pinMode(PIN_LED_M3_R, OUTPUT); pinMode(PIN_LED_M3_G, OUTPUT); pinMode(PIN_LED_M3_B, OUTPUT);
+  
+  // Start with Boot/Init state (M1: Yellow, M2: Blue, M3: Blue)
+  digitalWrite(PIN_LED_M1_Y, HIGH);
+  digitalWrite(PIN_LED_M2_B, HIGH);
+  digitalWrite(PIN_LED_M3_B, HIGH);
 
   loadConfiguration();
 
@@ -904,6 +976,9 @@ void setup() {
       SD.remove("/data/queue_new.jsonl");
     }
   }
+
+  // Start LED task early so it works in Setup Mode!
+  xTaskCreatePinnedToCore(taskStatusLEDs, "StatusLEDs", 2048, NULL, 1, NULL, 1);
 
   if (strlen(config.wifi_ssid) == 0) {
     char apPass[32];

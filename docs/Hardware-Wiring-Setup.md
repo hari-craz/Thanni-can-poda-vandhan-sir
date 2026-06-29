@@ -94,7 +94,35 @@ You are using a **Normally Closed 24V DC 1/2" Solenoid Valve**.
 
 ---
 
-## 7. 38-Pin ESP32-WROOM-32 Pinout Map (Visual Reference)
+## 7. Status LEDs (Traffic Light & Dual RGBs)
+
+The system uses three separate LED modules to indicate status across three categories: Network, Sensor Health, and Valve State. 
+*Note: Because some ESP32 pins are used for bootstrapping (GPIO 2, 12, 15), you **must use Common Cathode** LEDs where the common pin connects to GND.*
+
+**Module 1: Traffic Light (Network & Server Status)**
+| Color | Status Indicator | ESP32 Silkscreen | ESP32 GPIO |
+| :--- | :--- | :--- | :--- |
+| Red | Offline / Server Disconnected | **P14** | GPIO 14 |
+| Yellow | Booting / WiFi Setup Mode | **P25** | GPIO 25 |
+| Green | Online & Server Connected | **P26** | GPIO 26 |
+
+**Module 2: RGB LED 1 (Sensor & System Health)**
+| Color | Status Indicator | ESP32 Silkscreen | ESP32 GPIO |
+| :--- | :--- | :--- | :--- |
+| Red | Sensor Error / SD Error | **P4** | GPIO 4 |
+| Green | Sensors Healthy | **P16** | GPIO 16 |
+| Blue | Calibrating / Standby | **P17** | GPIO 17 |
+
+**Module 3: RGB LED 2 (Relay & Valve Status)**
+| Color | Status Indicator | ESP32 Silkscreen | ESP32 GPIO |
+| :--- | :--- | :--- | :--- |
+| Red | Valve Closed | **P13** | GPIO 13 |
+| Green | Valve Open | **P12** | GPIO 12 |
+| Blue | Manual Override / Reserved | **P2** | GPIO 2 |
+
+---
+
+## 8. 38-Pin ESP32-WROOM-32 Pinout Map (Visual Reference)
 
 This diagram corresponds exactly to the physical silkscreen labels on the back of your **NodeMCU ESP-32S** board:
 
@@ -112,13 +140,13 @@ This diagram corresponds exactly to the physical silkscreen labels on the back o
   TEMP →    P35  ── │ 6                            33 │ ── GND
     pH →    P32  ── │ 7                            32 │ ── P21 (GPIO 21 / LCD SDA)
   TURB →    P33  ── │ 8                            31 │ ── P19 (GPIO 19 / SD MISO)
-            P25  ── │ 9                            30 │ ── P18 (GPIO 18 / SD SCK)
-            P26  ── │ 10                           29 │ ── P5  (GPIO 5  / SD CS)
- VALVE ←    P27  ── │ 11                           28 │ ── P17 (GPIO 17 / TX2)
-            P14  ── │ 12                           27 │ ── P16 (GPIO 16 / RX2)
-            P12  ── │ 13                           26 │ ── P4  (GPIO 4)
+ M1(Y) ←    P25  ── │ 9                            30 │ ── P18 (GPIO 18 / SD SCK)
+ M1(G) ←    P26  ── │ 10                           29 │ ── P5  (GPIO 5  / SD CS)
+ VALVE ←    P27  ── │ 11                           28 │ ── P17 (GPIO 17)       → M2(B)
+ M1(R) ←    P14  ── │ 12                           27 │ ── P16 (GPIO 16)       → M2(G)
+ M3(G) ←    P12  ── │ 13                           26 │ ── P4  (GPIO 4)        → M2(R)
             GND  ── │ 14                           25 │ ── P0  (GPIO 0  / BOOT)
-            P13  ── │ 15                           24 │ ── P2  (GPIO 2  / Onboard LED)
+ M3(R) ←    P13  ── │ 15                           24 │ ── P2  (GPIO 2)        → M3(B)
             SD2  ── │ 16                           23 │ ── P15 (GPIO 15)
             SD3  ── │ 17                           22 │ ── SD1 (GPIO 8)
             GND  ── │ 18                           21 │ ── SD0 (GPIO 7)

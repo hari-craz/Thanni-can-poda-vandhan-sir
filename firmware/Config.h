@@ -23,6 +23,23 @@
 #define I2C_SDA         21
 #define I2C_SCL         22
 #define LCD_ADDR        0x27
+
+// ─── STATUS LED PINS ─────────────────────────────────────────────────────────
+// Module 1: Traffic Light (Network)
+#define PIN_LED_M1_R    14
+#define PIN_LED_M1_Y    25
+#define PIN_LED_M1_G    26
+
+// Module 2: RGB LED 1 (System Health)
+#define PIN_LED_M2_R    4
+#define PIN_LED_M2_G    16
+#define PIN_LED_M2_B    17
+
+// Module 3: RGB LED 2 (Relay Status)
+#define PIN_LED_M3_R    13
+#define PIN_LED_M3_G    12
+#define PIN_LED_M3_B    2
+
 #define FIRMWARE_VERSION "2.0.0"
 
 // ─── CONFIG SCHEMA VERSION ───────────────────────────────────────────────────
