@@ -70,6 +70,8 @@ class Device(Base):
     last_free_heap = Column(Integer)       # bytes
     last_queued_records = Column(Integer)  # SD queue depth
     last_sd_usage_percent = Column(Float)
+    last_sd_total_bytes = Column(BigInteger)
+    last_sd_used_bytes = Column(BigInteger)
     # Solenoid valve fields
     valve_status = Column(String(20), default="open", nullable=False)  # open, closed
     valve_last_toggled = Column(DateTime)

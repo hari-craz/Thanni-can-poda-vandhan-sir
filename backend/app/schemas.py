@@ -70,6 +70,8 @@ class DeviceHeartbeatRequest(BaseModel):
     status: str = Field(..., pattern="^(online|offline)$")
     signal_strength: Optional[int] = None          # dBm
     sd_usage_percent: Optional[float] = Field(None, ge=0, le=100)
+    sd_total_bytes: Optional[int] = Field(None, ge=0)
+    sd_used_bytes: Optional[int] = Field(None, ge=0)
     uptime_seconds: Optional[int] = Field(None, ge=0)
     firmware_version: Optional[str] = None
     last_reading_at: Optional[str] = None          # ISO8601 string or 'never'
@@ -328,6 +330,9 @@ class DeviceResponse(BaseModel):
     status: str  # online, offline
     last_seen: datetime
     firmware_version: Optional[str]
+    last_sd_usage_percent: Optional[float] = None
+    last_sd_total_bytes: Optional[int] = None
+    last_sd_used_bytes: Optional[int] = None
     is_active: bool
     created_at: datetime
 

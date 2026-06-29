@@ -442,6 +442,10 @@ async def device_heartbeat(
             device.firmware_version = request.firmware_version
         if request.sd_usage_percent is not None:
             device.last_sd_usage_percent = request.sd_usage_percent
+        if request.sd_total_bytes is not None:
+            device.last_sd_total_bytes = request.sd_total_bytes
+        if request.sd_used_bytes is not None:
+            device.last_sd_used_bytes = request.sd_used_bytes
         if request.free_heap is not None:
             device.last_free_heap = request.free_heap
         if request.queued_records is not None:

@@ -169,6 +169,22 @@ export default function DeviceTelemetry() {
               <span className="text-on-surface-variant">Created At</span>
               <span className="font-bold">{new Date(device.created_at).toLocaleDateString()}</span>
             </div>
+            <div className="flex justify-between py-2 border-b border-border-subtle/50">
+              <span className="text-on-surface-variant">SD Memory Installed</span>
+              <span className="font-bold">
+                {device.last_sd_total_bytes 
+                  ? `${(device.last_sd_total_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` 
+                  : 'N/A'}
+              </span>
+            </div>
+            <div className="flex justify-between py-2 border-b border-border-subtle/50">
+              <span className="text-on-surface-variant">SD Memory Used</span>
+              <span className="font-bold">
+                {device.last_sd_used_bytes 
+                  ? `${(device.last_sd_used_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB (${device.last_sd_usage_percent?.toFixed(1) || 0}%)` 
+                  : 'N/A'}
+              </span>
+            </div>
           </div>
         </div>
         <div className="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6">

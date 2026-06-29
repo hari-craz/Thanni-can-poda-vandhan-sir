@@ -249,6 +249,58 @@ int getQueueCount() {
   return count;
 }
 
+// ─── SD ARCHIVE & SYSTEM LOGGING ──────────────────────────────────────────────
+void getArchiveFilename(const char* type, char* buf, size_t maxLen) {
+  bool tOk = false;
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo, 100)) {
+    if (timeinfo.tm_year > 120) {
+      tOk = true;
+    }
+  }
+  if (tOk) {
+    int block = (timeinfo.tm_hour / 6) * 6;
+    snprintf(buf, maxLen, "/archive/%s/%04d-%02d-%02d_%02d00.%s",
+             type, timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday, block, 
+             (strcmp(type, "logs") == 0) ? "txt" : "jsonl");
+  } else {
+    snprintf(buf, maxLen, "/archive/%s/1970-01-01_0000.%s", 
+             type, (strcmp(type, "logs") == 0) ? "txt" : "jsonl");
+  }
+}
+
+void writeToArchive(const char* type, const String& payload) {
+  if (!sdAvailable) return;
+  if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(3000)) != pdPASS) return;
+  
+  if (!SD.exists("/archive")) SD.mkdir("/archive");
+  if (!SD.exists("/archive/data")) SD.mkdir("/archive/data");
+  if (!SD.exists("/archive/logs")) SD.mkdir("/archive/logs");
+
+  char filename[64];
+  getArchiveFilename(type, filename, sizeof(filename));
+  
+  File file = SD.open(filename, FILE_APPEND);
+  if (file) {
+    file.println(payload);
+    file.close();
+  } else {
+    lowStorageMode = true;
+  }
+  xSemaphoreGive(sdMutex);
+}
+
+void sysLog(const String& message) {
+  Serial.println(message);
+  
+  bool tOk = false;
+  char ts[32] = "1970-01-01T00:00:00Z";
+  getUTCTime(ts, sizeof(ts), tOk);
+  
+  String logEntry = String("[") + ts + "] " + message;
+  writeToArchive("logs", logEntry);
+}
+
 // ─── SD QUEUE BUFFERING ──────────────────────────────────────────────────────
 void writeToSDQueue(const String& payload, uint32_t seqNo) {
   if (!sdAvailable) return;
@@ -274,17 +326,26 @@ void writeToSDQueue(const String& payload, uint32_t seqNo) {
 
 void pruneOfflineQueue() {
   if (!sdAvailable) return;
-  if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) != pdPASS) return;
-
   lowStorageMode = (getSDUsagePercent() > 90.0f);
 
+  if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) != pdPASS) return;
   if (!SD.exists("/data/queue.jsonl")) {
     xSemaphoreGive(sdMutex);
     return;
   }
+  
+  SD.rename("/data/queue.jsonl", "/data/queue_pruning.jsonl");
+  xSemaphoreGive(sdMutex);
 
-  File file = SD.open("/data/queue.jsonl", FILE_READ);
-  if (!file) { xSemaphoreGive(sdMutex); return; }
+  File file = SD.open("/data/queue_pruning.jsonl", FILE_READ);
+  if (!file) {
+    if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
+      SD.rename("/data/queue_pruning.jsonl", "/data/queue.jsonl");
+      xSemaphoreGive(sdMutex);
+    }
+    return;
+  }
+
   int recordCount = 0;
   while (file.available()) {
     String line = file.readStringUntil('\n');
@@ -293,49 +354,61 @@ void pruneOfflineQueue() {
   file.close();
 
   if (recordCount <= 4320) {
-    xSemaphoreGive(sdMutex);
+    if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
+      SD.rename("/data/queue_pruning.jsonl", "/data/queue.jsonl");
+      xSemaphoreGive(sdMutex);
+    }
     return;
   }
 
   int skipCount = recordCount - 4000;
-
-  file = SD.open("/data/queue.jsonl", FILE_READ);
+  file = SD.open("/data/queue_pruning.jsonl", FILE_READ);
   File tmpFile = SD.open("/data/queue_new.jsonl", FILE_WRITE);
-  if (!file || !tmpFile) {
-    if (file) file.close();
-    if (tmpFile) tmpFile.close();
-    xSemaphoreGive(sdMutex);
-    return;
-  }
-
-  int current = 0;
-  while (file.available()) {
-    String line = file.readStringUntil('\n');
-    if (line.startsWith("[START:v2]")) {
-      current++;
-      String seqLine  = file.readStringUntil('\n');
-      String payload  = file.readStringUntil('\n');
-      String crcLine  = file.readStringUntil('\n');
-      String endLine  = file.readStringUntil('\n');
-      if (current > skipCount) {
-        tmpFile.println("[START:v2]");
-        tmpFile.println(seqLine);
-        tmpFile.println(payload);
-        tmpFile.println(crcLine);
-        tmpFile.println(endLine);
+  
+  if (file && tmpFile) {
+    int current = 0;
+    while (file.available()) {
+      String line = file.readStringUntil('\n');
+      if (line.startsWith("[START:v2]")) {
+        current++;
+        String seqLine  = file.readStringUntil('\n');
+        String payload  = file.readStringUntil('\n');
+        String crcLine  = file.readStringUntil('\n');
+        String endLine  = file.readStringUntil('\n');
+        if (current > skipCount) {
+          tmpFile.println("[START:v2]");
+          tmpFile.println(seqLine);
+          tmpFile.println(payload);
+          tmpFile.println(crcLine);
+          tmpFile.println(endLine);
+        }
       }
     }
   }
-  file.close();
-  tmpFile.close();
+  if (file) file.close();
+  if (tmpFile) tmpFile.close();
 
-  SD.remove("/data/queue_old.jsonl");
-  SD.rename("/data/queue.jsonl",     "/data/queue_old.jsonl");
-  SD.rename("/data/queue_new.jsonl", "/data/queue.jsonl");
-  SD.remove("/data/queue_old.jsonl");
-
-  lowStorageMode = (getSDUsagePercent() > 90.0f);
-  xSemaphoreGive(sdMutex);
+  // Merge back
+  if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
+    SD.rename("/data/queue.jsonl", "/data/queue_temp.jsonl");
+    SD.rename("/data/queue_new.jsonl", "/data/queue.jsonl");
+    
+    File temp = SD.open("/data/queue_temp.jsonl", FILE_READ);
+    if (temp) {
+      File q = SD.open("/data/queue.jsonl", FILE_APPEND);
+      if (q) {
+        while (temp.available()) {
+          q.write(temp.read());
+        }
+        q.close();
+      }
+      temp.close();
+    }
+    SD.remove("/data/queue_temp.jsonl");
+    SD.remove("/data/queue_pruning.jsonl");
+    lowStorageMode = (getSDUsagePercent() > 90.0f);
+    xSemaphoreGive(sdMutex);
+  }
 }
 
 // ─── FREERTOS TASKS ──────────────────────────────────────────────────────────
@@ -522,7 +595,7 @@ void taskNetworkManager(void* pvParameters) {
 
     if (isOnline) {
       if (!ntpInitialized) {
-        Serial.println("[NTP] Initializing configTime...");
+        sysLog("[NTP] Initializing configTime...");
         configTime(0, 0, "pool.ntp.org", "time.google.com", "time.windows.com");
         ntpInitialized = true;
       }
@@ -536,13 +609,15 @@ void taskNetworkManager(void* pvParameters) {
           getUTCTime(config.last_ntp_sync, sizeof(config.last_ntp_sync), tOk);
           if (strcmp(oldSync, config.last_ntp_sync) != 0) {
             saveConfiguration();
-            Serial.printf("[NTP] Time synced successfully: %s\n", config.last_ntp_sync);
+            String msg = "[NTP] Time synced successfully: ";
+            msg += config.last_ntp_sync;
+            sysLog(msg);
           }
         } else {
-          Serial.println("[NTP] Waiting for sync (year is still 1970)...");
+          sysLog("[NTP] Waiting for sync (year is still 1970)...");
         }
       } else {
-        Serial.println("[NTP] getLocalTime failed");
+        sysLog("[NTP] getLocalTime failed");
       }
     }
 
@@ -603,6 +678,8 @@ void taskUplinkSender(void* pvParameters) {
         }
       }
 
+      writeToArchive("data", payload);
+
       if (success) {
         bool tOk = false;
         getUTCTime(lastSendTimeStr, sizeof(lastSendTimeStr), tOk);
@@ -617,73 +694,65 @@ void taskOfflineSync(void* pvParameters) {
   for (;;) {
     pruneOfflineQueue();
 
-    if (isOnline && sdAvailable && SD.exists("/data/queue.jsonl") && !lowStorageMode) {
+    if (isOnline && sdAvailable && !lowStorageMode) {
       if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
-        File file = SD.open("/data/queue.jsonl", FILE_READ);
-        File tmpFile = SD.open("/data/queue_new.jsonl", FILE_WRITE);
+        if (!SD.exists("/data/queue.jsonl")) {
+          xSemaphoreGive(sdMutex);
+        } else {
+          SD.rename("/data/queue.jsonl", "/data/queue_processing.jsonl");
+          xSemaphoreGive(sdMutex);
 
-        if (file && tmpFile) {
-          while (file.available()) {
-            String marker = file.readStringUntil('\n');
-            marker.trim();
+          File file = SD.open("/data/queue_processing.jsonl", FILE_READ);
+          if (file) {
+            while (file.available()) {
+              String marker = file.readStringUntil('\n');
+              marker.trim();
 
-            if (marker == "[START:v2]") {
-              String seqLine  = file.readStringUntil('\n'); seqLine.trim();
-              String jsonBody = file.readStringUntil('\n'); jsonBody.trim();
-              String crcLine  = file.readStringUntil('\n'); crcLine.trim();
-              String endLine  = file.readStringUntil('\n'); endLine.trim();
+              if (marker == "[START:v2]") {
+                String seqLine  = file.readStringUntil('\n'); seqLine.trim();
+                String jsonBody = file.readStringUntil('\n'); jsonBody.trim();
+                String crcLine  = file.readStringUntil('\n'); crcLine.trim();
+                String endLine  = file.readStringUntil('\n'); endLine.trim();
 
-              bool integrityOk = false;
-              if (endLine == "[END]" && crcLine.startsWith("[CRC32:")) {
-                String hexCrc = crcLine.substring(7, crcLine.length() - 1);
-                uint32_t expected = (uint32_t)strtoul(hexCrc.c_str(), nullptr, 16);
-                uint32_t actual   = calculateQueueCRC(jsonBody);
-                integrityOk = (expected == actual);
-              }
+                bool integrityOk = false;
+                if (endLine == "[END]" && crcLine.startsWith("[CRC32:")) {
+                  String hexCrc = crcLine.substring(7, crcLine.length() - 1);
+                  uint32_t expected = (uint32_t)strtoul(hexCrc.c_str(), nullptr, 16);
+                  uint32_t actual   = calculateQueueCRC(jsonBody);
+                  integrityOk = (expected == actual);
+                }
 
-              bool jsonOk = false;
-              if (integrityOk) {
-                StaticJsonDocument<512> testDoc;
-                DeserializationError err = deserializeJson(testDoc, jsonBody);
-                jsonOk = (err == DeserializationError::Ok &&
-                          testDoc.containsKey("device_id") &&
-                          testDoc.containsKey("seq_no"));
-              }
+                bool replayed = false;
+                if (integrityOk) {
+                  int code = httpsSignedPost("/data", jsonBody);
+                  if (code == HTTP_CODE_OK || code == HTTP_CODE_CREATED || code == 409 || code == 401 || code == 403) {
+                    replayed = true;
+                  }
+                }
 
-              bool replayed = false;
-              if (jsonOk) {
-                xSemaphoreGive(sdMutex);
-                int code = httpsSignedPost("/data", jsonBody);
-                xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000));
-
-                if (code == HTTP_CODE_OK || code == HTTP_CODE_CREATED || code == 409) {
-                  replayed = true;
-                } else if (code == 401 || code == 403) {
-                  replayed = true;
+                if (!replayed && integrityOk) {
+                  if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
+                    File q = SD.open("/data/queue.jsonl", FILE_APPEND);
+                    if (q) {
+                      q.println("[START:v2]");
+                      q.println(seqLine);
+                      q.println(jsonBody);
+                      q.println(crcLine);
+                      q.println("[END]");
+                      q.close();
+                    }
+                    xSemaphoreGive(sdMutex);
+                  }
                 }
               }
-
-              if (!replayed && integrityOk) {
-                tmpFile.println("[START:v2]");
-                tmpFile.println(seqLine);
-                tmpFile.println(jsonBody);
-                tmpFile.println(crcLine);
-                tmpFile.println("[END]");
-              }
             }
+            file.close();
           }
-          tmpFile.close();
-          file.close();
-
-          SD.remove("/data/queue_old.jsonl");
-          SD.rename("/data/queue.jsonl",     "/data/queue_old.jsonl");
-          SD.rename("/data/queue_new.jsonl", "/data/queue.jsonl");
-          SD.remove("/data/queue_old.jsonl");
-        } else {
-          if (tmpFile) tmpFile.close();
-          if (file)    file.close();
+          if (xSemaphoreTake(sdMutex, pdMS_TO_TICKS(5000)) == pdPASS) {
+            SD.remove("/data/queue_processing.jsonl");
+            xSemaphoreGive(sdMutex);
+          }
         }
-        xSemaphoreGive(sdMutex);
       }
     }
 
@@ -699,6 +768,8 @@ void taskHealthHeartbeat(void* pvParameters) {
       doc["status"]           = "online";
       doc["signal_strength"]  = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
       doc["sd_usage_percent"] = getSDUsagePercent();
+      doc["sd_total_bytes"]   = sdAvailable ? (uint32_t)SD.totalBytes() : 0;
+      doc["sd_used_bytes"]    = sdAvailable ? (uint32_t)SD.usedBytes() : 0;
       doc["uptime_seconds"]   = millis() / 1000;
       doc["firmware_version"] = FIRMWARE_VERSION;
       doc["last_reading_at"]  = lastSendTimeStr;
