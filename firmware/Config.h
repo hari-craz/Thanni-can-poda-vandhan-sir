@@ -37,7 +37,7 @@
 
 // Module 3: RGB LED 2 (Relay Status)
 #define PIN_LED_M3_R    13
-#define PIN_LED_M3_G    12
+#define PIN_LED_M3_G    15
 #define PIN_LED_M3_B    2
 
 #define FIRMWARE_VERSION "2.0.0"

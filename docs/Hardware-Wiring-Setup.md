@@ -117,7 +117,7 @@ The system uses three separate LED modules to indicate status across three categ
 | Color | Status Indicator | ESP32 Silkscreen | ESP32 GPIO |
 | :--- | :--- | :--- | :--- |
 | Red | Valve Closed | **P13** | GPIO 13 |
-| Green | Valve Open | **P12** | GPIO 12 |
+| Green | Valve Open | **P15** | GPIO 15 |
 | Blue | Manual Override / Reserved | **P2** | GPIO 2 |
 
 ---
@@ -144,10 +144,10 @@ This diagram corresponds exactly to the physical silkscreen labels on the back o
  M1(G) ←    P26  ── │ 10                           29 │ ── P5  (GPIO 5  / SD CS)
  VALVE ←    P27  ── │ 11                           28 │ ── P17 (GPIO 17)       → M2(B)
  M1(R) ←    P14  ── │ 12                           27 │ ── P16 (GPIO 16)       → M2(G)
- M3(G) ←    P12  ── │ 13                           26 │ ── P4  (GPIO 4)        → M2(R)
+ M3(G) ←    P15  ── │ 13                           26 │ ── P4  (GPIO 4)        → M2(R)
             GND  ── │ 14                           25 │ ── P0  (GPIO 0  / BOOT)
  M3(R) ←    P13  ── │ 15                           24 │ ── P2  (GPIO 2)        → M3(B)
-            SD2  ── │ 16                           23 │ ── P15 (GPIO 15)
+            SD2  ── │ 16                           23 │ ── P15 (free)
             SD3  ── │ 17                           22 │ ── SD1 (GPIO 8)
             GND  ── │ 18                           21 │ ── SD0 (GPIO 7)
              5V  ── │ 19                           20 │ ── CLK (GPIO 6)
