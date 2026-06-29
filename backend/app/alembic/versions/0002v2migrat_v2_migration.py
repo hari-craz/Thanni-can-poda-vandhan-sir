@@ -8,8 +8,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers
-revision = '0002_v2_migration'
-down_revision = None  # Set to previous revision ID if chaining
+revision = '0002v2migrat'
+down_revision = '7238bc77b1a1'
 branch_labels = None
 depends_on = None
 
